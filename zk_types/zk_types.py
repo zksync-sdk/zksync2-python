@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from hexbytes import HexBytes
 from web3.types import Hash32, HexStr, Nonce, Wei
 from typing import TypedDict, Union, NewType, Dict
@@ -82,3 +83,11 @@ ContractAddress = HexAddress
 class ContractDebugInfo(TypedDict):
     assemblyCode: str
     pcLineMapping: Dict[int, int]
+
+
+@dataclass
+class Eip712Domain:
+    name: str
+    version: str
+    chainId: HexBytes
+    verifyingContract: Address
