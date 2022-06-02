@@ -13,9 +13,5 @@ class ZkSyncProvider(HTTPProvider):
 
     def make_request(self, method: RPCEndpoint, params: Any) -> RPCResponse:
         self.logger.debug(f"make_request: {method}, params : {params}")
-        # if method == RPCEndpoint("zks_getAccountTransactions"):
-        #
-        # else:
         response = HTTPProvider.make_request(self, method, params)
         return response
-        # return response

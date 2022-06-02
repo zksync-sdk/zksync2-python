@@ -3,8 +3,6 @@ from crypto.eth_signer import PrivateKeyEthSigner
 from eth_account.signers.local import LocalAccount
 from eth_account import Account
 from hexbytes import HexBytes
-# from zk_types.zk_types import Transaction, Eip712Meta, L1WithdrawHash, TokenAddress
-# from decimal import Decimal
 
 
 def random_key_generator(s: int):

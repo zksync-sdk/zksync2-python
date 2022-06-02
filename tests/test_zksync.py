@@ -1,17 +1,20 @@
-from eth_typing import HexStr
+from eth_typing import HexStr, ChecksumAddress, HexAddress
 from hexbytes import HexBytes
 from protocol.zksync import ZkSyncBuilder
 from unittest import TestCase
 from zk_types.zk_types import Transaction, Eip712Meta, L1WithdrawHash, TokenAddress
 from decimal import Decimal
+from eth_typing import Address
 
 
 class TestZkSync(TestCase):
-    url_testnet = "https://zksync2-testnet.zksync.dev"
+    URL_TESTNET = "https://zksync2-testnet.zksync.dev"
     TOKEN_ADDRESS = TokenAddress(HexStr('0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'))
+    _TEST_ADDRESS_HEX = "0xc94770007dda54cF92009BFF0dE90c06F603a09f"
+    TEST_ADDRESS = Address(bytearray.fromhex(_TEST_ADDRESS_HEX[2:]))
 
     def setUp(self) -> None:
-        self.web3 = ZkSyncBuilder.build(self.url_testnet)
+        self.web3 = ZkSyncBuilder.build(self.URL_TESTNET)
 
     def test_zks_main_contract(self):
         main_contract = self.web3.zksync.zks_main_contract()
@@ -79,3 +82,8 @@ class TestZkSync(TestCase):
     def test_zks_l1_chain_id(self):
         response = self.web3.zksync.zks_l1_chain_id()
         self.assertEqual(response, '0x5')
+
+    def test_eth_get_balance(self):
+        token_address = TokenAddress(HexStr("0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"))
+        balance = self.web3.zksync.eth_get_balance(self.TEST_ADDRESS, "latest", token_address)
+        self.assertEqual(balance, 0)
