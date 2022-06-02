@@ -10,10 +10,18 @@ from web3 import Web3
 
 class ZkSyncBuilder:
     @classmethod
-    def build(cls, url: Optional[Union[URI, str]]) -> Web3:
+    def build(cls, url: Union[URI, str]) -> Web3:
         web3_module = Web3()
         zksync_provider = ZkSyncProvider(url)
         zksync_middleware = build_zksync_middleware(zksync_provider)
         web3_module.middleware_onion.add(zksync_middleware)
         attach_modules(web3_module, {"zksync": (ZkSync,)})
         return web3_module
+
+    @classmethod
+    def build_based_on(cls, web3: Web3, url: Union[URI, str]) -> Web3:
+        zksync_provider = ZkSyncProvider(url)
+        zksync_middleware = build_zksync_middleware(zksync_provider)
+        web3.middleware_onion.add(zksync_middleware)
+        attach_modules(web3, {'zksync': (ZkSync,)})
+        return web3

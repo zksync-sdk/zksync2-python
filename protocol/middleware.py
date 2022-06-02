@@ -1,4 +1,6 @@
 from typing import Callable
+
+import web3.eth
 from web3 import Web3
 from web3.middleware import Middleware
 from web3.types import RPCEndpoint, RPCResponse
@@ -27,7 +29,7 @@ def build_zksync_middleware(zksync_provider: ZkSyncProvider) -> Middleware:
                           w3: Web3) -> Callable[[RPCEndpoint, Any], RPCResponse]:
         def middleware(method: RPCEndpoint, params: Any) -> RPCResponse:
             if method not in ZK_METHODS:
-                return make_request(method, params)
+                return w3.provider.make_request(method, params)
             else:
                 return zksync_provider.make_request(method, params)
         return middleware
