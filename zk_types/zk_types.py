@@ -1,9 +1,10 @@
 from dataclasses import dataclass, field
 from hexbytes import HexBytes
 from web3.types import Hash32, HexStr, Nonce, Wei
-from typing import TypedDict, Union, NewType, Dict
+from typing import TypedDict, Union, NewType, Dict, Optional
 from eth_typing import Address, HexAddress, BlockNumber
 from decimal import Decimal
+from enum import Enum
 
 # class EIP712Meta(TypedDict):
 #     feeToken: str,
@@ -137,13 +138,13 @@ class Token:
 class Transfer:
     to: Address
     amount: Decimal
-    token: Token = None
-    nonce: int = None
+    token: Optional[Token] = None
+    nonce: Optional[int] = None
 
 
 @dataclass
 class Withdraw:
     to: Address
     amount: Decimal
-    token: Token = None
-    nonce: int = None
+    token: Optional[Token] = None
+    nonce: Optional[int] = None

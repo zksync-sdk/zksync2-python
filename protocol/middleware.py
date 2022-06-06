@@ -28,9 +28,10 @@ def build_zksync_middleware(zksync_provider: ZkSyncProvider) -> Middleware:
     def zksync_middleware(make_request: Callable[[RPCEndpoint, Any], Any],
                           w3: Web3) -> Callable[[RPCEndpoint, Any], RPCResponse]:
         def middleware(method: RPCEndpoint, params: Any) -> RPCResponse:
-            if method not in ZK_METHODS:
-                return w3.provider.make_request(method, params)
-            else:
-                return zksync_provider.make_request(method, params)
+            return zksync_provider.make_request(method, params)
+            # if method not in ZK_METHODS:
+            #     return w3.provider.make_request(method, params)
+            # else:
+            #     return zksync_provider.make_request(method, params)
         return middleware
     return zksync_middleware

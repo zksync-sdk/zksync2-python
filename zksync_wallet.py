@@ -1,6 +1,13 @@
+from typing import Optional
+
+import web3.eth
+from web3.types import BlockIdentifier
+
 from zk_types.zk_types import *
 from protocol.zksync_module import ZkSync
 from crypto.eth_signer import EthSignerBase
+from web3.eth import Eth
+
 # from eth_abi import EI
 # from eth_abi.abi import EIP20_ABI
 from web3.contract import ContractEvent, ContractFunction
@@ -14,7 +21,8 @@ class ZkSyncWallet:
         self.signer = signer
 
     # INFO: might be static method
-    def get_balance(self, address: Address = None, token: Token = None, block_param=None):
+    def get_balance(self, address: Optional[Address] = None, token: Optional[Token] = None,
+                    block_param: Optional[BlockIdentifier] = None):
         param_token = token
         param_block_param = block_param
         param_address = address
@@ -26,12 +34,9 @@ class ZkSyncWallet:
             param_token = Token.create_eth()
         return self.zksync.eth_get_balance(param_address, param_block_param, param_token.address)
 
-    def get_nonce(self, block_param=None):
-        param_block = block_param
-        if param_block is None:
-            param_block = "latest"
+    def get_nonce(self, block_param: Optional[BlockIdentifier] = "latest"):
         param_address = self.signer.get_address()
-        return self.zksync.get_transaction_count(param_address, param_block)
+        return self.zksync.get_transaction_count(param_address, block_param)
 
     def transfer(self, transfer: Transfer):
         if transfer.nonce is None:

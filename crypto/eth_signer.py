@@ -42,7 +42,7 @@ class EthSignerBase:
 class PrivateKeyEthSigner(EthSignerBase, ABC):
     _NAME = "zkSync"
     _VERSION = "2"
-    # INFO: Java holds 160 length with BigInt 0 => 160/8 = 20
+    # INFO: Java holds 160 length with BigInt 0 => 160/8 = 20bytes => 40 hex
     _DEFAULT_ADDRESS = Address("0x00000000000000000000".encode())
 
     def __init__(self, creds: LocalAccount, chain_id: HexBytes):

@@ -2,7 +2,7 @@ from protocol.zksync_module import ZkSync
 from protocol.zksync_provider import ZkSyncProvider
 from protocol.middleware import build_zksync_middleware
 
-from typing import Union, Optional
+from typing import Union
 from web3._utils.module import attach_modules
 from eth_typing import URI
 from web3 import Web3
@@ -18,10 +18,10 @@ class ZkSyncBuilder:
         attach_modules(web3_module, {"zksync": (ZkSync,)})
         return web3_module
 
-    @classmethod
-    def build_based_on(cls, web3: Web3, url: Union[URI, str]) -> Web3:
-        zksync_provider = ZkSyncProvider(url)
-        zksync_middleware = build_zksync_middleware(zksync_provider)
-        web3.middleware_onion.add(zksync_middleware)
-        attach_modules(web3, {'zksync': (ZkSync,)})
-        return web3
+    # @classmethod
+    # def build_based_on(cls, web3: Web3, url: Union[URI, str]) -> Web3:
+    #     zksync_provider = ZkSyncProvider(url)
+    #     zksync_middleware = build_zksync_middleware(zksync_provider)
+    #     web3.middleware_onion.add(zksync_middleware)
+    #     attach_modules(web3, {'zksync': (ZkSync,)})
+    #     return web3
