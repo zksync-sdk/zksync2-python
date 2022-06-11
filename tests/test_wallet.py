@@ -11,7 +11,7 @@ from protocol.zksync import ZkSyncBuilder
 # logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
 
-class TestZkSync(TestCase):
+class TestZkSyncWallet(TestCase):
     PRIVATE_KEYS = ['0xa045b52470d306ff78e91b0d2d92f90f7504189125a46b69423dc673fd6b4f3e',
                     '0x601b47729b2820e94bc10125edc8d534858827428b449175a275069dc00c303f',
                     '0xa7adf8459b4c9a62f09e0e5390983c0145fa20e88c9e5bf837d8bf3dcd05bd9c']

@@ -88,6 +88,8 @@ class ContractDebugInfo(TypedDict):
 
 @dataclass
 class Eip712Domain:
+    # TODO: make JSON serializable
+    # TODO: MOVE TO EIP712 serializable !!!
     name: str
     version: str
     chainId: HexBytes
@@ -101,6 +103,10 @@ class Fee:
     ergsPriceLimit: HexBytes
     ergsPerStorageLimit: HexBytes
     ergsPerPubdataLimit: HexBytes
+    # ergsLimit: HexBytes = HexBytes(0)
+    # ergsPriceLimit: HexBytes = HexBytes(0)
+    # ergsPerStorageLimit: HexBytes = HexBytes(0)
+    # ergsPerPubdataLimit: HexBytes = HexBytes(0)
 
 
 @dataclass

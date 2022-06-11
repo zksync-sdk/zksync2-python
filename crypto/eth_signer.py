@@ -43,7 +43,7 @@ class PrivateKeyEthSigner(EthSignerBase, ABC):
     _NAME = "zkSync"
     _VERSION = "2"
     # INFO: Java holds 160 length with BigInt 0 => 160/8 = 20bytes => 40 hex
-    _DEFAULT_ADDRESS = Address("0x00000000000000000000".encode())
+    # _DEFAULT_ADDRESS = Address("".encode())
 
     def __init__(self, creds: LocalAccount, chain_id: HexBytes):
         self.credentials = creds
@@ -52,9 +52,9 @@ class PrivateKeyEthSigner(EthSignerBase, ABC):
     def get_address(self) -> ChecksumAddress:
         return self.credentials.address
 
-    def get_domain(self) -> Eip712Domain:
-        default_domain = Eip712Domain(self._NAME, self._VERSION, self.chain_id, self._DEFAULT_ADDRESS)
-        return default_domain
+    # def get_domain(self) -> Eip712Domain:
+    #     default_domain = Eip712Domain(self._NAME, self._VERSION, self.chain_id, self._DEFAULT_ADDRESS)
+    #     return default_domain
 
     def sign_message(self, msg: str) -> HexStr:
         """
