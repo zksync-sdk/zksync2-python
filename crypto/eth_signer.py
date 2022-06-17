@@ -1,17 +1,11 @@
-from abc import abstractmethod, ABC
-
-import eth_account.account
 import web3
+from abc import abstractmethod, ABC
+from eip712_structs import make_domain
 from eth_typing import ChecksumAddress
-from web3.types import Hash32, HexStr, Nonce, Wei
 from zk_types.zk_types import *
 from eth_account.signers.local import LocalAccount
 from eth_account.messages import encode_defunct, defunct_hash_message
-from eth_utils.curried import to_hex, to_bytes
-from web3 import Web3
-
-
-# from web3.eth import recoverHash
+from eth_utils.curried import to_bytes
 
 
 class EthSignerBase:
@@ -21,7 +15,7 @@ class EthSignerBase:
         raise NotImplementedError
 
     @abstractmethod
-    def get_domain(self) -> Eip712Domain:
+    def get_domain(self):
         raise NotImplemented
 
     @abstractmethod
@@ -42,8 +36,7 @@ class EthSignerBase:
 class PrivateKeyEthSigner(EthSignerBase, ABC):
     _NAME = "zkSync"
     _VERSION = "2"
-    # INFO: Java holds 160 length with BigInt 0 => 160/8 = 20bytes => 40 hex
-    # _DEFAULT_ADDRESS = Address("".encode())
+    _ADDRESS_DEFAULT = "0x" + "0" * 40
 
     def __init__(self, creds: LocalAccount, chain_id: HexBytes):
         self.credentials = creds
@@ -52,9 +45,12 @@ class PrivateKeyEthSigner(EthSignerBase, ABC):
     def get_address(self) -> ChecksumAddress:
         return self.credentials.address
 
-    # def get_domain(self) -> Eip712Domain:
-    #     default_domain = Eip712Domain(self._NAME, self._VERSION, self.chain_id, self._DEFAULT_ADDRESS)
-    #     return default_domain
+    def get_domain(self):
+        default_domain = make_domain(name=self._NAME,
+                                     version=self._VERSION,
+                                     chainId=self.chain_id,
+                                     verifyingContract=self._ADDRESS_DEFAULT)
+        return default_domain
 
     def sign_message(self, msg: str) -> HexStr:
         """

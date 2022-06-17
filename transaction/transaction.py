@@ -1,16 +1,28 @@
 from abc import ABC
 from dataclasses import dataclass
+from enum import Enum, auto, IntEnum
 from typing import Optional
 
+import rlp
+import web3.eth
 from eip712_structs import EIP712Struct, Address, Uint, Bytes
 from eth_typing import HexStr
+from rlp.sedes import big_endian_int, Binary
+from rlp.sedes import List as rlpList
 
 from zk_types.zk_types import Fee, TokenAddress
 from eth_utils.crypto import keccak_256
 
+# from eth_abi import encode_abi
+# from ethereum.transactions import Transaction
+# from web3.eth import Transaction
 
-# from eth_typing.evm import Address as ethAddress
-# from eth_typing.evm import Nonce
+# from eth_rlp import rlp
+from web3._utils.transactions import replace_transaction
+
+
+# from web3._utils.datatypes import Contract
+# web3.eth.Contract
 
 # TODO: check should Fee be EIP712 Struct-able or not
 #       depends on this use @dataclass or EIP712 Struct-able Type
@@ -29,6 +41,12 @@ class TransactionRequest(EIP712Struct):
     withdrawToken = Address()
 
 
+class TransactionType(Enum):
+    EXECUTE = auto()
+    DEPLOY = auto()
+    WITHDRAW = auto()
+
+
 @dataclass
 class TransactionBase:
     address: Address()
@@ -36,6 +54,9 @@ class TransactionBase:
     nonce: Uint(32)
 
     def transaction_request(self) -> TransactionRequest:
+        raise NotImplementedError
+
+    def get_type(self) -> TransactionType:
         raise NotImplementedError
 
 
@@ -64,6 +85,9 @@ class Execute(TransactionBase, ABC):
             withdrawToken=Address()
         )
 
+    def get_type(self) -> TransactionType:
+        return TransactionType.EXECUTE
+
 
 class DeployContract(TransactionBase, ABC):
 
@@ -74,6 +98,7 @@ class DeployContract(TransactionBase, ABC):
             call_data = b'\0' * 7 + b'\1' + b'\0' * 24
         self.call_data = call_data
         # this.factoryDeps = new byte[][] { bytecode };
+        self.factory_deps = [bytecode]
 
     def _get_input(self):
         return self.main_contract_hash + self.call_data
@@ -96,6 +121,9 @@ class DeployContract(TransactionBase, ABC):
             # TODO: default address, check it
             withdrawToken=Address()
         )
+
+    def get_type(self) -> TransactionType:
+        return TransactionType.DEPLOY
 
 
 class Withdraw(TransactionBase, ABC):
@@ -123,4 +151,9 @@ class Withdraw(TransactionBase, ABC):
             feeToken=self.fee.feeToken,
             withdrawToken=self.token_address
         )
+
+    def get_type(self) -> TransactionType:
+        return TransactionType.WITHDRAW
+
+
 
