@@ -6,27 +6,35 @@ from transaction.transaction import TransactionBase, TransactionType
 
 class Transaction712:
     EIP_712_TX_TYPE = b'\x70'
-    _DEFAULT_ADDRESS_STR = "0" * 40
 
     def __init__(self, transaction: TransactionBase, chain_id):
         self.transaction = transaction
         self.chain_id = chain_id
 
+    def _get_withdraw_token(self, value: str) -> bytes:
+        if self.transaction.get_type() == TransactionType.WITHDRAW:
+            return bytes.fromhex(value)
+        else:
+            # INFO: must be empty byte array
+            return bytes()
+
     def as_rlp_values(self, signature=None):
         transaction_request = self.transaction.transaction_request()
-        # if (signatureData != null) {
-        #     byte[] v = signatureData.getV()[0] == (byte) 0 ? new byte[] {}: signatureData.getV();
-        #     result.add(RlpString.create(v)); //
-        #         6
-        #     result.add(RlpString.create(Bytes.trimLeadingZeroes(signatureData.getR()))); // 7
-        #     result.add(RlpString.create(Bytes.trimLeadingZeroes(signatureData.getS()))); // 8
-        # }
-
         maybe_empty_lst = []
+        elements_to_process = None
         if self.transaction.get_type() == TransactionType.DEPLOY:
             maybe_empty_lst = self.transaction.factory_deps
+            elements_to_process = [binary for _ in range(len(maybe_empty_lst))]
 
         vals = transaction_request.values
+
+        for entry in ['to', 'feeToken', 'withdrawToken']:
+            address_like = vals[entry]
+            if address_like.startswith("0x"):
+                vals[entry] = address_like[2:]
+
+        withdraw_token = self._get_withdraw_token(vals['withdrawToken'])
+
         if signature is not None:
             class InternalRepresentation(rlp.Serializable):
                 fields = [
@@ -45,29 +53,30 @@ class Transaction712:
                     ('withdrawToken', binary),
                     ('ergsPerStorage', big_endian_int),
                     ('ergsPerPubdata', big_endian_int),
-                    ('factoryDeps', rlpList)
+                    ('factoryDeps', rlpList(elements=elements_to_process, strict=False))
                 ]
 
             v_bytes = bytes()
             # TODO: getV[0] is big endian or little , and what is the bytes amount??
             if signature.v == 0:
                 v_bytes = bytes(signature.v)
-            value = InternalRepresentation(nonce=transaction_request.nonce.none_val,
-                                           gasPrice=transaction_request.gasPrice.none_val,
-                                           gasLimit=transaction_request.gasPrice.none_val,
-                                           to=transaction_request.to.none_val,
-                                           value=transaction_request.value.none_val,
-                                           data=transaction_request.data.none_val,
-                                           v=v_bytes,
-                                           r=bytes(signature.r),  # TODO: must be lstrip(trim leading by default)
-                                           s=bytes(signature.s),  # TODO: must be lstrip(trim leading by default)
-                                           chain_id=self.chain_id,
-                                           feeToken=transaction_request.feeToken.none_val,
-                                           withdrawToken=transaction_request.withdrawToken.none_val,
-                                           ergsPerStorage=transaction_request.ergsPerStorage.none_val,
-                                           ergsPerPubdata=transaction_request.ergsPerPubdata.none_val,
-                                           factoryDeps=[maybe_empty_lst]
-                                           )
+
+            value = InternalRepresentation(
+                nonce=vals['nonce'],
+                gasPrice=vals['gasPrice'],
+                gasLimit=vals['gasLimit'],
+                to=bytes.fromhex(vals['to']),
+                value=vals['value'],
+                data=vals['data'],
+                v=v_bytes,
+                r=bytes(signature.r),  # TODO: must be lstrip(trim leading by default)
+                s=bytes(signature.s),  # TODO: must be lstrip(trim leading by default)
+                chain_id=self.chain_id,
+                feeToken=bytes.fromhex(vals['feeToken']),
+                withdrawToken=withdraw_token,
+                ergsPerStorage=vals['ergsPerStorage'],
+                ergsPerPubdata=vals['ergsPerPubdata'],
+                factoryDeps=[maybe_empty_lst])
             result = rlp.encode(value, infer_serializer=False, cache=False)
         else:
             class InternalRepresentation(rlp.Serializable):
@@ -84,23 +93,23 @@ class Transaction712:
                     ('withdrawToken', binary),
                     ('ergsPerStorage', big_endian_int),
                     ('ergsPerPubdata', big_endian_int),
-                    ('factoryDeps', rlpList(strict=False))
+                    ('factoryDeps', rlpList(elements=elements_to_process, strict=False))
                 ]
-            address = vals['to']
-            if address.startswith("0x"):
-                address = address[2:]
-            value = InternalRepresentation(nonce=vals['nonce'],
-                                           gasPrice=vals['gasPrice'],
-                                           gasLimit=vals['gasLimit'],
-                                           to=bytes.fromhex(address),
-                                           value=vals['value'],
-                                           data=vals['data'],
-                                           chain_id=self.chain_id,
-                                           feeToken=bytes.fromhex(vals['feeToken'][2:]),
-                                           withdrawToken=bytes.fromhex(vals['withdrawToken'][2:]),
-                                           ergsPerStorage=vals['ergsPerStorage'],
-                                           ergsPerPubdata=vals['ergsPerPubdata'],
-                                           factoryDeps=[maybe_empty_lst]
-                                           )
+
+            value = InternalRepresentation(
+                nonce=vals['nonce'],
+                gasPrice=vals['gasPrice'],
+                gasLimit=vals['gasLimit'],
+                to=bytes.fromhex(vals['to']),
+                value=vals['value'],
+                data=vals['data'],
+                chain_id=self.chain_id,
+                feeToken=bytes.fromhex(vals['feeToken']),
+                withdrawToken=withdraw_token,
+                ergsPerStorage=vals['ergsPerStorage'],
+                ergsPerPubdata=vals['ergsPerPubdata'],
+                # TODO: CHECK TYPE MUST BE List of Bytes
+                factoryDeps=maybe_empty_lst
+            )
             result = rlp.encode(value, infer_serializer=True, cache=False)
         return result

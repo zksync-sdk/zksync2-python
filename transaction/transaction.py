@@ -1,28 +1,11 @@
 from abc import ABC
 from dataclasses import dataclass
-from enum import Enum, auto, IntEnum
+from enum import Enum, auto
 from typing import Optional
-
-import rlp
-import web3.eth
 from eip712_structs import EIP712Struct, Address, Uint, Bytes
 from eth_typing import HexStr
-from rlp.sedes import big_endian_int, Binary
-from rlp.sedes import List as rlpList
-
 from zk_types.zk_types import Fee, TokenAddress
 from eth_utils.crypto import keccak_256
-
-# from eth_abi import encode_abi
-# from ethereum.transactions import Transaction
-# from web3.eth import Transaction
-
-# from eth_rlp import rlp
-from web3._utils.transactions import replace_transaction
-
-
-# from web3._utils.datatypes import Contract
-# web3.eth.Contract
 
 # TODO: check should Fee be EIP712 Struct-able or not
 #       depends on this use @dataclass or EIP712 Struct-able Type
@@ -53,6 +36,8 @@ class TransactionBase:
     fee: Fee
     nonce: Uint(32)
 
+    DEFAULT_ADDRESS = "0x" + "0"*40
+
     def transaction_request(self) -> TransactionRequest:
         raise NotImplementedError
 
@@ -72,7 +57,8 @@ class Execute(TransactionBase, ABC):
             to=self.contract_address,
             nonce=self.nonce,
             # TODO: default value, check it
-            value=Uint(256),
+            # value=Uint(256),
+            value=0,
             data=self.call_data,
             # TODO: here it's hex bytes, need to convert to int ???
             gasPrice=int.from_bytes(self.fee.ergsPriceLimit, byteorder='big', signed=False),
@@ -82,7 +68,7 @@ class Execute(TransactionBase, ABC):
             ergsPerPubdata=int.from_bytes(self.fee.ergsPerPubdataLimit, byteorder='big', signed=False),
             feeToken=self.fee.feeToken,
             # TODO: default address, check it
-            withdrawToken=Address()
+            withdrawToken=self.DEFAULT_ADDRESS
         )
 
     def get_type(self) -> TransactionType:
@@ -95,21 +81,22 @@ class DeployContract(TransactionBase, ABC):
         super(DeployContract, self).__init__(initiator_address, fee, nonce)
         self.main_contract_hash = keccak_256(bytecode)
         if call_data is None:
-            call_data = b'\0' * 7 + b'\1' + b'\0' * 24
+            call_data = bytes(b'\0' * 8) + bytes(b'\1') + bytes(b'\0' * 23)
         self.call_data = call_data
-        # this.factoryDeps = new byte[][] { bytecode };
         self.factory_deps = [bytecode]
 
-    def _get_input(self):
+    def _get_input(self) -> bytes:
         return self.main_contract_hash + self.call_data
 
     def transaction_request(self) -> TransactionRequest:
         return TransactionRequest(
             # TODO: check for default address, must be
-            to=Address(),
+            # to=Address(),
+            to=self.DEFAULT_ADDRESS,
             nonce=self.nonce,
             # TODO: check that it's default value
-            value=Uint(256),
+            # value=Uint(256),
+            value=0,
             data=self._get_input(),
             # TODO: here it's hex bytes, need to convert to int ???
             gasPrice=int.from_bytes(self.fee.ergsPriceLimit, byteorder='big', signed=False),
@@ -119,7 +106,7 @@ class DeployContract(TransactionBase, ABC):
             ergsPerPubdata=int.from_bytes(self.fee.ergsPerPubdataLimit, byteorder='big', signed=False),
             feeToken=self.fee.feeToken,
             # TODO: default address, check it
-            withdrawToken=Address()
+            withdrawToken=self.DEFAULT_ADDRESS
         )
 
     def get_type(self) -> TransactionType:
@@ -133,8 +120,8 @@ class Withdraw(TransactionBase, ABC):
                  initiator_address: HexStr, fee: Fee, nonce: int):
         super(Withdraw, self).__init__(initiator_address, fee, nonce)
         self.token_address = token_address
-        self.to: Address() = to
-        self.amount: Uint(256) = amount
+        self.to = to
+        self.amount = amount
 
     def transaction_request(self) -> TransactionRequest:
         return TransactionRequest(
