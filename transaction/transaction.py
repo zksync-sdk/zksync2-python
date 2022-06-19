@@ -47,8 +47,8 @@ class TransactionBase:
 
 class Execute(TransactionBase, ABC):
 
-    def __int__(self, contract_address: HexStr, call_data: bytes, initiator_address: HexStr, fee: Fee, nonce: int):
-        super(Execute, self).__init__(address=initiator_address, fee=fee, nonce=nonce)
+    def __init__(self, contract_address: HexStr, call_data: bytes, initiator_address: HexStr, fee: Fee, nonce: int):
+        super(Execute, self).__init__(initiator_address, fee, nonce)
         self.contract_address = contract_address
         self.call_data = call_data
 
