@@ -1,10 +1,12 @@
+import json
+
 import web3
 from abc import abstractmethod, ABC
-from eip712_structs import make_domain
+from eip712_structs import make_domain, EIP712Struct
 from eth_typing import ChecksumAddress
 from zk_types.zk_types import *
 from eth_account.signers.local import LocalAccount
-from eth_account.messages import encode_defunct, defunct_hash_message
+from eth_account.messages import encode_defunct, defunct_hash_message, encode_structured_data, _hash_eip191_message
 from eth_utils.curried import to_bytes
 
 
@@ -25,12 +27,11 @@ class EthSignerBase:
     def verify_signature(self, sig: HexStr, msg: bytes) -> bool:
         raise NotImplemented
 
+    def sign_typed_data(self, typed_data: EIP712Struct) -> HexStr:
+        raise NotImplemented
 
-# def get_eth_message_hash(self) -> bytes:
-#     raise NotImplemented
-
-# def get_eth_message_prefix(self, msg_len: int):
-#    raise NotImplemented
+    def verify_typed_signature(self, sig: HexStr, typed_data: EIP712Struct) -> bool:
+        raise NotImplemented
 
 
 class PrivateKeyEthSigner(EthSignerBase, ABC):
@@ -38,7 +39,7 @@ class PrivateKeyEthSigner(EthSignerBase, ABC):
     _VERSION = "2"
     _ADDRESS_DEFAULT = "0x" + "0" * 40
 
-    def __init__(self, creds: LocalAccount, chain_id: HexBytes):
+    def __init__(self, creds: LocalAccount, chain_id: int):
         self.credentials = creds
         self.chain_id = chain_id
 
@@ -58,10 +59,29 @@ class PrivateKeyEthSigner(EthSignerBase, ABC):
         """
         message_hash = encode_defunct(to_bytes(text=msg))
         sig = self.credentials.sign_message(message_hash)
-        signature = sig.r.to_bytes(32, 'big') + sig.s.to_bytes(32, 'big') + sig.v.to_bytes(1, 'big')
-        return HexStr(signature)
+        return HexStr(sig.signature.hex())
 
     def verify_signature(self, signature: HexStr, msg: str):
-        message_hash = defunct_hash_message(text=msg)
-        address = web3.Account.recoverHash(message_hash=message_hash, signature=signature)
+        msg = encode_defunct(text=msg)
+        address = web3.Account.recover_message(signable_message=msg, signature=signature)
+        return address == self.get_address()
+
+    def sign_typed_data(self, typed_data: EIP712Struct, domain=None) -> HexStr:
+        d = domain
+        if d is None:
+            d = self.get_domain()
+        structured_json = typed_data.to_message_json(d)
+        json_value = json.loads(structured_json)
+        msg = encode_structured_data(json_value)
+        sig = self.credentials.sign_message(msg)
+        return HexStr(sig.signature.hex())
+
+    def verify_typed_data(self, sig: HexStr, typed_data: EIP712Struct, domain=None) -> bool:
+        d = domain
+        if d is None:
+            d = self.get_domain()
+        structured_json = typed_data.to_message_json(d)
+        json_value = json.loads(structured_json)
+        msg = encode_structured_data(json_value)
+        address = web3.Account.recover_message(signable_message=msg, signature=sig)
         return address == self.get_address()

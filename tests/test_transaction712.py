@@ -15,6 +15,7 @@ from transaction.transaction712 import Transaction712
 class TestTransaction712(TestCase):
     _DEFAULT_ADDRESS_STR = "0" * 40
     _TEST_ADDRESS = HexStr("0x7e5f4552091a69125d5dfcb7b8c2659029395bdf")
+    _EXECUTE_INITIATE_ADDRESS = HexStr("0xe1fab3efd74a77c23b426c302d96372140ff7d0c")
     _TEST_CHAIN_ID = 270
     _DEFAULT_NONCE = 0
     _INCREMENT_FUNCTION_NAME = 'increment'
@@ -76,10 +77,9 @@ class TestTransaction712(TestCase):
         contract_addr = HexStr("0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee")
         if encoded_function.startswith("0x"):
             encoded_function = encoded_function[2:]
-        init_addr = HexStr("0xe1fab3efd74a77c23b426c302d96372140ff7d0c")
         execute = Execute(contract_address=contract_addr,
                           call_data=bytes.fromhex(encoded_function),
-                          initiator_address=init_addr,
+                          initiator_address=self._EXECUTE_INITIATE_ADDRESS,
                           fee=self.fee, nonce=0)
         tx712 = Transaction712(execute, self._TEST_CHAIN_ID)
         ret = tx712.as_rlp_values()

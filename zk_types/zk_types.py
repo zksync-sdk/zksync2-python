@@ -4,12 +4,6 @@ from web3.types import Hash32, HexStr, Nonce, Wei
 from typing import TypedDict, Union, NewType, Dict, Optional
 from eth_typing import Address, HexAddress, BlockNumber
 from decimal import Decimal
-from enum import Enum
-
-# class EIP712Meta(TypedDict):
-#     feeToken: str,
-#     ergsPerStorage: int
-
 
 # TODO: add builders and types with convertors
 
