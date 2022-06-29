@@ -4,7 +4,9 @@ from enum import Enum, auto
 from typing import Optional
 from eip712_structs import EIP712Struct, Address, Uint, Bytes
 from eth_typing import HexStr
-from zk_types.zk_types import Fee, TokenAddress
+# from transaction712 import Transaction712
+from transaction.misc import Transaction712Constants
+from zk_types.zk_types import Fee, TokenAddress, Transaction, Eip712Meta
 from eth_utils.crypto import keccak_256
 
 # TODO: check should Fee be EIP712 Struct-able or not
@@ -44,6 +46,9 @@ class TransactionBase:
     def get_type(self) -> TransactionType:
         raise NotImplementedError
 
+    def to_transaction(self) -> Transaction:
+        raise NotImplementedError
+
 
 class Execute(TransactionBase, ABC):
 
@@ -73,6 +78,26 @@ class Execute(TransactionBase, ABC):
 
     def get_type(self) -> TransactionType:
         return TransactionType.EXECUTE
+
+    def to_transaction(self) -> Transaction:
+        eip: Eip712Meta = {
+            "feeToken": self.fee.feeToken,
+            "ergsPerStorage": HexStr(self.fee.ergsPerStorageLimit.hex()),
+            "ergsPerPubdata": HexStr(self.fee.ergsPerPubdataLimit.hex()),
+            "withdrawToken": "",
+            "factoryDeps": []
+        }
+        tx: Transaction = {
+            "from": self.address,
+            "to":  self.contract_address,
+            "gas": HexStr(self.fee.ergsLimit.hex()),
+            "gasPrice": HexStr(self.fee.ergsPriceLimit.hex()),
+            "value": HexStr("0x0"),
+            "data": HexStr(self.call_data.hex()),
+            "transactionType": HexStr(Transaction712Constants.EIP_712_TX_TYPE.value.hex()),
+            "eip712Meta": eip
+        }
+        return tx
 
 
 class DeployContract(TransactionBase, ABC):
@@ -112,6 +137,27 @@ class DeployContract(TransactionBase, ABC):
     def get_type(self) -> TransactionType:
         return TransactionType.DEPLOY
 
+    def to_transaction(self) -> Transaction:
+        eip: Eip712Meta = {
+            "feeToken": self.fee.feeToken,
+            "ergsPerStorage": HexStr(self.fee.ergsPerStorageLimit.hex()),
+            "ergsPerPubdata": HexStr(self.fee.ergsPerPubdataLimit.hex()),
+            "withdrawToken": "",
+            "factoryDeps": self.factory_deps
+
+        }
+        tx: Transaction = {
+            "from": self.address,
+            "to": HexStr(self.DEFAULT_ADDRESS),
+            "gas": HexStr(self.fee.ergsLimit.hex()),
+            "gasPrice": HexStr(self.fee.ergsPriceLimit.hex()),
+            "value": HexStr("0x0"),
+            "data": HexStr(self._get_input().hex()),
+            "transactionType": HexStr(Transaction712Constants.EIP_712_TX_TYPE.value.hex()),
+            "eip712Meta": eip
+        }
+        return tx
+
 
 class Withdraw(TransactionBase, ABC):
 
@@ -141,6 +187,26 @@ class Withdraw(TransactionBase, ABC):
 
     def get_type(self) -> TransactionType:
         return TransactionType.WITHDRAW
+
+    def to_transaction(self) -> Transaction:
+        eip: Eip712Meta = {
+            "feeToken": self.fee.feeToken,
+            "ergsPerStorage": HexStr(self.fee.ergsPerStorageLimit.hex()),
+            "ergsPerPubdata": HexStr(self.fee.ergsPerPubdataLimit.hex()),
+            "withdrawToken": self.token_address,
+            "factoryDeps": []
+        }
+        tx: Transaction = {
+            "from": self.address,
+            "to":  self.to,
+            "gas": HexStr(self.fee.ergsLimit.hex()),
+            "gasPrice": HexStr(self.fee.ergsPriceLimit.hex()),
+            "value": HexStr(hex(self.amount)),
+            "data": HexStr(""),
+            "transactionType": HexStr(Transaction712Constants.EIP_712_TX_TYPE.value.hex()),
+            "eip712Meta": eip
+        }
+        return tx
 
 
 

@@ -7,12 +7,22 @@ from decimal import Decimal
 
 # TODO: add builders and types with convertors
 
+# INFO: see original
+# public class Eip712Meta {
+#     private String feeToken;
+#     private BigInteger ergsPerStorage;
+#     private BigInteger ergsPerPubdata;
+#     private String withdrawToken;
+#     private byte[][] factoryDeps;
+
 Eip712Meta = TypedDict(
     "Eip712Meta",
     {
         "feeToken": HexStr,
         "ergsPerStorage": HexStr,
-        "ergsPerPubdata": HexStr
+        "ergsPerPubdata": HexStr,
+        "withdrawToken": str,
+        "factoryDeps": list
     })
 
 # INFO: ONLY FOR estimationFee as Input Type

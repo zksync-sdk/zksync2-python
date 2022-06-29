@@ -5,7 +5,7 @@ from transaction.transaction import TransactionBase, TransactionType
 
 
 class Transaction712:
-    EIP_712_TX_TYPE = b'\x70'
+    # EIP_712_TX_TYPE = b'\x70'
 
     def __init__(self, transaction: TransactionBase, chain_id):
         self.transaction = transaction
