@@ -15,6 +15,7 @@ from decimal import Decimal
 #     private String withdrawToken;
 #     private byte[][] factoryDeps;
 
+# TODO: type depends fields - > DO POLYMORPHYC TYPE
 Eip712Meta = TypedDict(
     "Eip712Meta",
     {
