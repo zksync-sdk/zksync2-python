@@ -3,10 +3,14 @@ from eth_typing import HexStr
 from web3 import Web3
 
 
+# TODO: might need to provide custom gas Provider
+
 class ContractBase:
 
     def __init__(self, contract_address: HexStr, web3: Web3, account: BaseAccount, abi):
-        self.contract_address = contract_address
+        # INFO: web3 py requirements
+        check_sum_address = Web3.toChecksumAddress(contract_address)
+        self.contract_address = check_sum_address
         self.web3 = web3
         self.contract = self.web3.eth.contract(self.contract_address, abi=abi)  # type: ignore[call-overload]
         self.account = account
@@ -16,6 +20,9 @@ class ContractBase:
         if amount is not None:
             params['value'] = amount
         params['from'] = self.account.address
+        # INFO: must have under latest version
+        # params['maxFeePerGas'] = Web3.toWei(250, 'gwei')
+        # params['maxPriorityFeePerGas'] = Web3.toWei(2, 'gwei')
         transaction = getattr(self.contract.functions, method_name)(
             *args,
             **kwargs

@@ -35,8 +35,14 @@ class ERC20Contract(ContractBase):
     def approve_deposit(self, max_erc20_approve_amount=MAX_ERC20_APPROVE_AMOUNT):
         return self._call_method('approve', self.zksync_address, max_erc20_approve_amount)
 
-    def is_deposit_approved(self, erc20_approve_threshold=ERC20_APPROVE_THRESHOLD):
-        allowance = self.contract.functions.allowance(self.account.address,
+    # def is_deposit_approved(self, erc20_approve_threshold=ERC20_APPROVE_THRESHOLD):
+    #     allowance = self.contract.functions.allowance(self.account.address,
+    #                                                   self.zksync_address).call()
+    #     return allowance >= erc20_approve_threshold
+    def is_deposit_approved(self, to: str, erc20_approve_threshold=ERC20_APPROVE_THRESHOLD):
+        allowance = self.contract.functions.allowance(to,
                                                       self.zksync_address).call()
-
         return allowance >= erc20_approve_threshold
+
+    def transfer(self, _to: str, _value: int):
+        self._call_method("transfer", _to, _value)

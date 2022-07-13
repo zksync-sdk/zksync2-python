@@ -1,5 +1,7 @@
 import json
 
+import contract_abi
+
 from eth_typing import HexStr
 from web3 import Web3
 from web3.contract import Contract
@@ -10,7 +12,11 @@ from eth_account.signers.base import BaseAccount
 from protocol.contract_base import ContractBase
 
 zksync_abi_cache = None
-zksync_default_path = Path('./contract_abi/ZkSync.json')
+
+
+def get_zksync_default_path() -> Path:
+    zksync_default_path = Path(contract_abi.__file__).parent / Path('ZkSync.json')
+    return zksync_default_path
 
 
 # def build_zksync_contract(w3: Web3, contract_address, abi=None) -> 'Contract':
@@ -29,7 +35,8 @@ def _zksync_abi_default():
     global zksync_abi_cache
 
     if zksync_abi_cache is None:
-        with zksync_default_path.open(mode='r') as json_file:
+        zksync_path = get_zksync_default_path()
+        with zksync_path.open(mode='r') as json_file:
             data = json.load(json_file)
             zksync_abi_cache = data['abi']
     return zksync_abi_cache
@@ -76,13 +83,37 @@ class ZkSyncContract(ContractBase):
                                  _op_tree)
 
     def deposit_base_cost(self, _gas_price: int, _queue_type: int, _op_tree: int):
-        return self._call_method('depositBaseCost', _gas_price, _queue_type, _op_tree)
+        # return self._call_method('depositBaseCost', _gasPrice=_gas_price, _queueType=_queue_type, _opTree=_op_tree)
+        nonce = self.web3.eth.get_transaction_count(self.account.address)
+        transaction = self.contract.functions.depositBaseCost(_gas_price, _queue_type, _op_tree).build_transaction({
+            # 'chainId': self.web3.eth.chain_id,
+            'gas': 70000,
+            'maxFeePerGas': Web3.toWei('2', 'gwei'),
+            'maxPriorityFeePerGas': Web3.toWei('1', 'gwei'),
+            'nonce': nonce,
+            'from': self.account.address
+        })
+        signed_tx = self.account.sign_transaction(transaction)
+        txn_hash = self.web3.eth.send_raw_transaction(signed_tx.rawTransaction)
+        txn_receipt = self.web3.eth.waitForTransactionReceipt(txn_hash)
+        return txn_receipt
 
     def deposit_erc20(self, _token: str, _amount: int, _zk_sync_address: str, _queue_type: int, _op_tree: int):
         return self._call_method('depositERC20', _token, _amount, _zk_sync_address, _queue_type, _op_tree)
 
     def deposit_eth(self, _amount: int, _zk_sync_address: str, _queue_type: int, _op_tree: int, _value: int):
-        return self._call_method('depositETH', _amount, _zk_sync_address, _queue_type, _op_tree, _value)
+        nonce = self.web3.eth.get_transaction_count(self.account.address)
+        tx = self.contract.functions.depositETH(_amount, _zk_sync_address, _queue_type, _op_tree).build_transaction({
+            "chainId": self.web3.eth.chain_id,
+            'gas': 100000,
+            'gasPrice': 0,
+            'nonce': nonce,
+            'value': _value
+        })
+        signed_tx = self.account.sign_transaction(tx)
+        txn_hash = self.web3.eth.send_raw_transaction(signed_tx.rawTransaction)
+        txn_receipt = self.web3.eth.wait_for_transaction_receipt(txn_hash)
+        return txn_receipt
 
     def emergency_freeze_diamond(self):
         return self._call_method('emergencyFreezeDiamond')
@@ -132,12 +163,12 @@ class ZkSyncContract(ContractBase):
         return self._call_method('requestDeployContract', _bytecode, _calldata, _ergs_limit, _queue_type, _op_tree)
 
     def request_execute(self,
-                        _contract_address_L2: str,
-                        _calldata: bytes,
+                        _contract_address_l2: str,
+                        _call_data: bytes,
                         _ergs_limit: int,
                         _queue_type: int,
                         _op_tree: int):
-        return self._call_method('requestExecute', _contract_address_L2, _calldata, _ergs_limit, _queue_type, _op_tree)
+        return self._call_method('requestExecute', _contract_address_l2, _call_data, _ergs_limit, _queue_type, _op_tree)
 
     def request_withdraw(self, _token: str, _amount: int, _to: str, _queue_type: int, _op_tree: int):
         return self._call_method('requestWithdraw', _token, _amount, _to, _queue_type, _op_tree)

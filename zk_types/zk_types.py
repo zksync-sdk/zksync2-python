@@ -140,6 +140,11 @@ class Token:
         # INFO: might need round down
         return x / d
 
+    # def from_decimal(self, amount: Decimal) -> int:
+    #     return int(amount.scaleb(self.decimals))
+
+    # INFO: WEI TO ETH
+    # ONLY FOR ZKSYNC
     def to_int(self, amount: Decimal) -> int:
         # return int(amount.scaleb(self.decimals))
         return int(amount * (Decimal(10) ** self.decimals))

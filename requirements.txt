@@ -4,4 +4,4 @@ eth_typing==2.3.0
 eth_utils==1.10.0
 hexbytes==0.2.2
 rlp==2.0.1
-web3==5.29.2
+web3==5.30.0
