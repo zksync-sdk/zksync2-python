@@ -108,10 +108,20 @@ class Fee:
     ergsPriceLimit: HexBytes
     ergsPerStorageLimit: HexBytes
     ergsPerPubdataLimit: HexBytes
+
     # ergsLimit: HexBytes = HexBytes(0)
     # ergsPriceLimit: HexBytes = HexBytes(0)
     # ergsPerStorageLimit: HexBytes = HexBytes(0)
     # ergsPerPubdataLimit: HexBytes = HexBytes(0)
+
+    @classmethod
+    def default_fee(cls, address: TokenAddress) -> 'Fee':
+        val = cls(feeToken=address,
+                  ergsLimit=HexBytes(0),
+                  ergsPriceLimit=HexBytes(0),
+                  ergsPerStorageLimit=HexBytes(0),
+                  ergsPerPubdataLimit=HexBytes(0))
+        return val
 
 
 @dataclass

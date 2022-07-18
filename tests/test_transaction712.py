@@ -48,7 +48,7 @@ class TestTransaction712(TestCase):
         self.counter_contract_instance = self.w3.eth.contract(abi=self.counter_contract_abi,
                                                               bytecode=self.counter_contract)
 
-    def test_withdraw_encode(self):
+    def test_encode_withdraw(self):
         withdraw = Withdraw(token_address=self.token.address,
                             to=self._TEST_ADDRESS,
                             amount=Web3.toWei(1, 'ether'),

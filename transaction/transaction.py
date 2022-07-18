@@ -49,6 +49,9 @@ class TransactionBase:
     def to_transaction(self) -> Transaction:
         raise NotImplementedError
 
+    def set_fee(self, new_fee: Fee):
+        self.fee = new_fee
+
 
 class Execute(TransactionBase, ABC):
 

@@ -45,4 +45,5 @@ class ERC20Contract(ContractBase):
         return allowance >= erc20_approve_threshold
 
     def transfer(self, _to: str, _value: int):
-        self._call_method("transfer", _to, _value)
+        # self._call_method("transfer", _to, _value)
+        self.contract.functions.transfer(_to, _value).transaction({"from": self.account.address})
