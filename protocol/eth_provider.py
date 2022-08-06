@@ -31,10 +31,11 @@ class EthereumProvider:
     def approve_deposits(self, token: Token, limit: Decimal):
         contract = ERC20Contract(self.web3,
                                  # self.zksync_contract.contract_address,
-                                 self.address,
+                                 # self.address,
                                  token.address,
                                  self.zksync_contract.account)
-        return contract.approve_deposit(token.to_int(limit))
+        # return contract.approve_deposit(token.to_int(limit))
+        return contract.approve_deposit(self.address, token.to_int(limit))
 
     def transfer(self, token: Token, amount: Decimal, to: HexStr):
         if token.is_eth():
@@ -48,9 +49,13 @@ class EthereumProvider:
             signed_tx = self.web3.eth.account.sign_transaction(tx, self.zksync_contract.account)
             return self.web3.eth.send_raw_transaction(signed_tx)
         else:
+            # token_contract = ERC20Contract(web3=self.web3,
+            #                                zksync_address=token.address,
+            #                                contract_address=self.zksync_contract.contract_address,
+            #                                account=self.zksync_contract.account)
+            # return token_contract.transfer(to, token.to_int(amount))
             token_contract = ERC20Contract(web3=self.web3,
-                                           zksync_address=token.address,
-                                           contract_address=self.zksync_contract.contract_address,
+                                           contract_address=token.address,
                                            account=self.zksync_contract.account)
             return token_contract.transfer(to, token.to_int(amount))
 
@@ -83,10 +88,17 @@ class EthereumProvider:
                                                      PriorityOpTree.FULL.value)
 
     def is_deposit_approved(self, token: Token, to: str, threshold: int = None):
-        token_contract = ERC20Contract(self.web3, self.address, token.address,
-                                       self.zksync_contract.account)
+        # token_contract = ERC20Contract(self.web3, self.address, token.address,
+        #                                self.zksync_contract.account)
+        # # TODO: refactor it
+        # if threshold is not None:
+        #     return token_contract.is_deposit_approved(to, threshold)
+        # else:
+        #     return token_contract.is_deposit_approved(to)
+
+        token_contract = ERC20Contract(self.web3, token.address, self.zksync_contract.account)
         # TODO: refactor it
         if threshold is not None:
-            return token_contract.is_deposit_approved(to, threshold)
+            return token_contract.is_deposit_approved(self.zksync_contract.contract_address, to, threshold)
         else:
-            return token_contract.is_deposit_approved(to)
+            return token_contract.is_deposit_approved(self.zksync_contract.contract_address, to)

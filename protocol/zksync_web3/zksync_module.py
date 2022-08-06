@@ -1,0 +1,163 @@
+from abc import ABC
+from web3 import Web3
+from web3.eth import Eth
+from web3.types import RPCEndpoint
+
+from protocol.core.types import TransactionHash, Limit, L2WithdrawTxHash, From, ContractSourceDebugInfo, BridgeAddresses
+from protocol.request.request_types import *
+from protocol.response.response_types import *
+from eth_typing import Address
+from web3.method import Method, default_root_munger
+from typing import Any, Callable, List
+
+
+class ZkSync(Eth, ABC):
+    zks_estimate_fee_rpc = RPCEndpoint("zks_estimateFee")
+    zks_main_contract_rpc = RPCEndpoint("zks_getMainContract")
+    zks_get_l1_withdraw_tx_rpc = RPCEndpoint("zks_getL1WithdrawalTx")
+    zks_get_confirmed_tokens_rpc = RPCEndpoint("zks_getConfirmedTokens")
+    zks_is_token_liquid_rpc = RPCEndpoint("zks_isTokenLiquid")
+    zks_get_token_price_rpc = RPCEndpoint("zks_getTokenPrice")
+    zks_l1_chain_id_rpc = RPCEndpoint("zks_L1ChainId")
+    zks_eth_get_balance_rpc = RPCEndpoint("eth_getBalance")
+    zks_get_all_account_balances_rpc = RPCEndpoint("zks_getAllAccountBalances")
+    zks_get_bridge_contracts_rpc = RPCEndpoint("zks_getBridgeContracts")
+    zks_get_l2_to_l1_msg_proof_prc = RPCEndpoint("zks_getL2ToL1MsgProof")
+    eth_gas_price_rpc = RPCEndpoint("eth_gasPrice")
+    eth_estimate_gas_rpc = RPCEndpoint("eth_estimateGas")
+
+    zks_set_contract_debug_info_rpc = RPCEndpoint("zks_setContractDebugInfo")
+    zks_get_contract_debug_info_rpc = RPCEndpoint("zks_getContractDebugInfo")
+    zks_get_transaction_trace_rpc = RPCEndpoint("zks_getTransactionTrace")
+
+    _zks_estimate_fee: Method[Callable[[Transaction], ZksEstimateFee]] = Method(
+        zks_estimate_fee_rpc,
+        mungers=[default_root_munger]
+    )
+
+    _zks_main_contract: Method[Callable[[], ZksMainContract]] = Method(
+        zks_main_contract_rpc,
+        mungers=None
+    )
+
+    _zks_get_l1_withdraw_tx: Method[Callable[[L2WithdrawTxHash], TransactionHash]] = Method(
+        zks_get_l1_withdraw_tx_rpc,
+        mungers=[default_root_munger]
+    )
+
+    _zks_get_confirmed_tokens: Method[Callable[[From, Limit], ZksTokens]] = Method(
+        zks_get_confirmed_tokens_rpc,
+        mungers=[default_root_munger]
+    )
+
+    _zks_is_token_liquid: Method[Callable[[TokenAddress], ZksIsTokenLiquid]] = Method(
+        zks_is_token_liquid_rpc,
+        mungers=[default_root_munger]
+    )
+
+    _zks_get_token_price: Method[Callable[[TokenAddress], ZksTokenPrice]] = Method(
+        zks_get_token_price_rpc,
+        mungers=[default_root_munger]
+    )
+
+    _zks_l1_chain_id: Method[Callable[[], ZksL1ChainId]] = Method(
+        zks_l1_chain_id_rpc,
+        mungers=None
+    )
+
+    _zks_eth_get_balance: Method[Callable[[Address, Any, TokenAddress], Any]] = Method(
+        zks_eth_get_balance_rpc,
+        mungers=[default_root_munger]
+    )
+
+    _zks_get_all_account_balances: Method[Callable[[Address], ZksAccountBalances]] = Method(
+        zks_get_all_account_balances_rpc,
+        mungers=[default_root_munger]
+    )
+
+    _zks_get_bridge_contracts: Method[Callable[[], ZksBridgeAddresses]] = Method(
+        zks_get_bridge_contracts_rpc,
+        mungers=[default_root_munger]
+    )
+
+    _zks_get_l2_to_l1_msg_proof: Method[Callable[[int, HexStr, str, Optional[int]], ZksMessageProof]] = Method(
+        zks_get_l2_to_l1_msg_proof_prc,
+        mungers=[default_root_munger]
+    )
+
+    _eth_gas_price: Method[Callable[[TokenAddress], str]] = Method(
+        eth_gas_price_rpc,
+        mungers=[default_root_munger]
+    )
+
+    _eth_estimate_gas: Method[Callable[[Transaction], str]] = Method(
+        eth_estimate_gas_rpc,
+        mungers=[default_root_munger]
+    )
+
+    # TODO: implement it
+    _zks_set_contract_debug_info: Method[Callable[[Address,
+                                                   ContractSourceDebugInfo],
+                                                  ZksSetContractDebugInfoResult]] = Method(
+        zks_set_contract_debug_info_rpc,
+        mungers=[default_root_munger]
+    )
+    _zks_get_contract_debug_info: Method[Callable[[Address], ContractSourceDebugInfo]] = Method(
+        zks_get_contract_debug_info_rpc,
+        mungers=[default_root_munger]
+    )
+
+    _zks_get_transaction_trace : Method[Callable[[Address], ZksTransactionTrace]] = Method(
+        zks_get_transaction_trace_rpc,
+        mungers=[default_root_munger]
+    )
+
+    def __init__(self, web3: "Web3"):
+        super(ZkSync, self).__init__(web3)
+
+    def zks_estimate_fee(self, transaction: Transaction) -> Fee:
+        return self._zks_estimate_fee(transaction)
+
+    def zks_main_contract(self) -> HexStr:
+        return self._zks_main_contract()
+
+    def zks_get_l1_withdraw_tx(self, withdraw_hash: L2WithdrawTxHash) -> TransactionHash:
+        return self._zks_get_l1_withdraw_tx(withdraw_hash)
+
+    def zks_get_confirmed_tokens(self, offset: From, limit: Limit) -> List[Token]:
+        return self._zks_get_confirmed_tokens(offset, limit)
+
+    def zks_is_token_liquid(self, token_address: TokenAddress) -> bool:
+        return self._zks_is_token_liquid(token_address)
+
+    def zks_get_token_price(self, token_address: TokenAddress) -> Decimal:
+        return self._zks_get_token_price(token_address)
+
+    def zks_l1_chain_id(self) -> int:
+        return self._zks_l1_chain_id()
+
+    def eth_get_balance(self, address: Address, default_block, token_address: TokenAddress) -> Any:
+        return self._zks_eth_get_balance(address, default_block, token_address)
+
+    def zks_get_all_account_balances(self, addr: Address):
+        return self._zks_get_all_account_balances(addr)
+
+    def zks_get_bridge_contracts(self) -> BridgeAddresses:
+        response: ZksBridgeAddresses = self._zks_get_bridge_contracts()
+        return BridgeAddresses(response["l1EthDefaultBridge"],
+                               response["l2EthDefaultBridge"],
+                               response["l1Erc20DefaultBridge"],
+                               response["l2Erc20DefaultBridge"])
+
+    def zks_get_l2_to_l1_msg_proof(self,
+                                   block: int,
+                                   sender: HexStr,
+                                   message: str,
+                                   l2log_pos: Optional[int]) -> ZksMessageProof:
+        return self._zks_get_l2_to_l1_msg_proof(block, sender, message, l2log_pos)
+
+    def eth_gas_price(self, token_address: TokenAddress) -> str:
+        return self._eth_gas_price(token_address)
+
+    def eth_estimate_gas(self, tx: Transaction) -> str:
+        return self._eth_estimate_gas(tx)
