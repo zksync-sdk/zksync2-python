@@ -1,7 +1,6 @@
 from typing import TypedDict, List, Any
 from eth_typing import HexStr
-
-# from typing import cast
+from web3.types import AccessList
 
 Eip712Meta = TypedDict(
     "Eip712Meta",
@@ -23,6 +22,6 @@ Transaction = TypedDict(
         "value": int,
         "data": HexStr,
         "transactionType": int,
-        "accessList": List[Any],
+        "accessList": AccessList,
         "eip712Meta": Eip712Meta
     })

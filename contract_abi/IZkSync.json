@@ -1,0 +1,1278 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "IZkSync",
+  "sourceName": "cache/solpp-generated-contracts/zksync/interfaces/IZkSync.sol",
+  "abi": [
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "blockNumber",
+          "type": "uint256"
+        }
+      ],
+      "name": "BlockCommit",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "blockNumber",
+          "type": "uint256"
+        }
+      ],
+      "name": "BlockExecution",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "totalBlocksVerified",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "totalBlocksCommitted",
+          "type": "uint256"
+        }
+      ],
+      "name": "BlocksRevert",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "facet",
+              "type": "address"
+            },
+            {
+              "internalType": "enum Diamond.Action",
+              "name": "action",
+              "type": "uint8"
+            },
+            {
+              "internalType": "bool",
+              "name": "isFreezable",
+              "type": "bool"
+            },
+            {
+              "internalType": "bytes4[]",
+              "name": "selectors",
+              "type": "bytes4[]"
+            }
+          ],
+          "indexed": false,
+          "internalType": "struct Diamond.FacetCut[]",
+          "name": "_facetCuts",
+          "type": "tuple[]"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "_initAddress",
+          "type": "address"
+        }
+      ],
+      "name": "DiamondCutProposal",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [],
+      "name": "DiamondCutProposalCancelation",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "components": [
+            {
+              "components": [
+                {
+                  "internalType": "address",
+                  "name": "facet",
+                  "type": "address"
+                },
+                {
+                  "internalType": "enum Diamond.Action",
+                  "name": "action",
+                  "type": "uint8"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "isFreezable",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bytes4[]",
+                  "name": "selectors",
+                  "type": "bytes4[]"
+                }
+              ],
+              "internalType": "struct Diamond.FacetCut[]",
+              "name": "facetCuts",
+              "type": "tuple[]"
+            },
+            {
+              "internalType": "address",
+              "name": "initAddress",
+              "type": "address"
+            },
+            {
+              "internalType": "bytes",
+              "name": "initCalldata",
+              "type": "bytes"
+            }
+          ],
+          "indexed": false,
+          "internalType": "struct Diamond.DiamondCutData",
+          "name": "_diamondCut",
+          "type": "tuple"
+        }
+      ],
+      "name": "DiamondCutProposalExecution",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "_address",
+          "type": "address"
+        }
+      ],
+      "name": "EmergencyDiamondCutApproved",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [],
+      "name": "EmergencyFreeze",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "newGovernor",
+          "type": "address"
+        }
+      ],
+      "name": "NewGovernor",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "oldPendingGovernor",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "newPendingGovernor",
+          "type": "address"
+        }
+      ],
+      "name": "NewPendingGovernor",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "txId",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "txHash",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint64",
+          "name": "expirationBlock",
+          "type": "uint64"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "txType",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "from",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "to",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "ergsLimit",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "ergsPerPubdataByteLimit",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "ergsPrice",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256[6]",
+              "name": "reserved",
+              "type": "uint256[6]"
+            },
+            {
+              "internalType": "bytes",
+              "name": "data",
+              "type": "bytes"
+            },
+            {
+              "internalType": "bytes",
+              "name": "signature",
+              "type": "bytes"
+            },
+            {
+              "internalType": "uint256[]",
+              "name": "factoryDeps",
+              "type": "uint256[]"
+            },
+            {
+              "internalType": "bytes",
+              "name": "reservedDynamic",
+              "type": "bytes"
+            }
+          ],
+          "indexed": false,
+          "internalType": "struct IMailbox.L2CanonicalTransaction",
+          "name": "transaction",
+          "type": "tuple"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes[]",
+          "name": "factoryDeps",
+          "type": "bytes[]"
+        }
+      ],
+      "name": "NewPriorityRequest",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [],
+      "name": "Unfreeze",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "validatorAddress",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "bool",
+          "name": "isActive",
+          "type": "bool"
+        }
+      ],
+      "name": "ValidatorStatusUpdate",
+      "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "acceptGovernor",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "_diamondCutHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "approveEmergencyDiamondCutAsSecurityCouncilMember",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "cancelDiamondCutProposal",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint32",
+              "name": "blockNumber",
+              "type": "uint32"
+            },
+            {
+              "internalType": "uint16",
+              "name": "numberOfLayer1Txs",
+              "type": "uint16"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "priorityOperationsHash",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "l2LogsTreeRoot",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "uint256",
+              "name": "timestamp",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "stateRoot",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "commitment",
+              "type": "bytes32"
+            }
+          ],
+          "internalType": "struct IExecutor.StoredBlockInfo",
+          "name": "_lastCommittedBlockData",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "bytes32",
+              "name": "newStateRoot",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "uint32",
+              "name": "blockNumber",
+              "type": "uint32"
+            },
+            {
+              "internalType": "address",
+              "name": "feeAccount",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "timestamp",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint16",
+              "name": "numberOfLayer1Txs",
+              "type": "uint16"
+            },
+            {
+              "internalType": "uint16",
+              "name": "numberOfLayer2Txs",
+              "type": "uint16"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "priorityOperationsHash",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "l2LogsTreeRoot",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "bytes",
+              "name": "l2Logs",
+              "type": "bytes"
+            },
+            {
+              "internalType": "bytes[]",
+              "name": "l2ArbitraryLengthMessages",
+              "type": "bytes[]"
+            },
+            {
+              "internalType": "bytes",
+              "name": "deployedContracts",
+              "type": "bytes"
+            },
+            {
+              "internalType": "bytes",
+              "name": "storageChanges",
+              "type": "bytes"
+            }
+          ],
+          "internalType": "struct IExecutor.CommitBlockInfo[]",
+          "name": "_newBlocksData",
+          "type": "tuple[]"
+        }
+      ],
+      "name": "commitBlocks",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "emergencyFreezeDiamond",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint32",
+              "name": "blockNumber",
+              "type": "uint32"
+            },
+            {
+              "internalType": "uint16",
+              "name": "numberOfLayer1Txs",
+              "type": "uint16"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "priorityOperationsHash",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "l2LogsTreeRoot",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "uint256",
+              "name": "timestamp",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "stateRoot",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "commitment",
+              "type": "bytes32"
+            }
+          ],
+          "internalType": "struct IExecutor.StoredBlockInfo[]",
+          "name": "_blocksData",
+          "type": "tuple[]"
+        }
+      ],
+      "name": "executeBlocks",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "components": [
+                {
+                  "internalType": "address",
+                  "name": "facet",
+                  "type": "address"
+                },
+                {
+                  "internalType": "enum Diamond.Action",
+                  "name": "action",
+                  "type": "uint8"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "isFreezable",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bytes4[]",
+                  "name": "selectors",
+                  "type": "bytes4[]"
+                }
+              ],
+              "internalType": "struct Diamond.FacetCut[]",
+              "name": "facetCuts",
+              "type": "tuple[]"
+            },
+            {
+              "internalType": "address",
+              "name": "initAddress",
+              "type": "address"
+            },
+            {
+              "internalType": "bytes",
+              "name": "initCalldata",
+              "type": "bytes"
+            }
+          ],
+          "internalType": "struct Diamond.DiamondCutData",
+          "name": "_diamondCut",
+          "type": "tuple"
+        }
+      ],
+      "name": "executeDiamondCutProposal",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes4",
+          "name": "_selector",
+          "type": "bytes4"
+        }
+      ],
+      "name": "facetAddress",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "facet",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "facetAddresses",
+      "outputs": [
+        {
+          "internalType": "address[]",
+          "name": "facets",
+          "type": "address[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_facet",
+          "type": "address"
+        }
+      ],
+      "name": "facetFunctionSelectors",
+      "outputs": [
+        {
+          "internalType": "bytes4[]",
+          "name": "",
+          "type": "bytes4[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "facets",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "addr",
+              "type": "address"
+            },
+            {
+              "internalType": "bytes4[]",
+              "name": "selectors",
+              "type": "bytes4[]"
+            }
+          ],
+          "internalType": "struct IGetters.Facet[]",
+          "name": "",
+          "type": "tuple[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "facetsExtended",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "addr",
+              "type": "address"
+            },
+            {
+              "components": [
+                {
+                  "internalType": "bytes4",
+                  "name": "selector",
+                  "type": "bytes4"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "isFreezable",
+                  "type": "bool"
+                }
+              ],
+              "internalType": "struct IGetters.SelectorExtended[]",
+              "name": "selectors",
+              "type": "tuple[]"
+            }
+          ],
+          "internalType": "struct IGetters.FacetExtended[]",
+          "name": "",
+          "type": "tuple[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getGovernor",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getLastProcessedPriorityTx",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getTotalBlocksCommitted",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getTotalBlocksExecuted",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getTotalBlocksVerified",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getTotalPriorityTxs",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getVerifier",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes4",
+          "name": "_selector",
+          "type": "bytes4"
+        }
+      ],
+      "name": "isFunctionFreezable",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_address",
+          "type": "address"
+        }
+      ],
+      "name": "isValidator",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint32",
+          "name": "blockNumber",
+          "type": "uint32"
+        }
+      ],
+      "name": "l2LogsRootHash",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "hash",
+          "type": "bytes32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_gasPrice",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_ergsLimit",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint32",
+          "name": "_calldataLength",
+          "type": "uint32"
+        }
+      ],
+      "name": "l2TransactionBaseCost",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "facet",
+              "type": "address"
+            },
+            {
+              "internalType": "enum Diamond.Action",
+              "name": "action",
+              "type": "uint8"
+            },
+            {
+              "internalType": "bool",
+              "name": "isFreezable",
+              "type": "bool"
+            },
+            {
+              "internalType": "bytes4[]",
+              "name": "selectors",
+              "type": "bytes4[]"
+            }
+          ],
+          "internalType": "struct Diamond.FacetCut[]",
+          "name": "_facetCuts",
+          "type": "tuple[]"
+        },
+        {
+          "internalType": "address",
+          "name": "_initAddress",
+          "type": "address"
+        }
+      ],
+      "name": "proposeDiamondCut",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint32",
+              "name": "blockNumber",
+              "type": "uint32"
+            },
+            {
+              "internalType": "uint16",
+              "name": "numberOfLayer1Txs",
+              "type": "uint16"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "priorityOperationsHash",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "l2LogsTreeRoot",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "uint256",
+              "name": "timestamp",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "stateRoot",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "commitment",
+              "type": "bytes32"
+            }
+          ],
+          "internalType": "struct IExecutor.StoredBlockInfo[]",
+          "name": "_committedBlocks",
+          "type": "tuple[]"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256[]",
+              "name": "recursiveInput",
+              "type": "uint256[]"
+            },
+            {
+              "internalType": "uint256[]",
+              "name": "proof",
+              "type": "uint256[]"
+            },
+            {
+              "internalType": "uint256[]",
+              "name": "commitments",
+              "type": "uint256[]"
+            },
+            {
+              "internalType": "uint8[]",
+              "name": "vkIndexes",
+              "type": "uint8[]"
+            },
+            {
+              "internalType": "uint256[16]",
+              "name": "subproofsLimbs",
+              "type": "uint256[16]"
+            }
+          ],
+          "internalType": "struct IExecutor.ProofInput",
+          "name": "_proof",
+          "type": "tuple"
+        }
+      ],
+      "name": "proveBlocks",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_blockNumber",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_index",
+          "type": "uint256"
+        },
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "sender",
+              "type": "address"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "key",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "value",
+              "type": "bytes32"
+            }
+          ],
+          "internalType": "struct L2Log",
+          "name": "_log",
+          "type": "tuple"
+        },
+        {
+          "internalType": "bytes32[]",
+          "name": "_proof",
+          "type": "bytes32[]"
+        }
+      ],
+      "name": "proveL2LogInclusion",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_blockNumber",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_index",
+          "type": "uint256"
+        },
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "sender",
+              "type": "address"
+            },
+            {
+              "internalType": "bytes",
+              "name": "data",
+              "type": "bytes"
+            }
+          ],
+          "internalType": "struct L2Message",
+          "name": "_message",
+          "type": "tuple"
+        },
+        {
+          "internalType": "bytes32[]",
+          "name": "_proof",
+          "type": "bytes32[]"
+        }
+      ],
+      "name": "proveL2MessageInclusion",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_contractAddressL2",
+          "type": "address"
+        },
+        {
+          "internalType": "bytes",
+          "name": "_calldata",
+          "type": "bytes"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_ergsLimit",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bytes[]",
+          "name": "_factoryDeps",
+          "type": "bytes[]"
+        }
+      ],
+      "name": "requestL2Transaction",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "txHash",
+          "type": "bytes32"
+        }
+      ],
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_blocksToRevert",
+          "type": "uint256"
+        }
+      ],
+      "name": "revertBlocks",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_txId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_layer2Tip",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "_sender",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_contractAddressL2",
+          "type": "address"
+        },
+        {
+          "internalType": "bytes",
+          "name": "_calldata",
+          "type": "bytes"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_ergsLimit",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bytes[]",
+          "name": "_factoryDeps",
+          "type": "bytes[]"
+        }
+      ],
+      "name": "serializeL2Transaction",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "txType",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "from",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "to",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "ergsLimit",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "ergsPerPubdataByteLimit",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "ergsPrice",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256[6]",
+              "name": "reserved",
+              "type": "uint256[6]"
+            },
+            {
+              "internalType": "bytes",
+              "name": "data",
+              "type": "bytes"
+            },
+            {
+              "internalType": "bytes",
+              "name": "signature",
+              "type": "bytes"
+            },
+            {
+              "internalType": "uint256[]",
+              "name": "factoryDeps",
+              "type": "uint256[]"
+            },
+            {
+              "internalType": "bytes",
+              "name": "reservedDynamic",
+              "type": "bytes"
+            }
+          ],
+          "internalType": "struct IMailbox.L2CanonicalTransaction",
+          "name": "",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "pure",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_newPendingGovernor",
+          "type": "address"
+        }
+      ],
+      "name": "setPendingGovernor",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_validator",
+          "type": "address"
+        },
+        {
+          "internalType": "bool",
+          "name": "_active",
+          "type": "bool"
+        }
+      ],
+      "name": "setValidator",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "unfreezeDiamond",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x",
+  "deployedBytecode": "0x",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}

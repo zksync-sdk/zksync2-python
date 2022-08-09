@@ -6,7 +6,7 @@ from eip712_structs import make_domain, EIP712Struct
 from eth_typing import ChecksumAddress
 from zk_types.zk_types import *
 from eth_account.signers.local import LocalAccount
-from eth_account.messages import encode_defunct, defunct_hash_message, encode_structured_data, _hash_eip191_message
+from eth_account.messages import encode_defunct, encode_structured_data
 from eth_utils.curried import to_bytes
 
 

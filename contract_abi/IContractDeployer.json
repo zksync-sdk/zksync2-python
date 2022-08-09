@@ -1,0 +1,40 @@
+{
+  "_format": "hh-zksolc-artifact-1",
+  "contractName": "IContractDeployer",
+  "sourceName": "cache-zk/solpp-generated-contracts/L2ContractHelper.sol",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "_salt",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "_bytecodeHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_value",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bytes",
+          "name": "_input",
+          "type": "bytes"
+        }
+      ],
+      "name": "create2",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x",
+  "deployedBytecode": "0x",
+  "linkReferences": {},
+  "deployedLinkReferences": {},
+  "factoryDeps": {}
+}
