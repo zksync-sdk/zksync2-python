@@ -14,8 +14,8 @@ def _icontract_deployer_abi_default():
     if icontract_deployer_abi_cache is None:
         with icontract_deployer_abi_default_path.open(mode='r') as json_file:
             data = json.load(json_file)
-            erc_20_abi_cache = data['abi']
-    return erc_20_abi_cache
+            icontract_deployer_abi_cache = data['abi']
+    return icontract_deployer_abi_cache
 
 
 class ContractDeployer:
