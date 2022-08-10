@@ -5,7 +5,7 @@ from decimal import Decimal
 
 from eth_typing import HexStr
 from web3 import Web3
-from protocol.erc20_contract import ERC20Contract
+from protocol.utility_contracts.erc20_contract import ERC20Contract
 from protocol.zksync_contract import ZkSyncContract
 from zk_types.zk_types import Token
 from zk_types.priority_queue_type import PriorityQueueType
