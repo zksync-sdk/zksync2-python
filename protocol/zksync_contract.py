@@ -1,42 +1,20 @@
 import json
-
-import contract_abi
-
 from eth_typing import HexStr
 from web3 import Web3
-from web3.contract import Contract
 from pathlib import Path
-# from contract_base import ContractBase
 from eth_account.signers.base import BaseAccount
-
 from protocol.contract_base import ContractBase
 
+
 zksync_abi_cache = None
+zksync_abi_default_path = Path('./contract_abi/IZkSync.json')
 
-
-def get_zksync_default_path() -> Path:
-    zksync_default_path = Path(contract_abi.__file__).parent / Path('ZkSync.json')
-    return zksync_default_path
-
-
-# def build_zksync_contract(w3: Web3, contract_address, abi=None) -> 'Contract':
-#     global zksync_abi_cache
-#
-#     if abi is not None:
-#         return w3.eth.contract(address=contract_address, abi=abi)
-#
-#     if zksync_abi_cache is None:
-#         with zksync_default_path.open(mode='r') as json_file:
-#             data = json.load(json_file)
-#             zksync_abi_cache = data['abi']
-#     return w3.eth.contract(address=contract_address, abi=zksync_abi_cache)
 
 def _zksync_abi_default():
     global zksync_abi_cache
 
     if zksync_abi_cache is None:
-        zksync_path = get_zksync_default_path()
-        with zksync_path.open(mode='r') as json_file:
+        with zksync_abi_default_path.open(mode='r') as json_file:
             data = json.load(json_file)
             zksync_abi_cache = data['abi']
     return zksync_abi_cache

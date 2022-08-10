@@ -9,9 +9,6 @@ import json
 erc_20_abi_cache = None
 erc_20_abi_default_path = Path('./contract_abi/IERC20.json')
 
-# def build_erc20_contract(w3: Web3, contract_address, abi) -> 'Contract':
-#     return w3.eth.contract(address=contract_address, abi=abi)
-
 
 def _erc_20_abi_default():
     global erc_20_abi_cache
@@ -28,11 +25,6 @@ class ERC20Contract(ContractBase):
     MAX_ERC20_APPROVE_AMOUNT = 2 ^ 256 - 1
     ERC20_APPROVE_THRESHOLD = 2 ^ 255
 
-    # TODO: simplify it, let it be provided directly in corresponded methods
-    # def __init__(self, web3: Web3, zksync_address: HexStr, contract_address: HexStr, account: BaseAccount):
-    #     super().__init__(contract_address, web3, account, _erc_20_abi_default())
-    #
-    #     self.zksync_address = zksync_address
     def __init__(self, web3: Web3, contract_address: HexStr, account: BaseAccount):
         super(ERC20Contract, self).__init__(contract_address, web3, account, _erc_20_abi_default())
 

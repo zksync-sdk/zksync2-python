@@ -1,3 +1,4 @@
+from eth_account.signers.base import BaseAccount
 from web3 import Web3
 from web3.contract import Contract
 from eth_typing import HexStr
@@ -21,14 +22,19 @@ def _l1_erc20_bridge_abi_default():
 
 
 class L1ERC20Bridge:
+    DEFAULT_GAS_LIMIT = 21000
 
-    def __init__(self, contract_address: HexStr, web3: Web3, abi=None):
+    def __init__(self, contract_address: HexStr, web3: Web3, eth_account: BaseAccount, abi=None):
         check_sum_address = Web3.toChecksumAddress(contract_address)
         self.web3 = web3
         self.addr = check_sum_address
+        self.account = eth_account
         if abi is None:
             abi = _l1_erc20_bridge_abi_default()
         self.contract: Contract = self.web3.eth.contract(self.addr, abi=abi)
+
+    def _get_nonce(self):
+        return self.web3.eth.get_transaction_count(self.account.address)
 
     def claim_failed_deposit(self, deposit_sender: HexStr,
                              l1_token: HexStr,
@@ -36,31 +42,79 @@ class L1ERC20Bridge:
                              l2_block_number: int,
                              l2_msg_index: int,
                              merkle_proof: List[bytes]):
-        tx_hash = self.contract.functions.claimFailedDeposit(deposit_sender,
-                                                             l1_token,
-                                                             tx_hash,
-                                                             l2_block_number,
-                                                             l2_msg_index,
-                                                             merkle_proof).transact()
-        return self.web3.eth.wait_for_transaction_receipt(tx_hash)
+        tx = self.contract.functions.claimFailedDeposit(deposit_sender,
+                                                        l1_token,
+                                                        tx_hash,
+                                                        l2_block_number,
+                                                        l2_msg_index,
+                                                        merkle_proof).build_transaction(
+            {
+                "chainId": self.web3.eth.chain_id,
+                "from": self.account.address,
+                "nonce": self._get_nonce(),
+                "gas": self.DEFAULT_GAS_LIMIT,
+                "gasPrice": self.web3.eth.gas_price
+            })
+        signed_tx = self.account.sign_transaction(tx)
+        txn_hash = self.web3.eth.send_raw_transaction(signed_tx.rawTransaction)
+        txn_receipt = self.web3.eth.wait_for_transaction_receipt(txn_hash)
+        return txn_receipt
 
     def deposit(self, l2_receiver: HexStr, l1_token: HexStr, amount: int, queue_type: int):
-        tx_hash = self.contract.functions.deposit(l2_receiver, l1_token, amount, queue_type).transact()
-        return self.web3.eth.wait_for_transaction_receipt(tx_hash)
+        tx = self.contract.functions.deposit(l2_receiver,
+                                             l1_token,
+                                             amount,
+                                             queue_type).build_transaction(
+            {
+                "chainId": self.web3.eth.chain_id,
+                "from": self.account.address,
+                "nonce": self._get_nonce(),
+                "gas": self.DEFAULT_GAS_LIMIT,
+                "gasPrice": self.web3.eth.gas_price,
+
+            })
+        signed_tx = self.account.sign_transaction(tx)
+        txn_hash = self.web3.eth.send_raw_transaction(signed_tx.rawTransaction)
+        txn_receipt = self.web3.eth.wait_for_transaction_receipt(txn_hash)
+        return txn_receipt
 
     def finalize_withdrawal(self,
                             l2_block_number: int,
                             l2_msg_index: int,
                             msg: bytes,
                             merkle_proof: List[bytes]):
-        tx_hash = self.contract.functions.finalizeWithdrawal(l2_block_number, l2_msg_index, msg, merkle_proof).transact()
-        return self.web3.eth.wait_for_transaction_receipt(tx_hash)
+        tx = self.contract.functions.finalizeWithdrawal(l2_block_number,
+                                                        l2_msg_index,
+                                                        msg,
+                                                        merkle_proof).build_transaction(
+            {
+                "chainId": self.web3.eth.chain_id,
+                "from": self.account.address,
+                "nonce": self._get_nonce(),
+                "gas": self.DEFAULT_GAS_LIMIT,
+                "gasPrice": self.web3.eth.gas_price
+            })
+        signed_tx = self.account.sign_transaction(tx)
+        txn_hash = self.web3.eth.send_raw_transaction(signed_tx.rawTransaction)
+        txn_receipt = self.web3.eth.wait_for_transaction_receipt(txn_hash)
+        return txn_receipt
 
     def initialize(self,
                    l2_bridge_bytecode: bytes,
                    l2_standard_erc20_bytecode: bytes):
-        tx_hash = self.contract.functions.initialize(l2_bridge_bytecode, l2_standard_erc20_bytecode).transact()
-        return self.web3.eth.wait_for_transaction_receipt(tx_hash)
+        tx = self.contract.functions.initialize(l2_bridge_bytecode,
+                                                l2_standard_erc20_bytecode).build_transaction(
+            {
+                "chainId": self.web3.eth.chain_id,
+                "from": self.account.address,
+                "nonce": self._get_nonce(),
+                "gas": self.DEFAULT_GAS_LIMIT,
+                "gasPrice": self.web3.eth.gas_price
+            })
+        signed_tx = self.account.sign_transaction(tx)
+        txn_hash = self.web3.eth.send_raw_transaction(signed_tx.rawTransaction)
+        txn_receipt = self.web3.eth.wait_for_transaction_receipt(txn_hash)
+        return txn_receipt
 
     def l2_bridge(self):
         return self.contract.functions.l2Bridge().call()
@@ -70,4 +124,3 @@ class L1ERC20Bridge:
 
     def l2_token_address(self, l1_token: HexStr):
         return self.contract.functions.l2TokenAddress(l1_token).call()
-

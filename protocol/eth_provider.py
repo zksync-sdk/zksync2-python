@@ -8,8 +8,8 @@ from web3 import Web3
 from protocol.utility_contracts.erc20_contract import ERC20Contract
 from protocol.zksync_contract import ZkSyncContract
 from zk_types.zk_types import Token
-from zk_types.priority_queue_type import PriorityQueueType
-from zk_types.priority_op_tree import PriorityOpTree
+from protocol.utility_contracts.priority_queue_type import PriorityQueueType
+from protocol.utility_contracts.priority_op_tree import PriorityOpTree
 
 
 # TODO: check to use Static Gas provider for ZkSync
