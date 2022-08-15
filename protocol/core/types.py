@@ -1,7 +1,7 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from decimal import Decimal
-from eth_typing import HexStr, Hash32, Address
-from typing import TypedDict, Union, NewType, Dict, Optional, List, Any
+from eth_typing import HexStr, Hash32
+from typing import Union, NewType, Dict, List, Any
 from hexbytes import HexBytes
 
 ADDRESS_DEFAULT = HexStr("0x" + "0" * 40)
@@ -33,6 +33,9 @@ class Token:
 
     def to_int(self, amount: Decimal) -> int:
         return int(amount * (Decimal(10) ** self.decimals))
+
+    def to_int_test(self) -> int:
+        return 1 * (10 ** self.decimals)
 
     @staticmethod
     def create_eth() -> 'Token':

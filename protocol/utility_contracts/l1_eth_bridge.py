@@ -1,23 +1,24 @@
+import importlib.resources as pkg_resources
 from eth_account.signers.base import BaseAccount
 from web3 import Web3
 from web3.contract import Contract
 from eth_typing import HexStr
 
-from pathlib import Path
 from typing import List
 import json
+from .. import contract_abi
 
 l1_eth_bridge_abi_cache = None
-l1_eth_bridge_abi_default_path = Path('./contract_abi/L1EthBridge.json')
 
 
 def _l1_eth_bridge_abi_default():
     global l1_eth_bridge_abi_cache
 
     if l1_eth_bridge_abi_cache is None:
-        with l1_eth_bridge_abi_default_path.open(mode='r') as json_file:
-            data = json.load(json_file)
-            l1_eth_bridge_abi_cache = data['abi']
+        with pkg_resources.path(contract_abi, "L1EthBridge.json") as p:
+            with p.open(mode='r') as json_file:
+                data = json.load(json_file)
+                l1_eth_bridge_abi_cache = data['abi']
     return l1_eth_bridge_abi_cache
 
 

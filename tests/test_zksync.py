@@ -1,6 +1,6 @@
 from eth_typing import HexStr, ChecksumAddress, HexAddress
 from hexbytes import HexBytes
-from protocol.zksync import ZkSyncBuilder
+from protocol.zksync_web3 import ZkSyncBuilder
 from unittest import TestCase
 from zk_types.zk_types import Transaction, Eip712Meta, L1WithdrawHash, TokenAddress
 from decimal import Decimal
@@ -41,7 +41,7 @@ class TestZkSync(TestCase):
     #         "eip712Meta": eip
     #     }
     #
-    #     response = self.web3.zksync.zks_estimate_fee(tx)
+    #     response = self.web3.zksync_web3.zks_estimate_fee(tx)
     #     self.assertEqual(response['ergsLimit'], "0x2940")
     #     self.assertEqual(response['ergsPriceLimit'], "0x6f9c")
 

@@ -1,15 +1,22 @@
-from typing import TypedDict, List, Any
+from typing import TypedDict, List, Optional
 from eth_typing import HexStr
 from web3.types import AccessList
+
+AAParams = TypedDict(
+    "AAParams",
+    {
+        "from": HexStr,
+        "signature": bytes
+    })
 
 Eip712Meta = TypedDict(
     "Eip712Meta",
     {
         "feeToken": HexStr,
-        "ergsPerStorage": HexStr,
-        "ergsPerPubdata": HexStr,
-        "withdrawToken": str,
-        "factoryDeps": list
+        "ergsPerPubdata": int,
+        "ergsPerStorage": int,
+        "factoryDeps": Optional[List[bytes]],
+        "aaParams": Optional[AAParams]
     })
 
 Transaction = TypedDict(

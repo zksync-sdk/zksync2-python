@@ -4,7 +4,7 @@ from eth_account.signers.local import LocalAccount
 from crypto.eth_signer import PrivateKeyEthSigner
 from zksync_wallet import ZkSyncWallet
 from zk_types.zk_types import *
-from protocol.zksync import ZkSyncBuilder
+from protocol.zksync_web3 import ZkSyncBuilder
 
 # import logging
 # import sys

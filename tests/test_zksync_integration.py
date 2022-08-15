@@ -1,9 +1,11 @@
 from unittest import TestCase
 
-from protocol.erc20_contract import ERC20Contract
+from eth_typing import HexStr
+
+from protocol.utility_contracts.erc20_contract import ERC20Contract
 from protocol.zksync_contract import ZkSyncContract
-from transaction.transaction import TransactionBase, Execute, DeployContract, Withdraw
-from protocol.zksync import ZkSyncBuilder
+from transaction.transaction import TransactionBase, Execute, Withdraw
+from protocol.zksync_web3 import ZkSyncBuilder
 
 # from eip712_structs import make_domain
 from eth_account import Account
@@ -22,7 +24,6 @@ from web3.middleware import geth_poa_middleware
 # from transaction.transaction import Withdraw
 from transaction.transaction712 import Transaction712
 from zk_types.zk_types import Token, Fee, TokenAddress
-from hexbytes import HexBytes
 
 
 class ZkSyncIntegrationTests(TestCase):
@@ -84,8 +85,11 @@ class ZkSyncIntegrationTests(TestCase):
 
         main_contract = self.web3.zksync.zks_main_contract()
         zksync_contract = ZkSyncContract(main_contract, web3, self.account)
+        # erc20_contract = ERC20Contract(web3,
+        #                                self.account.address,
+        #                                zksync_contract.contract_address,
+        #                                zksync_contract.account)
         erc20_contract = ERC20Contract(web3,
-                                       self.account.address,
                                        zksync_contract.contract_address,
                                        zksync_contract.account)
         encoded_function = erc20_contract.contract.encodeABI(fn_name="transfer",
@@ -111,6 +115,66 @@ class ZkSyncIntegrationTests(TestCase):
         print(f"response: {response}")
         result = self.web3.zksync.wait_for_transaction_receipt(response)
         self.assertTrue(result["status"], 1)
+
+    def test_transfer_to_self_web3_contact(self):
+        erc20 = ERC20Contract(web3=self.web3.zksync,
+                              contract_address=self.ETH_TOKEN.address,
+                              account=self.account)
+        receipt = erc20.transfer("0xe1fab3efd74a77c23b426c302d96372140ff7d0c", 1)
+        self.assertEqual(receipt["status"], 1)
+
+    def test_withdraw(self):
+        nonce = self.web3.zksync.get_transaction_count(self.account.address, "committed")
+        zk_withdraw = Withdraw(self.ETH_TOKEN.address,
+                               self.account.address,
+                               Web3.toWei(1, "ether"),
+                               self.account.address,
+                               Fee.default_fee(self.ETH_TOKEN.address),
+                               nonce)
+        estimated_fee = self.estimate_fee(zk_withdraw)
+        zk_withdraw.set_fee(estimated_fee)
+
+        signature = self.signer.sign_typed_data(zk_withdraw.transaction_request())
+        tx712 = Transaction712(zk_withdraw, self.chain_id)
+        message = tx712.as_rlp_values(signature)
+        tx_hash = self.web3.zksync.send_raw_transaction(message)
+        receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash)
+        self.assertEqual(receipt["status"], 1)
+
+    def test_estimate_fee_withdraw(self):
+        zk_withdraw = Withdraw(TokenAddress(HexStr("0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee")),
+                               TokenAddress(HexStr("0xe1fab3efd74a77c23b426c302d96372140ff7d0c")),
+                               1,
+                               self.account.address,
+                               Fee.default_fee(self.ETH_TOKEN.address),
+                               0)
+        estimated_fee = self.estimate_fee(zk_withdraw)
+        # TODO: CHECK HAS ERROR
+        print(f"{estimated_fee}")
+
+    def test_estimate_fee_execute(self):
+        web3 = Web3(Web3.HTTPProvider(self.ETH_TEST_URL))
+        web3.middleware_onion.inject(geth_poa_middleware, layer=0)
+
+        main_contract = self.web3.zksync.zks_main_contract()
+        zksync_contract = ZkSyncContract(main_contract, web3, self.account)
+        erc20_contract = ERC20Contract(web3,
+                                       zksync_contract.contract_address,
+                                       zksync_contract.account)
+        encoded_function = erc20_contract.contract.encodeABI(fn_name="transfer",
+                                                             args=["0xe1fab3efd74a77c23b426c302d96372140ff7d0c", 1])
+        if encoded_function.startswith("0x"):
+            encoded_function = encoded_function[2:]
+        execute = Execute(TokenAddress(HexStr("0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee")),
+                          encoded_function,
+                          self.account.address,
+                          Fee.default_fee(self.ETH_TOKEN.address),
+                          0)
+        estimated_fee = self.estimate_fee(execute)
+        print(f"{estimated_fee}")
+
+    def test_estimate_fee_deploy_contract(self):
+        pass
 
     def estimate_fee(self, transaction: TransactionBase):
         return self.web3.zksync.zks_estimate_fee(transaction.to_transaction())

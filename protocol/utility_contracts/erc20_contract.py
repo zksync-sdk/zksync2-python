@@ -1,22 +1,23 @@
+import importlib.resources as pkg_resources
 from eth_typing import HexStr
 from web3 import Web3
-# from web3.contract import Contract
+
 from protocol.contract_base import ContractBase
 from eth_account.signers.base import BaseAccount
-from pathlib import Path
 import json
+from .. import contract_abi
 
 erc_20_abi_cache = None
-erc_20_abi_default_path = Path('./contract_abi/IERC20.json')
 
 
 def _erc_20_abi_default():
     global erc_20_abi_cache
 
     if erc_20_abi_cache is None:
-        with erc_20_abi_default_path.open(mode='r') as json_file:
-            data = json.load(json_file)
-            erc_20_abi_cache = data['abi']
+        with pkg_resources.path(contract_abi, "IERC20.json") as p:
+            with p.open(mode='r') as json_file:
+                data = json.load(json_file)
+                erc_20_abi_cache = data['abi']
     return erc_20_abi_cache
 
 
