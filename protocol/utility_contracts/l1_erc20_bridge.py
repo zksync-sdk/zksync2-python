@@ -101,10 +101,10 @@ class L1ERC20Bridge:
         return txn_receipt
 
     def initialize(self,
-                   l2_bridge_bytecode: bytes,
-                   l2_standard_erc20_bytecode: bytes):
-        tx = self.contract.functions.initialize(l2_bridge_bytecode,
-                                                l2_standard_erc20_bytecode).build_transaction(
+                   factory_deps: List[bytes],
+                   l2_token_factory: HexStr):
+        tx = self.contract.functions.initialize(factory_deps,
+                                                l2_token_factory).build_transaction(
             {
                 "chainId": self.web3.eth.chain_id,
                 "from": self.account.address,
@@ -117,11 +117,17 @@ class L1ERC20Bridge:
         txn_receipt = self.web3.eth.wait_for_transaction_receipt(txn_hash)
         return txn_receipt
 
+    def is_withdraw_finalized(self, a: int, b: int) -> bool:
+        return self.contract.functions.isWithdrawalFinalized(a, b).call()
+
     def l2_bridge(self):
         return self.contract.functions.l2Bridge().call()
 
-    def l2_standard_erc20_bytecode_hash(self):
-        return self.contract.functions.l2StandardERC20BytecodeHash().call()
+    def l2_proxy_token_byte_code_hash(self):
+        return self.contract.functions.l2ProxyTokenBytecodeHash().call()
 
     def l2_token_address(self, l1_token: HexStr):
         return self.contract.functions.l2TokenAddress(l1_token).call()
+
+    def l2_token_factory(self) -> HexStr:
+        return self.contract.functions.l2TokenFactory().call()
