@@ -36,7 +36,12 @@ class L2ERC20Bridge:
     def _get_nonce(self):
         return self.web3.zksync.get_transaction_count(self.zksync_account.address)
 
-    def finalize_deposit(self, l1_sender: HexStr, l2_receiver: HexStr, l1_token: HexStr, amount: int, data: bytes):
+    def finalize_deposit(self,
+                         l1_sender: HexStr,
+                         l2_receiver: HexStr,
+                         l1_token: HexStr,
+                         amount: int,
+                         data: bytes):
         tx = self.contract.functions.finalizeDeposit(l1_sender,
                                                      l2_receiver,
                                                      l1_token,
@@ -62,6 +67,9 @@ class L2ERC20Bridge:
 
     def l2_token_address(self, l1_token: HexStr):
         return self.contract.functions.l2TokenAddress(l1_token).call()
+
+    def l2_token_factory(self):
+        return self.contract.functions.l2TokenFactory().call()
 
     def withdraw(self, l1_receiver: HexStr, l2_token: HexStr, amount: int):
         tx = self.contract.functions.withdraw(l1_receiver,
