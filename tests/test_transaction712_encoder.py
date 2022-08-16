@@ -32,7 +32,7 @@ def _get_counter_contract_abi():
         return json.load(json_f)
 
 
-class TestTransaction712(TestCase):
+class TestTransaction712Encode(TestCase):
     ETH_TOKEN = Token.create_eth()
     BRIDGE_ADDRESS = HexStr("0x8c98381FfE6229Ee9E53B6aAb784E86863f61885")
     CONTRACT_RANDOM_ADDRESS = HexStr("0x7e5f4552091a69125d5dfcb7b8c2659029395bdf")

@@ -7,7 +7,6 @@ from typing import List
 import json
 from .. import contract_abi
 
-
 l1_erc20_bridge_abi_cache = None
 
 
@@ -131,3 +130,7 @@ class L1ERC20Bridge:
 
     def l2_token_factory(self) -> HexStr:
         return self.contract.functions.l2TokenFactory().call()
+
+    @property
+    def address(self):
+        return self.addr

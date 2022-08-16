@@ -87,3 +87,7 @@ class L2ERC20Bridge:
         txn_hash = self.web3.eth.send_raw_transaction(signed_tx.rawTransaction)
         txn_receipt = self.web3.eth.wait_for_transaction_receipt(txn_hash)
         return txn_receipt
+
+    @property
+    def address(self):
+        return self.addr

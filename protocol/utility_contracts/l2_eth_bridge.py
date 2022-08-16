@@ -88,3 +88,7 @@ class L2ETHBridge:
     @property
     def contract(self):
         return self._contract
+
+    @property
+    def address(self):
+        return self.addr

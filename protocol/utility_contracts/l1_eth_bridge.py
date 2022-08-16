@@ -111,3 +111,7 @@ class L1EthBridge:
 
     def l2_token_address(self, l1_token: HexStr):
         return self.contract.functions.l2TokenAddress(l1_token).call()
+
+    @property
+    def address(self):
+        return self.addr
