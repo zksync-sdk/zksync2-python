@@ -37,7 +37,12 @@ class L2ETHBridge:
     def balance_of(self, addr: HexStr):
         return self._contract.functions.balanceOf(addr).call()
 
-    def finalize_deposit(self, l1_sender: HexStr, l2_receiver: HexStr, l1_token: HexStr, amount: int, data: bytes):
+    def finalize_deposit(self,
+                         l1_sender: HexStr,
+                         l2_receiver: HexStr,
+                         l1_token: HexStr,
+                         amount: int,
+                         data: bytes):
         tx = self._contract.functions.finalizeDeposit(l1_sender,
                                                       l2_receiver,
                                                       l1_token,
@@ -64,7 +69,10 @@ class L2ETHBridge:
     def total_supply(self):
         return self._contract.functions.totalSupply().call()
 
-    def withdraw(self, l1_receiver: HexStr, l2_token: HexStr, amount: int):
+    def withdraw(self,
+                 l1_receiver: HexStr,
+                 l2_token: HexStr,
+                 amount: int):
         tx = self._contract.functions.withdraw(l1_receiver,
                                                l2_token,
                                                amount).build_transaction(
