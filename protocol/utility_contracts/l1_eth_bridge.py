@@ -39,7 +39,7 @@ class L1EthBridge:
 
     def claim_failed_deposit(self, deposit_sender: HexStr,
                              l1_token: HexStr,
-                             tx_hash,
+                             tx_hash: bytes,
                              l2_block_number: int,
                              l2_msg_index: int,
                              merkle_proof: List[bytes]):
@@ -61,11 +61,10 @@ class L1EthBridge:
         txn_receipt = self.web3.eth.wait_for_transaction_receipt(txn_hash)
         return txn_receipt
 
-    def deposit(self, l2_receiver: HexStr, l1_token: HexStr, amount: int, queue_type: int):
+    def deposit(self, l2_receiver: HexStr, l1_token: HexStr, amount: int):
         tx = self.contract.functions.deposit(l2_receiver,
                                              l1_token,
-                                             amount,
-                                             queue_type).build_transaction(
+                                             amount).build_transaction(
             {
                 "chainId": self.web3.eth.chain_id,
                 "from": self.account.address,
@@ -104,7 +103,10 @@ class L1EthBridge:
         tx_hash = self.contract.functions.initialize(l2_bridge_bytecode).transact()
         return self.web3.eth.wait_for_transaction_receipt(tx_hash)
 
-    def l2_bridge(self):
+    def is_withdrawal_finalized(self) -> bool:
+        return self.contract.functions.isWithdrawalFinalized().call()
+
+    def l2_bridge(self) -> HexStr:
         return self.contract.functions.l2Bridge().call()
 
     def l2_token_address(self, l1_token: HexStr):
