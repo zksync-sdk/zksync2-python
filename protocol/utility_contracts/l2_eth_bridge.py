@@ -5,6 +5,8 @@ from web3.contract import Contract
 from eth_typing import HexStr
 import json
 from .. import contract_abi
+from protocol.utility_contracts.gas_provider import GasProvider
+
 
 l2_eth_bridge_abi_cache = None
 
@@ -22,11 +24,17 @@ def _l2_eth_bridge_abi_default():
 
 class L2ETHBridge:
 
-    def __init__(self, contract_address: HexStr, web3: Web3, zksync_account: BaseAccount, abi=None):
+    def __init__(self,
+                 contract_address: HexStr,
+                 web3: Web3,
+                 zksync_account: BaseAccount,
+                 gas_provider: GasProvider,
+                 abi=None):
         check_sum_address = Web3.toChecksumAddress(contract_address)
         self.web3 = web3
         self.addr = check_sum_address
         self.zksync_account = zksync_account
+        self.gas_provider = gas_provider
         if abi is None:
             abi = _l2_eth_bridge_abi_default()
         self._contract: Contract = self.web3.eth.contract(self.addr, abi=abi)
@@ -50,7 +58,9 @@ class L2ETHBridge:
                                                       data).build_transaction(
             {
                 "from": self.zksync_account.address,
-                "nonce": self._get_nonce()
+                "nonce": self._get_nonce(),
+                "gas": self.gas_provider.gas_limit(),
+                "gasPrice": self.gas_provider.gas_price()
             })
         signed_tx = self.zksync_account.sign_transaction(tx)
         txn_hash = self.web3.zksync.send_raw_transaction(signed_tx.rawTransaction)
@@ -78,7 +88,9 @@ class L2ETHBridge:
                                                amount).build_transaction(
             {
                 "from": self.zksync_account.address,
-                "nonce": self._get_nonce()
+                "nonce": self._get_nonce(),
+                "gas": self.gas_provider.gas_limit(),
+                "gasPrice": self.gas_provider.gas_price()
             })
         signed_tx = self.zksync_account.sign_transaction(tx)
         txn_hash = self.web3.zksync.send_raw_transaction(signed_tx.rawTransaction)

@@ -5,6 +5,8 @@ from web3.contract import Contract
 from eth_typing import HexStr
 from typing import List
 import json
+
+from protocol.utility_contracts.gas_provider import GasProvider
 from .. import contract_abi
 
 l1_erc20_bridge_abi_cache = None
@@ -24,11 +26,16 @@ def _l1_erc20_bridge_abi_default():
 class L1ERC20Bridge:
     DEFAULT_GAS_LIMIT = 21000
 
-    def __init__(self, contract_address: HexStr, web3: Web3, eth_account: BaseAccount, abi=None):
+    def __init__(self,
+                 contract_address: HexStr,
+                 web3: Web3,
+                 eth_account: BaseAccount,
+                 gas_provider: GasProvider, abi=None):
         check_sum_address = Web3.toChecksumAddress(contract_address)
         self.web3 = web3
         self.addr = check_sum_address
         self.account = eth_account
+        self.gas_provider = gas_provider
         if abi is None:
             abi = _l1_erc20_bridge_abi_default()
         self.contract: Contract = self.web3.eth.contract(self.addr, abi=abi)
@@ -52,8 +59,8 @@ class L1ERC20Bridge:
                 "chainId": self.web3.eth.chain_id,
                 "from": self.account.address,
                 "nonce": self._get_nonce(),
-                "gas": self.DEFAULT_GAS_LIMIT,
-                "gasPrice": self.web3.eth.gas_price
+                "gas": self.gas_provider.gas_limit(),
+                "gasPrice": self.gas_provider.gas_price()
             })
         signed_tx = self.account.sign_transaction(tx)
         txn_hash = self.web3.eth.send_raw_transaction(signed_tx.rawTransaction)
@@ -69,9 +76,8 @@ class L1ERC20Bridge:
                 "chainId": self.web3.eth.chain_id,
                 "from": self.account.address,
                 "nonce": self._get_nonce(),
-                "gas": self.DEFAULT_GAS_LIMIT,
-                "gasPrice": self.web3.eth.gas_price,
-
+                "gas": self.gas_provider.gas_limit(),
+                "gasPrice": self.gas_provider.gas_price()
             })
         signed_tx = self.account.sign_transaction(tx)
         txn_hash = self.web3.eth.send_raw_transaction(signed_tx.rawTransaction)
@@ -91,8 +97,8 @@ class L1ERC20Bridge:
                 "chainId": self.web3.eth.chain_id,
                 "from": self.account.address,
                 "nonce": self._get_nonce(),
-                "gas": self.DEFAULT_GAS_LIMIT,
-                "gasPrice": self.web3.eth.gas_price
+                "gas": self.gas_provider.gas_limit(),
+                "gasPrice": self.gas_provider.gas_price()
             })
         signed_tx = self.account.sign_transaction(tx)
         txn_hash = self.web3.eth.send_raw_transaction(signed_tx.rawTransaction)
@@ -108,8 +114,8 @@ class L1ERC20Bridge:
                 "chainId": self.web3.eth.chain_id,
                 "from": self.account.address,
                 "nonce": self._get_nonce(),
-                "gas": self.DEFAULT_GAS_LIMIT,
-                "gasPrice": self.web3.eth.gas_price
+                "gas": self.gas_provider.gas_limit(),
+                "gasPrice": self.gas_provider.gas_price()
             })
         signed_tx = self.account.sign_transaction(tx)
         txn_hash = self.web3.eth.send_raw_transaction(signed_tx.rawTransaction)

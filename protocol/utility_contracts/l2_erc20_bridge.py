@@ -4,6 +4,8 @@ from web3 import Web3
 from web3.contract import Contract
 from eth_typing import HexStr
 import json
+
+from protocol.utility_contracts.gas_provider import GasProvider
 from .. import contract_abi
 
 l2_erc20_bridge_abi_cache = None
@@ -24,11 +26,17 @@ def _l2_erc20_bridge_abi_default():
 class L2ERC20Bridge:
     DEFAULT_GAS_LIMIT = 21000
 
-    def __init__(self, contract_address: HexStr, web3: Web3, zksync_account: BaseAccount, abi=None):
+    def __init__(self,
+                 contract_address: HexStr,
+                 web3: Web3,
+                 zksync_account: BaseAccount,
+                 gas_provider: GasProvider,
+                 abi=None):
         check_sum_address = Web3.toChecksumAddress(contract_address)
         self.web3 = web3
         self.addr = check_sum_address
         self.zksync_account = zksync_account
+        self.gas_provider = gas_provider
         if abi is None:
             abi = _l2_erc20_bridge_abi_default()
         self.contract: Contract = self.web3.eth.contract(self.addr, abi=abi)
@@ -51,8 +59,8 @@ class L2ERC20Bridge:
                 # "chainId": self.web3.zksync.zks_l1_chain_id(),
                 "from": self.zksync_account.address,
                 "nonce": self._get_nonce(),
-                # "gas": self.DEFAULT_GAS_LIMIT,
-                # "gasPrice": self.web3.eth.gas_price
+                "gas": self.gas_provider.gas_limit(),
+                "gasPrice": self.gas_provider.gas_price()
             })
         signed_tx = self.zksync_account.sign_transaction(tx)
         txn_hash = self.web3.zksync.send_raw_transaction(signed_tx.rawTransaction)
@@ -79,8 +87,8 @@ class L2ERC20Bridge:
                 # "chainId": self.web3.zksync.zks_l1_chain_id(),
                 "from": self.zksync_account.address,
                 "nonce": self._get_nonce(),
-                # "gas": self.DEFAULT_GAS_LIMIT,
-                # "gasPrice": self.web3.eth.gas_price
+                "gas": self.gas_provider.gas_limit(),
+                "gasPrice": self.gas_provider.gas_price()
             }
         )
         signed_tx = self.zksync_account.sign_transaction(tx)

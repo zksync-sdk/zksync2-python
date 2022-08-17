@@ -15,5 +15,5 @@ class ZkSyncBuilder:
         zksync_provider = ZkSyncProvider(url)
         zksync_middleware = build_zksync_middleware(zksync_provider)
         web3_module.middleware_onion.add(zksync_middleware)
-        attach_modules(web3_module, {"zksync_web3": (ZkSync,)})
+        attach_modules(web3_module, {"zksync": (ZkSync,)})
         return web3_module
