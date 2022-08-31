@@ -2,7 +2,7 @@ import json
 from unittest import TestCase
 from eth_utils.crypto import keccak_256
 from eip712_structs import EIP712Struct, String, Address, make_domain
-from eth_account.messages import encode_structured_data
+from crypto.eth_account_patch.encode_structed_data import encode_structured_data
 
 
 class Person(EIP712Struct):

@@ -13,6 +13,7 @@ from web3.types import Nonce
 from protocol.core.types import Token
 from protocol.utility_contracts.contract_deployer import ContractDeployer
 from protocol.utility_contracts.l2_eth_bridge import L2ETHBridge
+from tests.counter_contract_utils import CounterContractEncoder
 from transaction.transaction712 import Transaction712, Transaction712Encoder
 from pathlib import Path
 
@@ -112,8 +113,9 @@ class TestTransaction712Encode(TestCase):
                                         zksync_account=self.account)
         self.ACCOUNT_ADDRESS = Web3.toChecksumAddress(self.ACCOUNT_ADDRESS)
         self.deployer = ContractDeployer(self.web3)
-        self.counter_contract_instance = self.web3.eth.contract(abi=_get_counter_contract_abi(),
-                                                                bytecode=_get_counter_contract_binary())
+        self.counter_contract_encoder = CounterContractEncoder(self.web3)
+        # self.counter_contract_instance = self.web3.eth.contract(abi=_get_counter_contract_abi(),
+        #                                                         bytecode=_get_counter_contract_binary())
 
     def test_encode_withdraw(self):
         # INFO: Can't generate the same address as it under Java SDK for testing, just use it directly
@@ -181,7 +183,8 @@ class TestTransaction712Encode(TestCase):
         self.assertEqual(self.ENCODE_DEPLOY_EXPECTED, hex712)
 
     def test_encode_execute(self):
-        call_data = self.counter_contract_instance.encodeABI(fn_name="increment", args=[42])
+        # call_data = self.counter_contract_instance.encodeABI(fn_name="increment", args=[42])
+        call_data = self.counter_contract_encoder.encode_method("increment", args=[42])
         eip_meta: Eip712Meta = {
             "feeToken": self.ETH_TOKEN.l2_address,
             "ergsPerPubdata": 0,

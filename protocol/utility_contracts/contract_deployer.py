@@ -1,6 +1,5 @@
 import importlib.resources as pkg_resources
 from web3 import Web3
-from eth_utils.crypto import keccak_256
 from hashlib import sha256
 from typing import Optional
 import json

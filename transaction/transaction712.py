@@ -14,6 +14,8 @@ from protocol.request.request_types import EIP712Meta
 from eip712_structs import EIP712Struct, Address, Uint, Bytes, Array
 
 
+DynamicBytes = Bytes(0)
+
 # TxParams = TypedDict("TxParams", {
 #     "chainId": int,
 #     "data": Union[bytes, HexStr],
@@ -31,6 +33,7 @@ from eip712_structs import EIP712Struct, Address, Uint, Bytes, Array
 #     "type": Union[int, HexStr],
 #     "value": Wei,
 # }, total=False)
+
 
 def int_to_bytes(x: int) -> bytes:
     return x.to_bytes((x.bit_length() + 7) // 8, byteorder=sys.byteorder)
@@ -87,22 +90,23 @@ class Transaction712:
     meta: EIP712Meta
 
     def to_eip712_struct(self) -> EIP712Struct:
-        class InternalRepresentation(EIP712Struct):
+        class Transaction(EIP712Struct):
             pass
 
-        setattr(InternalRepresentation, 'txType',                   Uint(256))
-        setattr(InternalRepresentation, 'from',                     Uint(256))
-        setattr(InternalRepresentation, 'to',                       Uint(256))
-        setattr(InternalRepresentation, 'ergsLimit',                Uint(256))
-        setattr(InternalRepresentation, 'ergsPerPubdataByteLimit',  Uint(256))
-        setattr(InternalRepresentation, 'maxFeePerErg',             Uint(256))
-        setattr(InternalRepresentation, 'maxPriorityFeePerErg',     Uint(256))
-        setattr(InternalRepresentation, 'paymaster',                Uint(256))
-        setattr(InternalRepresentation, 'nonce',                    Uint(256))
-        setattr(InternalRepresentation, 'value',                    Uint(256))
-        setattr(InternalRepresentation, 'data',                     Bytes)
-        setattr(InternalRepresentation, 'factoryDeps',              Array(Bytes(32)))
-        setattr(InternalRepresentation, 'paymasterInput',           Bytes())
+        setattr(Transaction, 'txType',                   Uint(256))
+        setattr(Transaction, 'from',                     Uint(256))
+        setattr(Transaction, 'to',                       Uint(256))
+        setattr(Transaction, 'ergsLimit',                Uint(256))
+        setattr(Transaction, 'ergsPerPubdataByteLimit',  Uint(256))
+        setattr(Transaction, 'maxFeePerErg',             Uint(256))
+        setattr(Transaction, 'maxPriorityFeePerErg',     Uint(256))
+        setattr(Transaction, 'paymaster',                Uint(256))
+        setattr(Transaction, 'nonce',                    Uint(256))
+        setattr(Transaction, 'value',                    Uint(256))
+        # Special case: Length of 0 means a dynamic bytes type
+        setattr(Transaction, 'data',                     DynamicBytes)
+        setattr(Transaction, 'factoryDeps',              Array(Bytes(32)))
+        setattr(Transaction, 'paymasterInput',           DynamicBytes)
 
         paymaster: int = 0
         # paymaster_params = self.meta["paymasterParams"]
@@ -140,7 +144,7 @@ class Transaction712:
             'factoryDeps': factory_deps_hashes,
             'paymasterInput': paymaster_input
         }
-        return InternalRepresentation(**kwargs)
+        return Transaction(**kwargs)
 
 
 class Transaction712Encoder:
