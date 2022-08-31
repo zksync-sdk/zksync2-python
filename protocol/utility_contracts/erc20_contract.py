@@ -1,4 +1,6 @@
 import importlib.resources as pkg_resources
+from typing import Optional
+
 from eth_typing import HexStr
 from web3 import Web3
 
@@ -42,3 +44,14 @@ class ERC20Contract(ContractBase):
 
     def transfer(self, _to: str, _value: int):
         self.contract.functions.transfer(_to, _value).transaction({"from": self.account.address})
+
+
+class ERC20FunctionEncoder:
+
+    def __init__(self, web3_eth: Web3, abi: Optional[dict] = None):
+        if abi is None:
+            abi = _erc_20_abi_default()
+        self.contract = web3_eth.eth.contract(address=None, abi=abi)
+
+    def encode_method(self, fn_name, args):
+        return self.contract.encodeABI(fn_name=fn_name, args=args)

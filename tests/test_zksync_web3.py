@@ -3,9 +3,11 @@ from unittest import TestCase
 from eth_typing import HexStr
 from hexbytes import HexBytes
 from web3 import Web3
-from web3.types import TxParams, BlockParams
+from web3.types import TxParams, BlockParams, Nonce
 from web3.middleware import geth_poa_middleware
 
+from protocol.request.request_types import FunctionCallTxBuilder
+from protocol.utility_contracts.erc20_contract import ERC20FunctionEncoder
 from protocol.utility_contracts.gas_provider import StaticGasProvider
 from protocol.zksync_contract import ZkSyncContract
 from protocol.zksync_web3.zksync_web3_builder import ZkSyncBuilder
@@ -15,23 +17,25 @@ from eth_account.signers.local import LocalAccount
 
 from crypto.eth_signer import PrivateKeyEthSigner
 from protocol.eth_provider import EthereumProvider
+from transaction.transaction712 import Transaction712, Transaction712Encoder
 
 
 class ZkSyncWeb3Tests(TestCase):
     GAS_LIMIT = 21000
-    GAS_PRICE = 0
-    # GAS_MIM_COST = 21000
-    # TEST_GAS_PRICE = 0
+    # GAS_PRICE = 0
 
-    # ZkSync http://206.189.96.247:3050
-    # Ethereum http://206.189.96.247:8545
     ETH_TEST_URL = "http://206.189.96.247:8545"
     ZKSYNC_TEST_URL = "http://206.189.96.247:3050"
+
+    # ETH_TEST_URL = "http://127.0.0.1:8545"
+    # ZKSYNC_TEST_URL = "http://127.0.0.1:3050"
 
     ETH_TOKEN = Token.create_eth()
 
     DEFAULT_BLOCK_PARAM_NAME: BlockParams = "latest"
     PRIVATE_KEY = b'\00' * 31 + b'\01'
+
+    ETH_AMOUNT_BALANCE = 100
 
     def setUp(self) -> None:
         self.web3 = ZkSyncBuilder.build(self.ZKSYNC_TEST_URL)
@@ -40,7 +44,7 @@ class ZkSyncWeb3Tests(TestCase):
         self.chain_id = self.web3.zksync.chain_id
         self.signer = PrivateKeyEthSigner(self.account, self.chain_id)
         self.gas_provider = StaticGasProvider(Web3.toWei(1, "gwei"), 555000)
-        self.CONTRACT_ADDRESS = HexStr("0x5bb4c6b82d3bcef0417c1e0152e7e1ba763e72c8")
+        # self.CONTRACT_ADDRESS = HexStr("0x5bb4c6b82d3bcef0417c1e0152e7e1ba763e72c8")
 
     def test_send_money(self):
         web3 = Web3(Web3.HTTPProvider(self.ETH_TEST_URL))
@@ -64,11 +68,86 @@ class ZkSyncWeb3Tests(TestCase):
                                                                 eth=web3,
                                                                 account=self.account,
                                                                 gas_provider=self.gas_provider)
-        tx_receipt = eth_provider.deposit(self.ETH_TOKEN, web3.toWei(100, "ether"), self.account.address)
-        print(f"receipt: {tx_receipt}")
+        tx_receipt = eth_provider.deposit(self.ETH_TOKEN,
+                                          web3.toWei(self.ETH_AMOUNT_BALANCE, "ether"),
+                                          self.account.address)
+        self.assertEqual(1, tx_receipt["status"])
 
     def test_get_balance_of_token(self):
         balance = self.web3.zksync.eth_get_balance(self.account.address,
                                                    self.DEFAULT_BLOCK_PARAM_NAME,
                                                    self.ETH_TOKEN.l2_address)
-        print(f"balance: {balance}")
+
+        ret = int(self.ETH_TOKEN.format_token(balance))
+        self.assertEqual(self.ETH_AMOUNT_BALANCE, ret)
+
+    def test_nonce(self):
+        nonce = self.web3.zksync.get_transaction_count(self.account.address, self.DEFAULT_BLOCK_PARAM_NAME)
+        print(f"Nonce: {nonce}")
+
+    def test_transaction_receipt(self):
+        tx_hash = "0xf53d38388cd8e5292683509c9a9f373e2c7d3766f41256b9cbf7d966552a46ff"
+        receipt = self.web3.zksync.get_transaction_receipt(tx_hash)
+        print(f"receipt: {receipt}")
+
+    def test_transfer_native_to_self(self):
+        nonce = self.web3.zksync.get_transaction_count(self.account.address, self.DEFAULT_BLOCK_PARAM_NAME)
+        # nonce = Nonce(1)
+        tx_builder = FunctionCallTxBuilder(from_=self.account.address,
+                                           to=self.account.address,
+                                           ergs_price=0,
+                                           ergs_limit=0,
+                                           data=HexStr("0x"))
+        tx = tx_builder.build()
+        estimate_gas = self.web3.zksync.eth_estimate_gas(tx)
+        gas_price = self.web3.zksync.gas_price
+
+        print(f"Fee for transaction is: {estimate_gas * gas_price}")
+
+        tx_712 = Transaction712(chain_id=self.chain_id,
+                                nonce=nonce,
+                                gas_limit=estimate_gas,
+                                to=tx["to"],
+                                value=Web3.toWei(1, 'ether'),
+                                data=tx["data"],
+                                maxPriorityFeePerGas=100000000,
+                                maxFeePerGas=gas_price,
+                                from_=self.account.address,
+                                meta=tx["eip712Meta"])
+
+        eip712_structured = tx_712.to_eip712_struct()
+        signature = self.signer.sign_typed_data(eip712_structured)
+        msg = Transaction712Encoder.encode(tx_712, signature)
+        tx_hash = self.web3.zksync.send_raw_transaction(msg)
+        tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash)
+        self.assertEqual(1, tx_receipt["status"])
+
+    def test_transfer_token_to_self(self):
+        nonce = self.web3.zksync.get_transaction_count(self.account.address, self.DEFAULT_BLOCK_PARAM_NAME)
+        tokens = self.web3.zksync.zks_get_confirmed_tokens(0, 100)
+        not_eth_tokens = [x for x in tokens if not x.is_eth()]
+        self.assertTrue(not bool(not_eth_tokens), "Can't get non eth tokens")
+        token_address = not_eth_tokens[0].l2_address
+
+        erc20_encoder = ERC20FunctionEncoder(self.web3)
+        transfer_params = [self.account.address, 0]
+        call_data = erc20_encoder.encode_method("transfer", args=transfer_params)
+
+        tx_builder = FunctionCallTxBuilder(from_=self.account.address,
+                                           to=token_address,
+                                           ergs_price=0,
+                                           ergs_limit=0,
+                                           data=call_data)
+        tx = tx_builder.build()
+        estimate_gas = self.web3.zksync.eth_estimate_gas(tx)
+        gas_price = self.web3.zksync.eth_gas_price(self.ETH_TOKEN.l2_address)
+
+        print(f"Fee for transaction is: {estimate_gas * gas_price}")
+        tx_712 = Transaction712(nonce=nonce,
+                                gas_price=0,
+                                gas_limit=estimate_gas,
+                                to=tx["to"],
+                                value=0,
+                                data=tx["data"],
+                                chain_id=self.chain_id,
+                                meta=tx["eip712Meta"])

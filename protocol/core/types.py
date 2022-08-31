@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, astuple, asdict
 from decimal import Decimal
 from eth_typing import HexStr, Hash32
 from typing import Union, NewType, Dict, List, Any
@@ -33,9 +33,6 @@ class Token:
 
     def to_int(self, amount: Decimal) -> int:
         return int(amount * (Decimal(10) ** self.decimals))
-
-    def to_int_test(self) -> int:
-        return 1 * (10 ** self.decimals)
 
     @staticmethod
     def create_eth() -> 'Token':
@@ -77,3 +74,15 @@ ContractSourceDebugInfo = NewType("ContractSourceDebugInfo", Any)
 class VmDebugTrace:
     steps: List[VmExecutionSteps]
     sources: Dict[str, ContractSourceDebugInfo]
+
+
+@dataclass
+class PaymasterParams(dict):
+    paymaster: HexStr
+    paymaster_input: bytes
+
+    def __iter__(self):
+        yield astuple(self)
+
+    def items(self):
+        return asdict(self).items()

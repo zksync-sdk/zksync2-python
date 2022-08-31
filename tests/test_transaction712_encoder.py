@@ -8,10 +8,9 @@ from eth_typing import HexStr
 from web3 import Web3
 from web3.providers.eth_tester import EthereumTesterProvider
 from eth_tester import PyEVMBackend
-from web3.types import Nonce, Wei
+from web3.types import Nonce
 
 from protocol.core.types import Token
-from protocol.request.request_types import Eip712Meta
 from protocol.utility_contracts.contract_deployer import ContractDeployer
 from protocol.utility_contracts.l2_eth_bridge import L2ETHBridge
 from transaction.transaction712 import Transaction712, Transaction712Encoder

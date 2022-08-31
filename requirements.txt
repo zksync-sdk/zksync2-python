@@ -1,5 +1,6 @@
 eip712_structs==1.1.0
 eth_account==0.5.7
+# eth-account==0.6.1
 eth_typing==2.3.0
 eth_utils==1.10.0
 hexbytes==0.2.2

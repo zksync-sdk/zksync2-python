@@ -3,10 +3,14 @@ import json
 import web3
 from abc import abstractmethod, ABC
 from eip712_structs import make_domain, EIP712Struct
-from eth_typing import ChecksumAddress
-from zk_types.zk_types import *
+from eth_account.datastructures import SignedMessage
+from eth_typing import ChecksumAddress, HexStr
+
+from protocol.core.types import ADDRESS_DEFAULT
 from eth_account.signers.local import LocalAccount
-from eth_account.messages import encode_defunct, encode_structured_data
+from eth_account.messages import encode_defunct
+from crypto.eth_account_patch.encode_structed_data import encode_structured_data
+
 from eth_utils.curried import to_bytes
 
 
@@ -37,7 +41,6 @@ class EthSignerBase:
 class PrivateKeyEthSigner(EthSignerBase, ABC):
     _NAME = "zkSync"
     _VERSION = "2"
-    _ADDRESS_DEFAULT = "0x" + "0" * 40
 
     def __init__(self, creds: LocalAccount, chain_id: int):
         self.credentials = creds
@@ -50,7 +53,8 @@ class PrivateKeyEthSigner(EthSignerBase, ABC):
         default_domain = make_domain(name=self._NAME,
                                      version=self._VERSION,
                                      chainId=self.chain_id,
-                                     verifyingContract=self._ADDRESS_DEFAULT)
+                                     # DO NOT USE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                                     verifyingContract=ADDRESS_DEFAULT)
         return default_domain
 
     def sign_message(self, msg: str) -> HexStr:
@@ -66,22 +70,20 @@ class PrivateKeyEthSigner(EthSignerBase, ABC):
         address = web3.Account.recover_message(signable_message=msg, signature=signature)
         return address == self.get_address()
 
-    def sign_typed_data(self, typed_data: EIP712Struct, domain=None) -> HexStr:
+    def sign_typed_data(self, typed_data: EIP712Struct, domain=None) -> SignedMessage:
         d = domain
         if d is None:
             d = self.get_domain()
-        structured_json = typed_data.to_message_json(d)
-        json_value = json.loads(structured_json)
-        msg = encode_structured_data(json_value)
+        structured = typed_data.to_message(d)
+        msg = encode_structured_data(structured)
         sig = self.credentials.sign_message(msg)
-        return HexStr(sig.signature.hex())
+        return sig
 
     def verify_typed_data(self, sig: HexStr, typed_data: EIP712Struct, domain=None) -> bool:
         d = domain
         if d is None:
             d = self.get_domain()
-        structured_json = typed_data.to_message_json(d)
-        json_value = json.loads(structured_json)
-        msg = encode_structured_data(json_value)
+        structured = typed_data.to_message(d)
+        msg = encode_structured_data(structured)
         address = web3.Account.recover_message(signable_message=msg, signature=sig)
         return address == self.get_address()
