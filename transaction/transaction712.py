@@ -1,11 +1,10 @@
-import dataclasses
 from dataclasses import dataclass
 from hashlib import sha256
 from typing import Union, Optional
 import sys
 import rlp
 from eth_account.datastructures import SignedMessage
-from eth_typing import Address, ChecksumAddress, HexStr
+from eth_typing import ChecksumAddress, HexStr
 from rlp.sedes import big_endian_int, binary
 from rlp.sedes import List as rlpList
 
@@ -13,26 +12,8 @@ from web3.types import Nonce
 from protocol.request.request_types import EIP712Meta
 from eip712_structs import EIP712Struct, Address, Uint, Bytes, Array
 
-
+# Special case: Length of 0 means a dynamic bytes type
 DynamicBytes = Bytes(0)
-
-# TxParams = TypedDict("TxParams", {
-#     "chainId": int,
-#     "data": Union[bytes, HexStr],
-#     # addr or ens
-#     "from": Union[Address, ChecksumAddress, str],
-#     "gas": Wei,
-#     # legacy pricing
-#     "gasPrice": Wei,
-#     # dynamic fee pricing
-#     "maxFeePerGas": Union[str, Wei],
-#     "maxPriorityFeePerGas": Union[str, Wei],
-#     "nonce": Nonce,
-#     # addr or ens
-#     "to": Union[Address, ChecksumAddress, str],
-#     "type": Union[int, HexStr],
-#     "value": Wei,
-# }, total=False)
 
 
 def int_to_bytes(x: int) -> bytes:
@@ -103,21 +84,17 @@ class Transaction712:
         setattr(Transaction, 'paymaster',                Uint(256))
         setattr(Transaction, 'nonce',                    Uint(256))
         setattr(Transaction, 'value',                    Uint(256))
-        # Special case: Length of 0 means a dynamic bytes type
         setattr(Transaction, 'data',                     DynamicBytes)
         setattr(Transaction, 'factoryDeps',              Array(Bytes(32)))
         setattr(Transaction, 'paymasterInput',           DynamicBytes)
 
         paymaster: int = 0
-        # paymaster_params = self.meta["paymasterParams"]
         paymaster_params = self.meta.paymaster_params
         if paymaster_params is not None and paymaster_params.paymaster is not None:
             paymaster = int(paymaster_params.paymaster, 16)
 
         data = get_data(self.data)
-        if not data:
-            data = b'00'
-        # factory_deps = self.meta["factoryDeps"]
+
         factory_deps = self.meta.factory_deps
         factory_deps_hashes = b''
         if factory_deps is not None and len(factory_deps):
@@ -133,7 +110,6 @@ class Transaction712:
             'from': int(self.from_, 16),
             'to': int(self.to, 16),
             'ergsLimit': self.gas_limit,
-            # 'ergsPerPubdataByteLimit': self.meta["ergsPerPubdata"],
             'ergsPerPubdataByteLimit': self.meta.ergs_per_pub_data,
             'maxFeePerErg': self.maxFeePerGas,
             'maxPriorityFeePerErg': self.maxPriorityFeePerGas,
@@ -156,7 +132,6 @@ class Transaction712Encoder:
 
         factory_deps_data = []
         factory_deps_elements = None
-        # factory_deps = meta["factoryDeps"]
         factory_deps = meta.factory_deps
         if factory_deps is not None and len(factory_deps) > 0:
             factory_deps_data = factory_deps
@@ -164,7 +139,6 @@ class Transaction712Encoder:
 
         paymaster_params_data = []
         paymaster_params_elements = None
-        # paymaster_params = meta["paymasterParams"]
         paymaster_params = meta.paymaster_params
         if paymaster_params is not None and \
                 paymaster_params.paymaster is not None and \
@@ -195,13 +169,11 @@ class Transaction712Encoder:
                 ('paymaster_params', rlpList(elements=paymaster_params_elements, strict=False))
             ]
 
-        # custom_signature = meta["customSignature"]
         custom_signature = meta.custom_signature
         if custom_signature is not None:
             rlp_signature = custom_signature
         elif signature is not None:
-            rlp_signature = int_to_bytes(signature.r) + int_to_bytes(signature.s) + int_to_bytes(signature.v)
-            # rlp_signature = bytes.fromhex("")
+            rlp_signature = signature.signature
         else:
             raise RuntimeError("Custom signature and signature can't be None both")
 
@@ -218,7 +190,6 @@ class Transaction712Encoder:
             "unknown2": b'',
             "chain_id2": tx712.chain_id,
             "from": _encode_address(tx712.from_),
-            # "ergsPerPubdata": meta["ergsPerPubdata"],
             "ergsPerPubdata": meta.ergs_per_pub_data,
             "factoryDeps": factory_deps_data,
             "signature": rlp_signature,

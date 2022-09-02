@@ -1,45 +1,41 @@
 import importlib.resources as pkg_resources
+from eth_account.signers.base import BaseAccount
 from web3 import Web3
 from web3.contract import Contract
-from eth_account.signers.base import BaseAccount
 from eth_typing import HexStr
-
-from typing import List
+from typing import List, Optional
 import json
 
 from protocol.utility_contracts.gas_provider import GasProvider
 from .. import contract_abi
 
-l1_eth_bridge_abi_cache = None
+l1_bridge_abi_cache = None
 
 
-def _l1_eth_bridge_abi_default():
-    global l1_eth_bridge_abi_cache
+def _l1_bridge_abi_default():
+    global l1_bridge_abi_cache
 
-    if l1_eth_bridge_abi_cache is None:
-        with pkg_resources.path(contract_abi, "L1EthBridge.json") as p:
+    if l1_bridge_abi_cache is None:
+        with pkg_resources.path(contract_abi, "IL1Bridge.json") as p:
             with p.open(mode='r') as json_file:
                 data = json.load(json_file)
-                l1_eth_bridge_abi_cache = data['abi']
-    return l1_eth_bridge_abi_cache
+                l1_bridge_abi_cache = data['abi']
+    return l1_bridge_abi_cache
 
 
-class L1EthBridge:
-    DEFAULT_GAS_LIMIT = 21000
-
+class L1Bridge:
     def __init__(self,
                  contract_address: HexStr,
                  web3: Web3,
                  eth_account: BaseAccount,
-                 gas_provider: GasProvider,
-                 abi=None):
+                 gas_provider: GasProvider, abi=None):
         check_sum_address = Web3.toChecksumAddress(contract_address)
         self.web3 = web3
         self.addr = check_sum_address
         self.account = eth_account
         self.gas_provider = gas_provider
         if abi is None:
-            abi = _l1_eth_bridge_abi_default()
+            abi = _l1_bridge_abi_default()
         self.contract: Contract = self.web3.eth.contract(self.addr, abi=abi)
 
     def _get_nonce(self):
@@ -47,13 +43,13 @@ class L1EthBridge:
 
     def claim_failed_deposit(self, deposit_sender: HexStr,
                              l1_token: HexStr,
-                             tx_hash: bytes,
+                             l2tx_hash,
                              l2_block_number: int,
                              l2_msg_index: int,
                              merkle_proof: List[bytes]):
         tx = self.contract.functions.claimFailedDeposit(deposit_sender,
                                                         l1_token,
-                                                        tx_hash,
+                                                        l2tx_hash,
                                                         l2_block_number,
                                                         l2_msg_index,
                                                         merkle_proof).build_transaction(
@@ -107,19 +103,23 @@ class L1EthBridge:
         txn_receipt = self.web3.eth.wait_for_transaction_receipt(txn_hash)
         return txn_receipt
 
-    def initialize(self, l2_bridge_bytecode: bytes):
-        tx_hash = self.contract.functions.initialize(l2_bridge_bytecode).transact()
-        return self.web3.eth.wait_for_transaction_receipt(tx_hash)
+    def is_withdrawal_finalized(self, l2_block_number: int, l2_msg_index: int) -> bool:
+        return self.contract.functions.isWithdrawalFinalized(l2_block_number, l2_msg_index).call()
 
-    def is_withdrawal_finalized(self) -> bool:
-        return self.contract.functions.isWithdrawalFinalized().call()
-
-    def l2_bridge(self) -> HexStr:
-        return self.contract.functions.l2Bridge().call()
-
-    def l2_token_address(self, l1_token: HexStr):
+    def l2_token_address(self, l1_token: HexStr) -> HexStr:
         return self.contract.functions.l2TokenAddress(l1_token).call()
 
     @property
     def address(self):
-        return self.addr
+        return self.contract.address
+
+
+class L1BridgeEncoder:
+
+    def __init__(self, web3: Web3, abi: Optional[dict] = None):
+        if abi is None:
+            abi = _l1_bridge_abi_default()
+        self.contract = web3.eth.contract(address=None, abi=abi)
+
+    def encode_function(self, fn_name: str, args: list) -> bytes:
+        return self.contract.encodeABI(fn_name=fn_name, args=args)

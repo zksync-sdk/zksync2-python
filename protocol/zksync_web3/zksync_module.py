@@ -1,22 +1,21 @@
 from abc import ABC
 
-# from eth_utils import apply_formatter_if, apply_formatters_to_dict
-from eth_utils import to_checksum_address
-from eth_utils.curried import apply_formatter_at_index, hexstr_if_str
-from hexbytes import HexBytes
+from eth_utils import to_checksum_address, is_dict
+from eth_utils.curried import apply_formatter_at_index
 from web3 import Web3
+from web3.module import Module
 from web3._utils.formatters import integer_to_hex
 from web3._utils.method_formatters import (
     ABI_REQUEST_FORMATTERS,
     METHOD_NORMALIZERS,
     PYTHONIC_REQUEST_FORMATTERS,
     combine_formatters,
-    STANDARD_NORMALIZERS,
     apply_formatter_if,
     apply_formatters_to_dict,
     is_not_null,
     apply_list_to_array_formatter,
-    to_hex_if_integer, to_hexbytes, to_ascii_if_bytes
+    to_hex_if_integer, to_hexbytes, to_ascii_if_bytes, PYTHONIC_RESULT_FORMATTERS, FILTER_RESULT_FORMATTERS,
+    apply_module_to_formatters, not_attrdict
 )
 
 from web3._utils.normalizers import (
@@ -25,7 +24,7 @@ from web3._utils.normalizers import (
     abi_bytes_to_hex,
     abi_bytes_to_bytes
 )
-from web3._utils.rpc_abi import abi_request_formatters
+from web3.datastructures import AttributeDict
 
 from web3.eth import Eth
 from web3.types import RPCEndpoint
@@ -38,7 +37,6 @@ from eth_utils.toolz import compose
 from web3.method import Method, default_root_munger
 from typing import Any, Callable, List
 
-
 zks_estimate_fee_rpc = RPCEndpoint("zks_estimateFee")
 zks_main_contract_rpc = RPCEndpoint("zks_getMainContract")
 zks_get_l1_withdraw_tx_rpc = RPCEndpoint("zks_getL1WithdrawalTx")
@@ -50,27 +48,11 @@ zks_eth_get_balance_rpc = RPCEndpoint("eth_getBalance")
 zks_get_all_account_balances_rpc = RPCEndpoint("zks_getAllAccountBalances")
 zks_get_bridge_contracts_rpc = RPCEndpoint("zks_getBridgeContracts")
 zks_get_l2_to_l1_msg_proof_prc = RPCEndpoint("zks_getL2ToL1MsgProof")
-# eth_gas_price_rpc = RPCEndpoint("eth_gasPrice")
 eth_estimate_gas_rpc = RPCEndpoint("eth_estimateGas")
 
 zks_set_contract_debug_info_rpc = RPCEndpoint("zks_setContractDebugInfo")
 zks_get_contract_debug_info_rpc = RPCEndpoint("zks_getContractDebugInfo")
 zks_get_transaction_trace_rpc = RPCEndpoint("zks_getTransactionTrace")
-
-# AA_PARAMS_FORMATTERS = {
-#     "from": abi_address_to_hex,
-#     "signature": abi_bytes_to_hex
-# }
-#
-# aa_params_formatter = apply_formatters_to_dict(AA_PARAMS_FORMATTERS)
-
-# EIP712_META_FORMATTERS = {
-#     "feeToken": to_checksum_address,
-#     "ergsPerPubdata": integer_to_hex,
-#     "ergsPerStorage": integer_to_hex,
-#     "factoryDeps": apply_formatter_if(is_not_null, apply_list_to_array_formatter(abi_bytes_to_hex)),
-#     "aaParams": apply_formatter_if(is_not_null, aa_params_formatter)
-# }
 
 PAYMENT_PARAMS = {
     "paymaster": to_checksum_address,
@@ -89,7 +71,6 @@ EIP712_META_FORMATTERS = {
 meta_formatter = apply_formatters_to_dict(EIP712_META_FORMATTERS)
 
 ZKS_TRANSACTION_PARAMS_FORMATTERS = {
-    # 'data': abi_bytes_to_bytes,
     'data': to_ascii_if_bytes,
     'from': to_checksum_address,
     'gas': to_hex_if_integer,
@@ -104,19 +85,36 @@ ZKS_TRANSACTION_PARAMS_FORMATTERS = {
 
 zks_transaction_request_formatter = apply_formatters_to_dict(ZKS_TRANSACTION_PARAMS_FORMATTERS)
 
-
-ZKSYNC_FORMATTERS: [RPCEndpoint, Callable[..., Any]] = {
+ZKSYNC_REQUEST_FORMATTERS: [RPCEndpoint, Callable[..., Any]] = {
     eth_estimate_gas_rpc: apply_formatter_at_index(zks_transaction_request_formatter, 0),
 }
 
-# ZKSYNC_ABI_REQUEST_FORMATTERS = abi_request_formatters(STANDARD_NORMALIZERS, ZKSYNC_RPC_ABIS)
+
+def to_token(t: dict) -> Token:
+    return Token(l1_address=to_checksum_address(t["l1Address"]),
+                 l2_address=to_checksum_address(t["l2Address"]),
+                 symbol=t["symbol"],
+                 decimals=t["decimals"])
+
+
+def to_bridge_address(t: dict) -> BridgeAddresses:
+    return BridgeAddresses(l1_eth_default_bridge=HexStr(to_checksum_address(t["l1EthDefaultBridge"])),
+                           l2_eth_default_bridge=HexStr(to_checksum_address(t["l2EthDefaultBridge"])),
+                           l1_erc20_default_bridge=HexStr(to_checksum_address(t["l1Erc20DefaultBridge"])),
+                           l2_erc20_default_bridge=HexStr(to_checksum_address(t["l2Erc20DefaultBridge"])))
+
+
+ZKSYNC_RESULT_FORMATTERS: Dict[RPCEndpoint, Callable[..., Any]] = {
+    zks_get_confirmed_tokens_rpc: apply_list_to_array_formatter(to_token),
+    zks_get_bridge_contracts_rpc: to_bridge_address
+}
 
 
 def zksync_get_request_formatters(
-    method_name: Union[RPCEndpoint, Callable[..., RPCEndpoint]]
+        method_name: Union[RPCEndpoint, Callable[..., RPCEndpoint]]
 ) -> Dict[str, Callable[..., Any]]:
     request_formatter_maps = (
-        ZKSYNC_FORMATTERS,
+        ZKSYNC_REQUEST_FORMATTERS,
         ABI_REQUEST_FORMATTERS,
         # METHOD_NORMALIZERS needs to be after ABI_REQUEST_FORMATTERS
         # so that eth_getLogs's apply_formatter_at_index formatter
@@ -127,6 +125,29 @@ def zksync_get_request_formatters(
     )
     formatters = combine_formatters(request_formatter_maps, method_name)
     return compose(*formatters)
+
+
+def zksync_get_result_formatters(
+        method_name: Union[RPCEndpoint, Callable[..., RPCEndpoint]],
+        module: "Module",
+) -> Dict[str, Callable[..., Any]]:
+    formatters = combine_formatters(
+        (ZKSYNC_RESULT_FORMATTERS,
+         PYTHONIC_RESULT_FORMATTERS),
+        method_name
+    )
+    formatters_requiring_module = combine_formatters(
+        (FILTER_RESULT_FORMATTERS,),
+        method_name
+    )
+
+    partial_formatters = apply_module_to_formatters(
+        formatters_requiring_module,
+        module,
+        method_name
+    )
+    attrdict_formatter = apply_formatter_if(is_dict and not_attrdict, AttributeDict.recursive)
+    return compose(*partial_formatters, attrdict_formatter, *formatters)
 
 
 class ZkSync(Eth, ABC):
@@ -148,6 +169,7 @@ class ZkSync(Eth, ABC):
     _zks_get_confirmed_tokens: Method[Callable[[From, Limit], ZksTokens]] = Method(
         zks_get_confirmed_tokens_rpc,
         mungers=[default_root_munger]
+        , result_formatters=zksync_get_result_formatters
     )
 
     _zks_is_token_liquid: Method[Callable[[TokenAddress], ZksIsTokenLiquid]] = Method(
@@ -177,18 +199,15 @@ class ZkSync(Eth, ABC):
 
     _zks_get_bridge_contracts: Method[Callable[[], ZksBridgeAddresses]] = Method(
         zks_get_bridge_contracts_rpc,
-        mungers=[default_root_munger]
+        mungers=[default_root_munger],
+        result_formatters=zksync_get_result_formatters
     )
 
     _zks_get_l2_to_l1_msg_proof: Method[Callable[[int, HexStr, str, Optional[int]], ZksMessageProof]] = Method(
         zks_get_l2_to_l1_msg_proof_prc,
-        mungers=[default_root_munger]
+        mungers=[default_root_munger],
+        request_formatters=zksync_get_request_formatters
     )
-
-    # _eth_gas_price: Method[Callable[[TokenAddress], str]] = Method(
-    #     eth_gas_price_rpc,
-    #     mungers=[default_root_munger]
-    # )
 
     _eth_estimate_gas: Method[Callable[[Transaction], str]] = Method(
         eth_estimate_gas_rpc,
@@ -244,11 +263,7 @@ class ZkSync(Eth, ABC):
         return self._zks_get_all_account_balances(addr)
 
     def zks_get_bridge_contracts(self) -> BridgeAddresses:
-        response: ZksBridgeAddresses = self._zks_get_bridge_contracts()
-        return BridgeAddresses(response["l1EthDefaultBridge"],
-                               response["l2EthDefaultBridge"],
-                               response["l1Erc20DefaultBridge"],
-                               response["l2Erc20DefaultBridge"])
+        return self._zks_get_bridge_contracts()
 
     def zks_get_l2_to_l1_msg_proof(self,
                                    block: int,
@@ -256,9 +271,6 @@ class ZkSync(Eth, ABC):
                                    message: str,
                                    l2log_pos: Optional[int]) -> ZksMessageProof:
         return self._zks_get_l2_to_l1_msg_proof(block, sender, message, l2log_pos)
-
-    # def eth_gas_price(self, token_address: TokenAddress) -> str:
-    #     return self._eth_gas_price(token_address)
 
     def eth_estimate_gas(self, tx: Transaction) -> str:
         return self._eth_estimate_gas(tx)

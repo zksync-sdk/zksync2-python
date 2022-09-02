@@ -18,10 +18,10 @@ class TestTransaction712(TestCase):
     SENDER = HexStr("0x1234512345123451234512345123451234512345")
     RECEIVER = HexStr("0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC")
 
-    EXPECTED_TYPE_STRING = "Transaction(uint256 txType,uint256 from,uint256 to,uint256 ergsLimit,uint256 " \
-                           "ergsPerPubdataByteLimit,uint256 maxFeePerErg,uint256 maxPriorityFeePerErg,uint256 " \
-                           "paymaster,uint256 nonce,uint256 value,bytes data,bytes32[] factoryDeps," \
-                           "bytes paymasterInput) "
+    EXPECTED_TYPE_STRING = "Transaction(uint256 txType,uint256 from,uint256 to,uint256 " \
+                           "ergsLimit,uint256 ergsPerPubdataByteLimit,uint256 maxFeePerErg," \
+                           "uint256 maxPriorityFeePerErg,uint256 paymaster,uint256 nonce," \
+                           "uint256 value,bytes data,bytes32[] factoryDeps,bytes paymasterInput)"
 
     EXPECTED_ENCODED_VALUE = "0x2360af215549f2e44413f5a6eb25ecf40590c231e24a70b23a942f995814dc77"
     EXPECTED_ENCODED_BYTES = "0x2506074540188226a81a8dc006ab311c06b680232d39699d348e8ec83c81388b"

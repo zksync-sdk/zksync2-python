@@ -1,8 +1,9 @@
 from dataclasses import dataclass, astuple, asdict
 from decimal import Decimal
 from eth_typing import HexStr, Hash32
-from typing import Union, NewType, Dict, List, Any
+from typing import Union, NewType, Dict, List, Any, Literal
 from hexbytes import HexBytes
+from enum import Enum
 
 ADDRESS_DEFAULT = HexStr("0x" + "0" * 40)
 
@@ -13,6 +14,12 @@ L2WithdrawTxHash = Union[Hash32, HexBytes, HexStr]
 From = NewType("from", int)
 # Before = NewType('offset', int)
 Limit = NewType('limit', int)
+# ZkBlockParams = Literal["committed", "finalized"]
+
+
+class ZkBlockParams(Enum):
+    COMMITTED = "committed"
+    FINALIZED = "finalized"
 
 
 @dataclass
@@ -31,7 +38,9 @@ class Token:
     def into_decimal(self, amount: int) -> Decimal:
         return Decimal(amount).scaleb(self.decimals) // Decimal(10) ** self.decimals
 
-    def to_int(self, amount: Decimal) -> int:
+    def to_int(self, amount: Union[Decimal, int]) -> int:
+        if isinstance(amount, int):
+            amount = Decimal(amount)
         return int(amount * (Decimal(10) ** self.decimals))
 
     @staticmethod

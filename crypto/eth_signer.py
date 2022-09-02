@@ -50,11 +50,15 @@ class PrivateKeyEthSigner(EthSignerBase, ABC):
         return self.credentials.address
 
     def get_domain(self):
+        # default_domain = make_domain(name=self._NAME,
+        #                              version=self._VERSION,
+        #                              chainId=self.chain_id,
+        #                              # DO NOT USE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        #                              verifyingContract=ADDRESS_DEFAULT)
+        # return default_domain
         default_domain = make_domain(name=self._NAME,
                                      version=self._VERSION,
-                                     chainId=self.chain_id,
-                                     # DO NOT USE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                                     verifyingContract=ADDRESS_DEFAULT)
+                                     chainId=self.chain_id)
         return default_domain
 
     def sign_message(self, msg: str) -> HexStr:

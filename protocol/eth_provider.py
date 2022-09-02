@@ -6,8 +6,7 @@ from eth_typing import HexStr
 from web3 import Web3
 from protocol.utility_contracts.erc20_contract import ERC20Contract
 from protocol.utility_contracts.gas_provider import GasProvider
-from protocol.utility_contracts.l1_eth_bridge import L1EthBridge
-from protocol.utility_contracts.l1_erc20_bridge import L1ERC20Bridge
+from protocol.utility_contracts.l1_bridge import L1Bridge
 from protocol.utility_contracts.priority_op_tree import PriorityOpTree
 from protocol.utility_contracts.priority_queue_type import PriorityQueueType
 from protocol.zksync_contract import ZkSyncContract
@@ -19,30 +18,29 @@ from protocol.core.types import Token, ADDRESS_DEFAULT, BridgeAddresses
 class EthereumProvider:
     # gas - gas limit - amount of iteration code  execution
     # gas price = price of 1 gas limit
-
     GAS_LIMIT = 21000
     DEFAULT_THRESHOLD = 2 ** 255
 
     def __init__(self,
                  web3: Web3,
-                 l1_erc20_bridge: L1ERC20Bridge,
-                 l1_eth_bridge: L1EthBridge,
+                 erc20_bridge: L1Bridge,
+                 eth_bridge: L1Bridge,
                  account: BaseAccount,
                  zksync: Optional[ZkSyncContract] = None):
         self.web3 = web3
         self.account = account
-        self.l1_erc20_bridge = l1_erc20_bridge
-        self.l1_eth_bridge = l1_eth_bridge
+        self.l1_erc20_bridge = erc20_bridge
+        self.l1_eth_bridge = eth_bridge
         self.zksync_contract = zksync
 
     @classmethod
     def build_ethereum_provider(cls, zksync: Web3, eth: Web3, account: BaseAccount, gas_provider: GasProvider):
         bridge_contracts: BridgeAddresses = zksync.zksync.zks_get_bridge_contracts()
-        erc20_bridge = L1ERC20Bridge(bridge_contracts.l1_erc20_default_bridge, eth, account, gas_provider)
-        eth_bridge = L1EthBridge(bridge_contracts.l1_eth_default_bridge, eth, account, gas_provider)
+        erc20_bridge = L1Bridge(bridge_contracts.l1_erc20_default_bridge, eth, account, gas_provider)
+        eth_bridge = L1Bridge(bridge_contracts.l1_eth_default_bridge, eth, account, gas_provider)
         provider = cls(web3=eth,
-                       l1_erc20_bridge=erc20_bridge,
-                       l1_eth_bridge=eth_bridge,
+                       erc20_bridge=erc20_bridge,
+                       eth_bridge=eth_bridge,
                        account=account)
         return provider
 
@@ -81,7 +79,7 @@ class EthereumProvider:
     def deposit(self, token: Token, amount: int, user_address: HexStr):
         if token.is_eth():
             return self.l1_eth_bridge.deposit(user_address, ADDRESS_DEFAULT, amount)
-        return self.l1_erc20_bridge.deposit(user_address, token.l1_address, amount, PriorityQueueType.DEQUE)
+        return self.l1_erc20_bridge.deposit(user_address, token.l1_address, amount)
 
     def withdraw(self, token: Token, amount: int, user_address: str):
         raise NotImplementedError("Unsupported operation")

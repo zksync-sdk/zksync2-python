@@ -1,7 +1,4 @@
 from unittest import TestCase
-
-# from eth_account.messages import encode_structured_data
-
 from eth_typing import HexStr
 from web3 import Web3
 from web3.types import Nonce
