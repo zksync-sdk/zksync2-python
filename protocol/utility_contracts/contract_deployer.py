@@ -1,4 +1,6 @@
 import importlib.resources as pkg_resources
+
+from eth_typing import HexStr
 from web3 import Web3
 from hashlib import sha256
 from typing import Optional
@@ -23,10 +25,7 @@ class ContractDeployer:
     DEFAULT_SALT = b'\0' * 32
     CREATE2_FUNC = "create2"
     MAX_BYTE_CODE_LENGTH = 2 ** 16
-
     EMPTY_BYTES = b''
-
-    DEPLOYER_SYSTEM_CONTRACT_ADDRESS = "0x0000000000000000000000000000000000008006"
 
     def __init__(self, web3: Web3, abi: Optional[dict] = None):
         self.web3 = web3
@@ -39,12 +38,11 @@ class ContractDeployer:
         bytecode_len = int(len(bytecode) / 32)
         if bytecode_len > self.MAX_BYTE_CODE_LENGTH:
             raise OverflowError("ContractDeployer._hash_byte_code, bytecode length must be less than 2^16")
-        # byte_code_hash = keccak_256(bytecode)
         byte_code_hash = bytes.fromhex(sha256(bytecode).hexdigest())
         ret = bytecode_len.to_bytes(2, byteorder='big') + byte_code_hash[2:]
         return ret
 
-    def encode_data(self, bytecode: bytes, salt: bytes = None) -> bytes:
+    def encode_data(self, bytecode: bytes, salt: bytes = None) -> HexStr:
 
         # INFO: function encoding under the Python is different from web3 java
         #       Reason: class ByteStringEncoder(BaseEncoder): for empty bytes generates 32 bytes empty value
@@ -66,4 +64,4 @@ class ContractDeployer:
             )
 
         encoded_function = self.contract_deployer.encodeABI(fn_name=self.CREATE2_FUNC, args=args)
-        return encoded_function
+        return HexStr(encoded_function)

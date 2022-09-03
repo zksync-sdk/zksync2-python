@@ -5,17 +5,18 @@ from web3 import Web3
 from web3.types import TxParams, BlockParams, Nonce
 from web3.middleware import geth_poa_middleware
 
-from protocol.request.request_types import FunctionCallTxBuilder
+from protocol.request.request_types import FunctionCallTxBuilder, ContractDeployTransactionBuilder
 from protocol.utility_contracts.erc20_contract import ERC20FunctionEncoder
 from protocol.utility_contracts.gas_provider import StaticGasProvider
 from protocol.zksync_web3.zksync_web3_builder import ZkSyncBuilder
 from protocol.utility_contracts.l2_bridge import L2BridgeEncoder
-from protocol.core.types import Token, ZkBlockParams, BridgeAddresses
+from protocol.core.types import Token, ZkBlockParams, BridgeAddresses, EthBlockParams
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
 
 from crypto.eth_signer import PrivateKeyEthSigner
 from protocol.eth_provider import EthereumProvider
+from tests.counter_contract_utils import _get_counter_contract_binary
 from transaction.transaction712 import Transaction712, Transaction712Encoder
 
 
@@ -81,6 +82,17 @@ class ZkSyncWeb3Tests(TestCase):
         tx_hash = "0xf53d38388cd8e5292683509c9a9f373e2c7d3766f41256b9cbf7d966552a46ff"
         receipt = self.web3.zksync.get_transaction_receipt(tx_hash)
         print(f"receipt: {receipt}")
+
+    def test_estimate_gas_transfer_native(self):
+        tx_builder = FunctionCallTxBuilder(from_=self.account.address,
+                                           to=self.account.address,
+                                           ergs_price=0,
+                                           ergs_limit=0,
+                                           data=HexStr("0x"))
+        tx = tx_builder.build()
+        estimate_gas = self.web3.zksync.eth_estimate_gas(tx)
+        print(f"test_estimate_gas_transfer_native, estimate_gas: {estimate_gas}")
+        self.assertGreater(estimate_gas, 0, "test_estimate_gas_transfer_native, estimate_gas must be greater 0")
 
     def test_transfer_native_to_self(self):
         nonce = self.web3.zksync.get_transaction_count(self.account.address, self.DEFAULT_BLOCK_PARAM_NAME)
@@ -162,6 +174,29 @@ class ZkSyncWeb3Tests(TestCase):
         tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash)
         self.assertEqual(1, tx_receipt["status"])
 
+    def test_estimate_gas_withdraw(self):
+        bridges = self.web3.zksync.zks_get_bridge_contracts()
+        l2_func_encoder = L2BridgeEncoder(self.web3)
+        call_data = l2_func_encoder.encode_function(fn_name="withdraw", args=[
+            self.account.address,
+            self.ETH_TOKEN.l2_address,
+            self.ETH_TOKEN.to_int(1)
+        ])
+
+        self.assertEqual("0xd9caed120000000000000000000000007e5f4552091a69125d5dfcb7b8c2659029395bdf"
+                         "00000000000000000000000000000000000000000000000000000000000000000000000000"
+                         "000000000000000000000000000000000000000de0b6b3a7640000", call_data)
+
+        tx_builder = FunctionCallTxBuilder(from_=self.account.address,
+                                           to=bridges.l2_eth_default_bridge,
+                                           ergs_limit=0,
+                                           ergs_price=0,
+                                           data=HexStr(call_data))
+        tx = tx_builder.build()
+        estimate_gas = self.web3.zksync.eth_estimate_gas(tx)
+        print(f"test_estimate_gas_withdraw, estimate_gas: {estimate_gas}")
+        self.assertGreater(estimate_gas, 0, "test_estimate_gas_withdraw, estimate_gas must be greater 0")
+
     def test_withdraw(self):
         nonce = self.web3.zksync.get_transaction_count(self.account.address, ZkBlockParams.COMMITTED.value)
         bridges: BridgeAddresses = self.web3.zksync.zks_get_bridge_contracts()
@@ -201,3 +236,34 @@ class ZkSyncWeb3Tests(TestCase):
         tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash)
         self.assertEqual(1, tx_receipt["status"])
 
+    def test_estimate_gas_execute(self):
+        erc20func_encoder = ERC20FunctionEncoder(self.web3)
+        transfer_args = [
+            Web3.toChecksumAddress("0xe1fab3efd74a77c23b426c302d96372140ff7d0c"),
+            1
+        ]
+        call_data = erc20func_encoder.encode_method(fn_name="transfer", args=transfer_args)
+        tx_builder = FunctionCallTxBuilder(from_=self.account.address,
+                                           to=Web3.toChecksumAddress("0x79f73588fa338e685e9bbd7181b410f60895d2a3"),
+                                           ergs_limit=0,
+                                           ergs_price=0,
+                                           data=HexStr(call_data))
+        tx = tx_builder.build()
+        estimate_gas = self.web3.zksync.eth_estimate_gas(tx)
+        print(f"test_estimate_gas_execute, estimate_gas: {estimate_gas}")
+        self.assertGreater(estimate_gas, 0, "test_estimate_withdraw, estimate_gas must be greater 0")
+
+    def test_estimate_gas_deploy_contract(self):
+        counter_contract_bin = _get_counter_contract_binary()
+        tx_builder = ContractDeployTransactionBuilder(web3=self.web3,
+                                                      from_=self.account.address,
+                                                      ergs_price=0,
+                                                      ergs_limit=0,
+                                                      bytecode=counter_contract_bin)
+        tx = tx_builder.build()
+        estimate_gas = self.web3.zksync.eth_estimate_gas(tx)
+        print(f"test_estimate_gas_deploy_contract, estimate_gas: {estimate_gas}")
+        self.assertGreater(estimate_gas, 0, "test_estimate_gas_deploy_contract, estimate_gas must be greater 0")
+
+    def test_deploy_contract_create(self):
+        nonce = self.web3.zksync.get_transaction_count(self.account.address, EthBlockParams.PENDING.value)

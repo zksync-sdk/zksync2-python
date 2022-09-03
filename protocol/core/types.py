@@ -22,6 +22,10 @@ class ZkBlockParams(Enum):
     FINALIZED = "finalized"
 
 
+class EthBlockParams(Enum):
+    PENDING = "pending"
+
+
 @dataclass
 class Token:
     l1_address: HexStr

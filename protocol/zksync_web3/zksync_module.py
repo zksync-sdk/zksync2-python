@@ -2,9 +2,10 @@ from abc import ABC
 
 from eth_utils import to_checksum_address, is_dict
 from eth_utils.curried import apply_formatter_at_index
+from hexbytes import HexBytes
 from web3 import Web3
 from web3.module import Module
-from web3._utils.formatters import integer_to_hex
+from web3._utils.formatters import integer_to_hex, apply_formatter_to_array
 from web3._utils.method_formatters import (
     ABI_REQUEST_FORMATTERS,
     METHOD_NORMALIZERS,
@@ -54,21 +55,22 @@ zks_set_contract_debug_info_rpc = RPCEndpoint("zks_setContractDebugInfo")
 zks_get_contract_debug_info_rpc = RPCEndpoint("zks_getContractDebugInfo")
 zks_get_transaction_trace_rpc = RPCEndpoint("zks_getTransactionTrace")
 
-PAYMENT_PARAMS = {
-    "paymaster": to_checksum_address,
-    "paymasterInput": abi_bytes_to_hex
-}
 
-payments_params_formatter = apply_formatters_to_dict(PAYMENT_PARAMS)
+def meta_formatter(eip712: EIP712Meta) -> dict:
+    ret = {
+        "ergsPerPubdata": integer_to_hex(eip712.ergs_per_pub_data)
+    }
+    if eip712.custom_signature is not None:
+        ret["customSignature"] = eip712.custom_signature.hex()
 
-EIP712_META_FORMATTERS = {
-    "ergsPerPubdata": integer_to_hex,
-    "customSignature": apply_formatter_if(is_not_null, abi_bytes_to_hex),
-    "factoryDeps": apply_formatter_if(is_not_null, apply_list_to_array_formatter(abi_bytes_to_hex)),
-    "paymasterParams": apply_formatter_if(is_not_null, payments_params_formatter)
-}
+    factory_formatter = apply_formatter_to_array(to_ascii_if_bytes)
+    if eip712.factory_deps is not None:
+        ret["factoryDeps"] = [factory_formatter(dep)
+                              for dep in eip712.factory_deps]
+    # if self.paymaster_params is not None:
+    #     ret["paymasterParams"] = self.paymaster_params.as_dict()
+    return ret
 
-meta_formatter = apply_formatters_to_dict(EIP712_META_FORMATTERS)
 
 ZKS_TRANSACTION_PARAMS_FORMATTERS = {
     'data': to_ascii_if_bytes,
