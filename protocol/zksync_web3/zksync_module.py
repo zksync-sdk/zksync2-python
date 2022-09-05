@@ -106,9 +106,17 @@ def to_bridge_address(t: dict) -> BridgeAddresses:
                            l2_erc20_default_bridge=HexStr(to_checksum_address(t["l2Erc20DefaultBridge"])))
 
 
+def to_zks_account_balances(t: dict) -> ZksAccountBalances:
+    result = dict()
+    for k, v in t.items():
+        result[k] = int(v, 16)
+    return result
+
+
 ZKSYNC_RESULT_FORMATTERS: Dict[RPCEndpoint, Callable[..., Any]] = {
     zks_get_confirmed_tokens_rpc: apply_list_to_array_formatter(to_token),
-    zks_get_bridge_contracts_rpc: to_bridge_address
+    zks_get_bridge_contracts_rpc: to_bridge_address,
+    zks_get_all_account_balances_rpc: to_zks_account_balances
 }
 
 
@@ -196,7 +204,8 @@ class ZkSync(Eth, ABC):
 
     _zks_get_all_account_balances: Method[Callable[[Address], ZksAccountBalances]] = Method(
         zks_get_all_account_balances_rpc,
-        mungers=[default_root_munger]
+        mungers=[default_root_munger],
+        result_formatters=zksync_get_result_formatters
     )
 
     _zks_get_bridge_contracts: Method[Callable[[], ZksBridgeAddresses]] = Method(
@@ -261,7 +270,7 @@ class ZkSync(Eth, ABC):
     def eth_get_balance(self, address: Address, default_block, token_address: TokenAddress) -> Any:
         return self._zks_eth_get_balance(address, default_block, token_address)
 
-    def zks_get_all_account_balances(self, addr: Address):
+    def zks_get_all_account_balances(self, addr: Address) -> ZksAccountBalances:
         return self._zks_get_all_account_balances(addr)
 
     def zks_get_bridge_contracts(self) -> BridgeAddresses:

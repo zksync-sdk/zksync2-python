@@ -5,7 +5,10 @@ from web3 import Web3
 from hashlib import sha256
 from typing import Optional
 import json
+from web3.types import Nonce
+from eth_utils.crypto import keccak
 from .. import contract_abi
+from ..core.utils import pad_front_bytes, get_data, int_to_bytes
 
 icontract_deployer_abi_cache = None
 
@@ -27,6 +30,8 @@ class ContractDeployer:
     MAX_BYTE_CODE_LENGTH = 2 ** 16
     EMPTY_BYTES = b''
 
+    CREATE_PREFIX = keccak(text="zksyncCreate")
+
     def __init__(self, web3: Web3, abi: Optional[dict] = None):
         self.web3 = web3
         if abi is None:
@@ -42,7 +47,7 @@ class ContractDeployer:
         ret = bytecode_len.to_bytes(2, byteorder='big') + byte_code_hash[2:]
         return ret
 
-    def encode_data(self, bytecode: bytes, salt: bytes = None) -> HexStr:
+    def encode_create2(self, bytecode: bytes, salt: bytes = None) -> HexStr:
 
         # INFO: function encoding under the Python is different from web3 java
         #       Reason: class ByteStringEncoder(BaseEncoder): for empty bytes generates 32 bytes empty value
@@ -65,3 +70,14 @@ class ContractDeployer:
 
         encoded_function = self.contract_deployer.encodeABI(fn_name=self.CREATE2_FUNC, args=args)
         return HexStr(encoded_function)
+
+    def compute_l2_create_address(self, sender: HexStr, nonce: Nonce) -> HexStr:
+        sender_bytes = get_data(sender)
+        sender_bytes = pad_front_bytes(sender_bytes, 32)
+        nonce = int_to_bytes(nonce)
+        nonce_bytes = pad_front_bytes(nonce, 32)
+        result = self.CREATE_PREFIX + sender_bytes + nonce_bytes
+        sha_result = keccak(result)
+        address = sha_result[12:]
+        address = "0x" + address.hex()
+        return HexStr(Web3.toChecksumAddress(address))

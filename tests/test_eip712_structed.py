@@ -3,6 +3,7 @@ from unittest import TestCase
 from eth_utils.crypto import keccak_256
 from eip712_structs import EIP712Struct, String, Address, make_domain
 from crypto.eth_account_patch.encode_structed_data import encode_structured_data
+from protocol.core.utils import pad_front_bytes
 
 
 class Person(EIP712Struct):
@@ -25,11 +26,6 @@ def make_mail(from_, to, content) -> Mail:
         'contents': content
     }
     return Mail(**kwargs)
-
-
-def pad_front_bytes(bs: bytes, needed_length: int):
-    padded = b'\0'*(needed_length - len(bs)) + bs
-    return padded
 
 
 class TestEIP712Structured(TestCase):

@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, astuple, asdict
-from typing import TypedDict, List, Optional, Dict
+from dataclasses import dataclass
+from typing import TypedDict, List, Optional
 from eth_typing import HexStr
 from web3 import Web3
 from web3.types import AccessList
@@ -19,26 +19,6 @@ class EIP712Meta(dict):
     custom_signature: Optional[bytes] = None
     factory_deps: Optional[List[bytes]] = None
     paymaster_params: Optional[PaymasterParams] = None
-
-    # def _as_dict(self) -> dict:
-    #     ret = {
-    #         "ergsPerPubdata": self.ergs_per_pub_data
-    #     }
-    #     if self.custom_signature is not None:
-    #         ret["customSignature"] = self.custom_signature
-    #
-    #     if self.factory_deps is not None:
-    #         ret["factoryDeps"] = self.factory_deps
-    #     # if self.paymaster_params is not None:
-    #     #     ret["paymasterParams"] = self.paymaster_params.as_dict()
-    #     return ret
-    #
-    # def __iter__(self):
-    #     yield astuple(self)
-    #
-    # def items(self):
-    #     # return asdict(self).items()
-    #     return self._as_dict().items()
 
 
 Transaction = TypedDict(
@@ -89,7 +69,7 @@ class FunctionCallTxBuilder(FunctionCallTxBuilderBase, ABC):
         return self.tx
 
 
-class ContractDeployTransactionBuilder(FunctionCallTxBuilderBase, ABC):
+class Create2ContractTransactionBuilder(FunctionCallTxBuilderBase, ABC):
 
     def __init__(self,
                  web3: Web3,
@@ -98,7 +78,7 @@ class ContractDeployTransactionBuilder(FunctionCallTxBuilderBase, ABC):
                  ergs_limit: int,
                  bytecode: bytes):
         contract_deployer = ContractDeployer(web3)
-        call_data = contract_deployer.encode_data(bytecode)
+        call_data = contract_deployer.encode_create2(bytecode)
         eip712_meta = EIP712Meta(ergs_per_pub_data=EIP712Meta.ERGS_PER_PUB_DATA_DEFAULT,
                                  custom_signature=None,
                                  factory_deps=[bytecode],
@@ -116,3 +96,6 @@ class ContractDeployTransactionBuilder(FunctionCallTxBuilderBase, ABC):
 
     def build(self) -> Transaction:
         return self.tx
+
+# class CreateContractTransactionBuilder(FunctionCallTxBuilderBase, ABC):
+#     def __init__(self, ):

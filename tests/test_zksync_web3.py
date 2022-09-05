@@ -5,7 +5,8 @@ from web3 import Web3
 from web3.types import TxParams, BlockParams, Nonce
 from web3.middleware import geth_poa_middleware
 
-from protocol.request.request_types import FunctionCallTxBuilder, ContractDeployTransactionBuilder
+from protocol.request.request_types import FunctionCallTxBuilder, Create2ContractTransactionBuilder
+from protocol.utility_contracts.contract_deployer import ContractDeployer
 from protocol.utility_contracts.erc20_contract import ERC20FunctionEncoder
 from protocol.utility_contracts.gas_provider import StaticGasProvider
 from protocol.zksync_web3.zksync_web3_builder import ZkSyncBuilder
@@ -16,7 +17,7 @@ from eth_account.signers.local import LocalAccount
 
 from crypto.eth_signer import PrivateKeyEthSigner
 from protocol.eth_provider import EthereumProvider
-from tests.counter_contract_utils import _get_counter_contract_binary
+from tests.counter_contract_utils import _get_counter_contract_binary, CounterContractEncoder, CounterContract
 from transaction.transaction712 import Transaction712, Transaction712Encoder
 
 
@@ -255,7 +256,7 @@ class ZkSyncWeb3Tests(TestCase):
 
     def test_estimate_gas_deploy_contract(self):
         counter_contract_bin = _get_counter_contract_binary()
-        tx_builder = ContractDeployTransactionBuilder(web3=self.web3,
+        tx_builder = Create2ContractTransactionBuilder(web3=self.web3,
                                                       from_=self.account.address,
                                                       ergs_price=0,
                                                       ergs_limit=0,
@@ -265,5 +266,48 @@ class ZkSyncWeb3Tests(TestCase):
         print(f"test_estimate_gas_deploy_contract, estimate_gas: {estimate_gas}")
         self.assertGreater(estimate_gas, 0, "test_estimate_gas_deploy_contract, estimate_gas must be greater 0")
 
+    def test_wen3py_deploy_contract(self):
+        counter_contract = CounterContract.deploy(self.web3, self.account)
+        print(f"Counter Contract address: {counter_contract.address}")
+
+        v = counter_contract.get()
+        self.assertEqual(v, 0)
+
+        tx = counter_contract.increment(10)
+        self.assertEqual(1, tx["status"])
+
+        v = counter_contract.get()
+        self.assertEqual(10, v)
+
     def test_deploy_contract_create(self):
         nonce = self.web3.zksync.get_transaction_count(self.account.address, EthBlockParams.PENDING.value)
+        deployer = ContractDeployer(self.web3)
+        precomputed_address = deployer.compute_l2_create_address(self.account.address, nonce)
+        print(f"precomputed address: {precomputed_address}")
+
+    def test_get_all_account_balances(self):
+        balances = self.web3.zksync.zks_get_all_account_balances(self.account.address)
+        print(f"balances : {balances}")
+
+    def test_get_confirmed_tokens(self):
+        confirmed = self.web3.zksync.zks_get_confirmed_tokens(0, 10)
+        print(f"confirmed tokens: {confirmed}")
+
+    def test_is_token_liquid(self):
+        """
+        ERROR: Method not found under JAVA also
+        """
+        is_token_liquid = self.web3.zksync.zks_is_token_liquid(self.ETH_TOKEN.l2_address)
+        print(f"is_token_liquid: {is_token_liquid}")
+
+    def test_get_token_price(self):
+        price = self.web3.zksync.zks_get_token_price(self.ETH_TOKEN.l2_address)
+        print(f"price: {price}")
+
+    def test_get_l1_chain_id(self):
+        l1_chain_id = self.web3.zksync.zks_l1_chain_id()
+        print(f"L1 chain ID: {l1_chain_id} ")
+
+    def test_get_bridge_addresses(self):
+        addresses = self.web3.zksync.zks_get_bridge_contracts()
+        print(f"Bridge addresses: {addresses}")

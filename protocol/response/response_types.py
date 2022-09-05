@@ -5,7 +5,7 @@ from eth_typing import HexStr
 from web3.types import TxData
 from protocol.core.types import TokenAddress, Token, VmDebugTrace, Fee
 
-ZksAccountBalances = Dict[str, str]
+ZksAccountBalances = Dict[str, int]
 
 ZksBridgeAddresses = TypedDict(
     "ZksBridgeAddresses",
