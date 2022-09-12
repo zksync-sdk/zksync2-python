@@ -37,7 +37,7 @@ def encode_address(addr: Union[Address, ChecksumAddress, str]) -> bytes:
 
 def hash_byte_code(bytecode: bytes) -> bytes:
     bytecode_hash = bytes.fromhex(sha256(bytecode).hexdigest())
-    bytecode_size = int(len(bytecode_hash) / 32)
+    bytecode_size = int(len(bytecode) / 32)
     if bytecode_size > 2 ** 16:
         raise OverflowError("hash_byte_code, bytecode length must be less than 2^16")
     ret = bytecode_size.to_bytes(2, byteorder='big') + bytecode_hash[2:]

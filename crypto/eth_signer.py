@@ -4,11 +4,13 @@ import web3
 from abc import abstractmethod, ABC
 from eip712_structs import make_domain, EIP712Struct
 from eth_account.datastructures import SignedMessage
+from eth_hash.backends.pycryptodome import keccak256
 from eth_typing import ChecksumAddress, HexStr
+from eth_utils import keccak
 
 from protocol.core.types import ADDRESS_DEFAULT
 from eth_account.signers.local import LocalAccount
-from eth_account.messages import encode_defunct
+from eth_account.messages import encode_defunct, SignableMessage
 from crypto.eth_account_patch.encode_structed_data import encode_structured_data
 
 from eth_utils.curried import to_bytes
@@ -74,13 +76,36 @@ class PrivateKeyEthSigner(EthSignerBase, ABC):
         address = web3.Account.recover_message(signable_message=msg, signature=signature)
         return address == self.get_address()
 
+    def typed_data_to_signed_bytes(self, typed_data: EIP712Struct, domain=None) -> SignableMessage:
+        d = domain
+        if d is None:
+            d = self.get_domain()
+        msg = typed_data.signable_bytes(d)
+        message_hash = encode_defunct(msg)
+        return message_hash
+
+    def sign_typed_data_msg_hash(self, typed_data: EIP712Struct, domain=None) -> SignedMessage:
+        d = domain
+        if d is None:
+            d = self.get_domain()
+        msg = typed_data.signable_bytes(d)
+        singable_message = encode_defunct(msg)
+        msg_hash = keccak(singable_message.body)
+        return self.credentials.signHash(msg_hash)
+
     def sign_typed_data(self, typed_data: EIP712Struct, domain=None) -> SignedMessage:
         d = domain
         if d is None:
             d = self.get_domain()
-        structured = typed_data.to_message(d)
-        msg = encode_structured_data(structured)
-        sig = self.credentials.sign_message(msg)
+        # structured = typed_data.to_message(d)
+        # msg = encode_structured_data(structured)
+        # sig = self.credentials.sign_message(msg)
+        # return sig
+        # typed_data.
+
+        msg = typed_data.signable_bytes(d)
+        message_hash = encode_defunct(msg)
+        sig = self.credentials.sign_message(message_hash)
         return sig
 
     def verify_typed_data(self, sig: HexStr, typed_data: EIP712Struct, domain=None) -> bool:

@@ -24,17 +24,6 @@ def _get_counter_contract_abi():
 
 class CounterContract:
 
-    # def __init__(self, web3: Web3, account: BaseAccount):
-    #     self.web3 = web3
-    #     self.counter_contract_instance = self.web3.zksync.contract(abi=_get_counter_contract_abi(),
-    #                                                                bytecode=_get_counter_contract_binary())
-
-    # def get(self):
-    #     return self.counter_contract_instance.functions.get().call()
-    #
-    # def increment(self, val: int):
-    #     tx_hash = self.counter_contract_instance.functions.increment(val).build
-
     def __init__(self, web3: Web3, address: HexStr, abi=None):
         self.web3 = web3
         if abi is None:
@@ -56,7 +45,7 @@ class CounterContract:
                                                          bytecode=_get_counter_contract_binary())
         tx_hash = counter_contract_instance.constructor().transact(
             {
-                "from": account.address
+                "from": account.address,
             }
         )
         tx_receipt = web3.zksync.wait_for_transaction_receipt(tx_hash)

@@ -1,11 +1,14 @@
 from unittest import TestCase
 
+from eth_hash.backends.pysha3 import keccak256
 from eth_typing import HexStr
+from eth_utils import keccak
 from web3 import Web3
 from web3.types import TxParams, BlockParams, Nonce
 from web3.middleware import geth_poa_middleware
 
-from protocol.request.request_types import FunctionCallTxBuilder, Create2ContractTransactionBuilder
+from protocol.request.request_types import FunctionCallTxBuilder, Create2ContractTransactionBuilder, \
+    create_contract_transaction, EIP712Meta
 from protocol.utility_contracts.contract_deployer import ContractDeployer
 from protocol.utility_contracts.erc20_contract import ERC20FunctionEncoder
 from protocol.utility_contracts.gas_provider import StaticGasProvider
@@ -257,16 +260,22 @@ class ZkSyncWeb3Tests(TestCase):
     def test_estimate_gas_deploy_contract(self):
         counter_contract_bin = _get_counter_contract_binary()
         tx_builder = Create2ContractTransactionBuilder(web3=self.web3,
-                                                      from_=self.account.address,
-                                                      ergs_price=0,
-                                                      ergs_limit=0,
-                                                      bytecode=counter_contract_bin)
+                                                       from_=self.account.address,
+                                                       ergs_price=0,
+                                                       ergs_limit=0,
+                                                       bytecode=counter_contract_bin)
         tx = tx_builder.build()
         estimate_gas = self.web3.zksync.eth_estimate_gas(tx)
         print(f"test_estimate_gas_deploy_contract, estimate_gas: {estimate_gas}")
         self.assertGreater(estimate_gas, 0, "test_estimate_gas_deploy_contract, estimate_gas must be greater 0")
 
     def test_wen3py_deploy_contract(self):
+        """
+        INFO: ZkSycn needs Ctor & Binary data as separate params:
+               public static Function encodeCreate2(byte[] bytecode, byte[] calldata);
+               but under Eth Web3J it's hard to split.
+               Might possible under Python
+        """
         counter_contract = CounterContract.deploy(self.web3, self.account)
         print(f"Counter Contract address: {counter_contract.address}")
 
@@ -279,11 +288,82 @@ class ZkSyncWeb3Tests(TestCase):
         v = counter_contract.get()
         self.assertEqual(10, v)
 
+    def test_deploy_contract_create_eip712(self):
+        factory_deps = [_get_counter_contract_binary()]
+        meta = EIP712Meta(ergs_per_pub_data=160000,
+                          custom_signature=None,
+                          factory_deps=factory_deps,
+                          paymaster_params=None)
+
+        tx_712 = Transaction712(chain_id=self.chain_id,
+                                nonce=Nonce(14),
+                                gas_limit=39832400000000,
+                                to=HexStr("0x0000000000000000000000000000000000008006"),
+                                value=0,
+                                data=HexStr("e2e9718a000000000000000000000000000000000000000000000000000000000000000000379c09b5568d43b0ac6533a2672ee836815530b412f082f0b2e69915aa50fc000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000"),
+                                maxPriorityFeePerGas=100000000,
+                                maxFeePerGas=100000000,
+                                from_=self.account.address,
+                                meta=meta)
+        eip712_structured = tx_712.to_eip712_struct()
+        signature = self.signer.typed_data_to_signed_bytes(eip712_structured)
+
+        self.assertEqual("2a619af0fdabc2b9979e9b8c250b36b7bda39109d0e446bbda3d259525e10063",
+                         keccak(signature.body).hex())
+        domain = self.signer.get_domain()
+        domain_hash = domain.hash_struct()
+        self.assertEqual("90c05efb083b1455ff9cfdbd3792b42bea87908b3a05f46c28244311c105b5a6", domain_hash.hex())
+
+        encoded_type = eip712_structured.encode_type()
+        encoded_type_expected = "Transaction(uint256 txType,uint256 from,uint256 to,uint256 ergsLimit,uint256 ergsPerPubdataByteLimit,uint256 maxFeePerErg,uint256 maxPriorityFeePerErg,uint256 paymaster,uint256 nonce,uint256 value,bytes data,bytes32[] factoryDeps,bytes paymasterInput)"
+        self.assertEqual(encoded_type_expected, encoded_type)
+
+        type_hash = eip712_structured.type_hash()
+        self.assertEqual("807c2e451d225420a18aeef6a82cbe63445d21905cbdd92ac8638cd29dc0fbea", type_hash.hex())
+
+        value_hash = eip712_structured.hash_struct()
+        self.assertEqual("c4e0b477258e218c26a90ae846d4fb7330e79360ac8f6ec5a18a1f820f02e22e", value_hash.hex())
+        print(f"typed_bytes: {value_hash.hex()}")
+
     def test_deploy_contract_create(self):
         nonce = self.web3.zksync.get_transaction_count(self.account.address, EthBlockParams.PENDING.value)
         deployer = ContractDeployer(self.web3)
         precomputed_address = deployer.compute_l2_create_address(self.account.address, nonce)
+
         print(f"precomputed address: {precomputed_address}")
+
+        tx = create_contract_transaction(web3=self.web3,
+                                         from_=self.account.address,
+                                         ergs_limit=0,
+                                         ergs_price=0,
+                                         bytecode=_get_counter_contract_binary())
+        estimate_gas = self.web3.zksync.eth_estimate_gas(tx)
+        gas_price = self.web3.zksync.gas_price
+        print(f"Fee for transaction is: {estimate_gas * gas_price}")
+
+        tx_712 = Transaction712(chain_id=self.chain_id,
+                                nonce=nonce,
+                                gas_limit=estimate_gas,
+                                to=tx["to"],
+                                value=tx["value"],
+                                data=tx["data"],
+                                maxPriorityFeePerGas=100000000,
+                                maxFeePerGas=gas_price,
+                                from_=self.account.address,
+                                meta=tx["eip712Meta"])
+        eip712_structured = tx_712.to_eip712_struct()
+        singable_message = self.signer.sign_typed_data_msg_hash(eip712_structured)
+        msg = Transaction712Encoder.encode(tx_712, singable_message)
+        tx_hash = self.web3.zksync.send_raw_transaction(msg)
+        tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
+
+        # INFO: does not work in all cases, fields are NONE
+        self.assertEqual(1, tx_receipt["status"])
+
+        # INFO: does not work
+        contract_address = tx_receipt["contractAddress"]
+        print(f"contract address: {contract_address}")
+        self.assertEqual(precomputed_address.lower(), contract_address.lower())
 
     def test_get_all_account_balances(self):
         balances = self.web3.zksync.zks_get_all_account_balances(self.account.address)

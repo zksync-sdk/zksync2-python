@@ -20,14 +20,17 @@ def _icontract_deployer_abi_default():
         with pkg_resources.path(contract_abi, "IContractDeployer.json") as p:
             with p.open(mode='r') as json_file:
                 data = json.load(json_file)
-                icontract_deployer_abi_cache = data['abi']
+                # icontract_deployer_abi_cache = data['abi']
+                icontract_deployer_abi_cache = data
     return icontract_deployer_abi_cache
 
 
 class ContractDeployer:
     DEFAULT_SALT = b'\0' * 32
+    CREATE_FUNC = "create"
     CREATE2_FUNC = "create2"
     MAX_BYTE_CODE_LENGTH = 2 ** 16
+    # INFO: see implementation of: class ByteStringEncoder(BaseEncoder):
     EMPTY_BYTES = b''
 
     CREATE_PREFIX = keccak(text="zksyncCreate")
@@ -70,6 +73,26 @@ class ContractDeployer:
 
         encoded_function = self.contract_deployer.encodeABI(fn_name=self.CREATE2_FUNC, args=args)
         return HexStr(encoded_function)
+
+    def encode_create(self, bytecode: bytes, call_data: Optional[bytes] = None, salt_data: Optional[bytes] = None):
+        # if salt_data is None:
+        #    salt_data = self.DEFAULT_SALT
+        # if call_data is None:
+        #    call_data = b'\0'
+
+        # if len(salt_data) != 32:
+        #    raise OverflowError("Salt data must be 32 length")
+
+        # bytecode_hash = self._hash_byte_code(bytecode)
+        # args = [
+        #    salt_data,
+        #    bytecode_hash,
+        #    0,
+        #    call_data
+        #]
+        # encoded_function = self.contract_deployer.encodeABI(fn_name=self.CREATE_FUNC, args=args)
+        # return HexStr(encoded_function)
+        return HexStr("0x" + "e2e9718a000000000000000000000000000000000000000000000000000000000000000000379c09b5568d43b0ac6533a2672ee836815530b412f082f0b2e69915aa50fc000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000")
 
     def compute_l2_create_address(self, sender: HexStr, nonce: Nonce) -> HexStr:
         sender_bytes = get_data(sender)

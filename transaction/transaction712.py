@@ -36,6 +36,21 @@ class Transaction712:
         class Transaction(EIP712Struct):
             pass
 
+        paymaster: int = 0
+        paymaster_params = self.meta.paymaster_params
+        if paymaster_params is not None and paymaster_params.paymaster is not None:
+            paymaster = int(paymaster_params.paymaster, 16)
+
+        data = get_data(self.data)
+
+        factory_deps = self.meta.factory_deps
+        factory_deps_hashes = b''
+        # INFO: MUST BE TUPLE BECAUSE LIST IS MUTABLE TYPE => NOT HASHABLE
+        if factory_deps is not None and len(factory_deps):
+            factory_deps_hashes = tuple([hash_byte_code(bytecode) for bytecode in factory_deps])
+            # for bytecode in factory_deps:
+            #     factory_deps_hashes += hash_byte_code(bytecode)
+
         setattr(Transaction, 'txType',                   Uint(256))
         setattr(Transaction, 'from',                     Uint(256))
         setattr(Transaction, 'to',                       Uint(256))
@@ -48,19 +63,8 @@ class Transaction712:
         setattr(Transaction, 'value',                    Uint(256))
         setattr(Transaction, 'data',                     DynamicBytes)
         setattr(Transaction, 'factoryDeps',              Array(Bytes(32)))
+        # setattr(Transaction, 'factoryDeps',              DynamicBytes)
         setattr(Transaction, 'paymasterInput',           DynamicBytes)
-
-        paymaster: int = 0
-        paymaster_params = self.meta.paymaster_params
-        if paymaster_params is not None and paymaster_params.paymaster is not None:
-            paymaster = int(paymaster_params.paymaster, 16)
-
-        data = get_data(self.data)
-
-        factory_deps = self.meta.factory_deps
-        factory_deps_hashes = b''
-        if factory_deps is not None and len(factory_deps):
-            factory_deps_hashes = [hash_byte_code(bytecode) for bytecode in factory_deps]
 
         paymaster_input = b''
         if paymaster_params is not None and \

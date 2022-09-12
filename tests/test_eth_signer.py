@@ -111,8 +111,5 @@ class TestEthSigner(TestCase):
 
         eip712_structured = tx_712.to_eip712_struct()
         structured = eip712_structured.to_message(signer.get_domain())
-        # singable_bytes = eip712_structured.signable_bytes(signer.get_domain())
         msg = encode_structured_data(structured)
-        # msg = encode_structured_data(hexstr=singable_bytes.hex())
-        # encode_structured_data()
         print(f"message: {msg.body.hex()}")

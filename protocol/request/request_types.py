@@ -97,5 +97,30 @@ class Create2ContractTransactionBuilder(FunctionCallTxBuilderBase, ABC):
     def build(self) -> Transaction:
         return self.tx
 
-# class CreateContractTransactionBuilder(FunctionCallTxBuilderBase, ABC):
-#     def __init__(self, ):
+
+def create_contract_transaction(web3: Web3,
+                                from_: HexStr,
+                                ergs_price: int,
+                                ergs_limit: int,
+                                bytecode: bytes,
+                                call_data: Optional[bytes] = None,
+                                value: int = 0):
+    contract_deployer = ContractDeployer(web3)
+    call_data = contract_deployer.encode_create(bytecode=bytecode,
+                                                call_data=call_data)
+    eip712_meta = EIP712Meta(ergs_per_pub_data=EIP712Meta.ERGS_PER_PUB_DATA_DEFAULT,
+                             custom_signature=None,
+                             factory_deps=[bytecode],
+                             paymaster_params=None)
+
+    tx: Transaction = {
+        "from": from_,
+        "to": Web3.toChecksumAddress(ZkSyncAddresses.CONTRACT_DEPLOYER_ADDRESS.value),
+        "gas": ergs_limit,
+        "gasPrice": ergs_price,
+        "value": value,
+        "data": HexStr(call_data),
+        "transactionType": 113,
+        "eip712Meta": eip712_meta
+    }
+    return tx
