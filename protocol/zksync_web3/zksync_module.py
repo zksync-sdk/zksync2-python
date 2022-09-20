@@ -42,7 +42,7 @@ zks_estimate_fee_rpc = RPCEndpoint("zks_estimateFee")
 zks_main_contract_rpc = RPCEndpoint("zks_getMainContract")
 zks_get_l1_withdraw_tx_rpc = RPCEndpoint("zks_getL1WithdrawalTx")
 zks_get_confirmed_tokens_rpc = RPCEndpoint("zks_getConfirmedTokens")
-zks_is_token_liquid_rpc = RPCEndpoint("zks_isTokenLiquid")
+# zks_is_token_liquid_rpc = RPCEndpoint("zks_isTokenLiquid")
 zks_get_token_price_rpc = RPCEndpoint("zks_getTokenPrice")
 zks_l1_chain_id_rpc = RPCEndpoint("zks_L1ChainId")
 zks_eth_get_balance_rpc = RPCEndpoint("eth_getBalance")
@@ -182,10 +182,10 @@ class ZkSync(Eth, ABC):
         , result_formatters=zksync_get_result_formatters
     )
 
-    _zks_is_token_liquid: Method[Callable[[TokenAddress], ZksIsTokenLiquid]] = Method(
-        zks_is_token_liquid_rpc,
-        mungers=[default_root_munger]
-    )
+    # _zks_is_token_liquid: Method[Callable[[TokenAddress], ZksIsTokenLiquid]] = Method(
+    #     zks_is_token_liquid_rpc,
+    #     mungers=[default_root_munger]
+    # )
 
     _zks_get_token_price: Method[Callable[[TokenAddress], ZksTokenPrice]] = Method(
         zks_get_token_price_rpc,
@@ -197,10 +197,10 @@ class ZkSync(Eth, ABC):
         mungers=None
     )
 
-    _zks_eth_get_balance: Method[Callable[[Address, Any, TokenAddress], Any]] = Method(
-        zks_eth_get_balance_rpc,
-        mungers=[default_root_munger]
-    )
+    # _zks_eth_get_balance: Method[Callable[[Address, Any, TokenAddress], Any]] = Method(
+    #     zks_eth_get_balance_rpc,
+    #     mungers=[default_root_munger]
+    # )
 
     _zks_get_all_account_balances: Method[Callable[[Address], ZksAccountBalances]] = Method(
         zks_get_all_account_balances_rpc,
@@ -258,8 +258,8 @@ class ZkSync(Eth, ABC):
     def zks_get_confirmed_tokens(self, offset: From, limit: Limit) -> List[Token]:
         return self._zks_get_confirmed_tokens(offset, limit)
 
-    def zks_is_token_liquid(self, token_address: TokenAddress) -> bool:
-        return self._zks_is_token_liquid(token_address)
+    # def zks_is_token_liquid(self, token_address: TokenAddress) -> bool:
+    #     return self._zks_is_token_liquid(token_address)
 
     def zks_get_token_price(self, token_address: TokenAddress) -> Decimal:
         return self._zks_get_token_price(token_address)
@@ -267,8 +267,11 @@ class ZkSync(Eth, ABC):
     def zks_l1_chain_id(self) -> int:
         return self._zks_l1_chain_id()
 
-    def eth_get_balance(self, address: Address, default_block, token_address: TokenAddress) -> Any:
-        return self._zks_eth_get_balance(address, default_block, token_address)
+    # def eth_get_balance(self, address: Address, default_block, token_address: TokenAddress) -> Any:
+    #     return self._zks_eth_get_balance(address, default_block, token_address)
+
+    # def eth_get_balance(self, address: Address, default_block) -> Any:
+    #     return self._zks_eth_get_balance(address, default_block)
 
     def zks_get_all_account_balances(self, addr: Address) -> ZksAccountBalances:
         return self._zks_get_all_account_balances(addr)
@@ -285,3 +288,5 @@ class ZkSync(Eth, ABC):
 
     def eth_estimate_gas(self, tx: Transaction) -> str:
         return self._eth_estimate_gas(tx)
+
+    # def wait_for_transaction_receipt(self, tx_hash, timeout):

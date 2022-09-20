@@ -3,26 +3,21 @@ from hashlib import sha256
 from typing import Union
 
 from eth_typing import HexStr, Address, ChecksumAddress
+from eth_utils import remove_0x_prefix
 
 
 def int_to_bytes(x: int) -> bytes:
     return x.to_bytes((x.bit_length() + 7) // 8, byteorder=sys.byteorder)
 
 
+# def to_int(x: bytes) -> int:
+#     return int.from_bytes(x, "big", signed=True)
+
+
 def get_data(data: Union[bytes, HexStr]) -> bytes:
     if isinstance(data, bytes):
         return data
-    if data.startswith("0x"):
-        data = data[2:]
-    return bytes.fromhex(data)
-
-
-# def _get_v(signature) -> bytes:
-#     v_bytes = bytes()
-#     # TODO: getV[0] is big endian or little , and what is the bytes amount??
-#     if signature.v != 0:
-#         v_bytes = int_to_bytes(signature.v)
-#     return v_bytes
+    return bytes.fromhex(remove_0x_prefix(data))
 
 
 def encode_address(addr: Union[Address, ChecksumAddress, str]) -> bytes:
@@ -30,9 +25,7 @@ def encode_address(addr: Union[Address, ChecksumAddress, str]) -> bytes:
         return bytes()
     if isinstance(addr, bytes):
         return addr
-    if addr.startswith("0x"):
-        addr = addr[2:]
-    return bytes.fromhex(addr)
+    return bytes.fromhex(remove_0x_prefix(addr))
 
 
 def hash_byte_code(bytecode: bytes) -> bytes:

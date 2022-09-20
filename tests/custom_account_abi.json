@@ -1,0 +1,455 @@
+[
+  {
+    "inputs": [
+      {
+        "internalType": "bool",
+        "name": "_violateValidationRules",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
+  {
+    "stateMutability": "payable",
+    "type": "fallback"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "txType",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "from",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "to",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "ergsLimit",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "ergsPerPubdataByteLimit",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "maxFeePerErg",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "maxPriorityFeePerErg",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "paymaster",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256[6]",
+            "name": "reserved",
+            "type": "uint256[6]"
+          },
+          {
+            "internalType": "bytes",
+            "name": "data",
+            "type": "bytes"
+          },
+          {
+            "internalType": "bytes",
+            "name": "signature",
+            "type": "bytes"
+          },
+          {
+            "internalType": "bytes32[]",
+            "name": "factoryDeps",
+            "type": "bytes32[]"
+          },
+          {
+            "internalType": "bytes",
+            "name": "paymasterInput",
+            "type": "bytes"
+          },
+          {
+            "internalType": "bytes",
+            "name": "reservedDynamic",
+            "type": "bytes"
+          }
+        ],
+        "internalType": "struct Transaction",
+        "name": "_transaction",
+        "type": "tuple"
+      }
+    ],
+    "name": "executeTransaction",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "txType",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "from",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "to",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "ergsLimit",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "ergsPerPubdataByteLimit",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "maxFeePerErg",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "maxPriorityFeePerErg",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "paymaster",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256[6]",
+            "name": "reserved",
+            "type": "uint256[6]"
+          },
+          {
+            "internalType": "bytes",
+            "name": "data",
+            "type": "bytes"
+          },
+          {
+            "internalType": "bytes",
+            "name": "signature",
+            "type": "bytes"
+          },
+          {
+            "internalType": "bytes32[]",
+            "name": "factoryDeps",
+            "type": "bytes32[]"
+          },
+          {
+            "internalType": "bytes",
+            "name": "paymasterInput",
+            "type": "bytes"
+          },
+          {
+            "internalType": "bytes",
+            "name": "reservedDynamic",
+            "type": "bytes"
+          }
+        ],
+        "internalType": "struct Transaction",
+        "name": "_transaction",
+        "type": "tuple"
+      }
+    ],
+    "name": "executeTransactionFromOutside",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "txType",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "from",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "to",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "ergsLimit",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "ergsPerPubdataByteLimit",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "maxFeePerErg",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "maxPriorityFeePerErg",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "paymaster",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256[6]",
+            "name": "reserved",
+            "type": "uint256[6]"
+          },
+          {
+            "internalType": "bytes",
+            "name": "data",
+            "type": "bytes"
+          },
+          {
+            "internalType": "bytes",
+            "name": "signature",
+            "type": "bytes"
+          },
+          {
+            "internalType": "bytes32[]",
+            "name": "factoryDeps",
+            "type": "bytes32[]"
+          },
+          {
+            "internalType": "bytes",
+            "name": "paymasterInput",
+            "type": "bytes"
+          },
+          {
+            "internalType": "bytes",
+            "name": "reservedDynamic",
+            "type": "bytes"
+          }
+        ],
+        "internalType": "struct Transaction",
+        "name": "_transaction",
+        "type": "tuple"
+      }
+    ],
+    "name": "payForTransaction",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "txType",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "from",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "to",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "ergsLimit",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "ergsPerPubdataByteLimit",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "maxFeePerErg",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "maxPriorityFeePerErg",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "paymaster",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256[6]",
+            "name": "reserved",
+            "type": "uint256[6]"
+          },
+          {
+            "internalType": "bytes",
+            "name": "data",
+            "type": "bytes"
+          },
+          {
+            "internalType": "bytes",
+            "name": "signature",
+            "type": "bytes"
+          },
+          {
+            "internalType": "bytes32[]",
+            "name": "factoryDeps",
+            "type": "bytes32[]"
+          },
+          {
+            "internalType": "bytes",
+            "name": "paymasterInput",
+            "type": "bytes"
+          },
+          {
+            "internalType": "bytes",
+            "name": "reservedDynamic",
+            "type": "bytes"
+          }
+        ],
+        "internalType": "struct Transaction",
+        "name": "_transaction",
+        "type": "tuple"
+      }
+    ],
+    "name": "prePaymaster",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "txType",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "from",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "to",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "ergsLimit",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "ergsPerPubdataByteLimit",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "maxFeePerErg",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "maxPriorityFeePerErg",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "paymaster",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256[6]",
+            "name": "reserved",
+            "type": "uint256[6]"
+          },
+          {
+            "internalType": "bytes",
+            "name": "data",
+            "type": "bytes"
+          },
+          {
+            "internalType": "bytes",
+            "name": "signature",
+            "type": "bytes"
+          },
+          {
+            "internalType": "bytes32[]",
+            "name": "factoryDeps",
+            "type": "bytes32[]"
+          },
+          {
+            "internalType": "bytes",
+            "name": "paymasterInput",
+            "type": "bytes"
+          },
+          {
+            "internalType": "bytes",
+            "name": "reservedDynamic",
+            "type": "bytes"
+          }
+        ],
+        "internalType": "struct Transaction",
+        "name": "_transaction",
+        "type": "tuple"
+      }
+    ],
+    "name": "validateTransaction",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "violateValidationRules",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  }
+]

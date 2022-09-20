@@ -4,11 +4,8 @@ import web3
 from abc import abstractmethod, ABC
 from eip712_structs import make_domain, EIP712Struct
 from eth_account.datastructures import SignedMessage
-from eth_hash.backends.pycryptodome import keccak256
 from eth_typing import ChecksumAddress, HexStr
 from eth_utils import keccak
-
-from protocol.core.types import ADDRESS_DEFAULT
 from eth_account.signers.local import LocalAccount
 from eth_account.messages import encode_defunct, SignableMessage
 from crypto.eth_account_patch.encode_structed_data import encode_structured_data
@@ -52,12 +49,6 @@ class PrivateKeyEthSigner(EthSignerBase, ABC):
         return self.credentials.address
 
     def get_domain(self):
-        # default_domain = make_domain(name=self._NAME,
-        #                              version=self._VERSION,
-        #                              chainId=self.chain_id,
-        #                              # DO NOT USE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        #                              verifyingContract=ADDRESS_DEFAULT)
-        # return default_domain
         default_domain = make_domain(name=self._NAME,
                                      version=self._VERSION,
                                      chainId=self.chain_id)
@@ -97,12 +88,6 @@ class PrivateKeyEthSigner(EthSignerBase, ABC):
         d = domain
         if d is None:
             d = self.get_domain()
-        # structured = typed_data.to_message(d)
-        # msg = encode_structured_data(structured)
-        # sig = self.credentials.sign_message(msg)
-        # return sig
-        # typed_data.
-
         msg = typed_data.signable_bytes(d)
         message_hash = encode_defunct(msg)
         sig = self.credentials.sign_message(message_hash)

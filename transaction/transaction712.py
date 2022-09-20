@@ -1,7 +1,5 @@
 from dataclasses import dataclass
-from hashlib import sha256
 from typing import Union, Optional
-import sys
 import rlp
 from eth_account.datastructures import SignedMessage
 from eth_typing import ChecksumAddress, HexStr

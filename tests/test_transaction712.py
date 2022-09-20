@@ -5,6 +5,7 @@ from eth_tester import PyEVMBackend
 from eth_typing import HexStr
 from web3 import Web3, EthereumTesterProvider
 from web3.types import Nonce
+
 from protocol.request.request_types import EIP712Meta
 from transaction.transaction712 import Transaction712
 from counter_contract_utils import CounterContractEncoder
@@ -60,5 +61,3 @@ class TestTransaction712(TestCase):
         msg = keccak_256(result_bytes)
         result = "0x" + msg.hex()
         self.assertEqual(self.EXPECTED_ENCODED_BYTES, result)
-
-
