@@ -30,22 +30,21 @@ from web3.datastructures import AttributeDict
 from web3.eth import Eth
 from web3.types import RPCEndpoint
 
-from protocol.core.types import TransactionHash, Limit, L2WithdrawTxHash, From, ContractSourceDebugInfo, BridgeAddresses
+from protocol.core.types import TransactionHash, Limit, L2WithdrawTxHash, From, ContractSourceDebugInfo, \
+    BridgeAddresses, TokenAddress
 from protocol.request.request_types import *
 from protocol.response.response_types import *
 from eth_typing import Address
 from eth_utils.toolz import compose
 from web3.method import Method, default_root_munger
-from typing import Any, Callable, List
+from typing import Any, Callable, List, Union
 
 zks_estimate_fee_rpc = RPCEndpoint("zks_estimateFee")
 zks_main_contract_rpc = RPCEndpoint("zks_getMainContract")
 zks_get_l1_withdraw_tx_rpc = RPCEndpoint("zks_getL1WithdrawalTx")
 zks_get_confirmed_tokens_rpc = RPCEndpoint("zks_getConfirmedTokens")
-# zks_is_token_liquid_rpc = RPCEndpoint("zks_isTokenLiquid")
 zks_get_token_price_rpc = RPCEndpoint("zks_getTokenPrice")
 zks_l1_chain_id_rpc = RPCEndpoint("zks_L1ChainId")
-zks_eth_get_balance_rpc = RPCEndpoint("eth_getBalance")
 zks_get_all_account_balances_rpc = RPCEndpoint("zks_getAllAccountBalances")
 zks_get_bridge_contracts_rpc = RPCEndpoint("zks_getBridgeContracts")
 zks_get_l2_to_l1_msg_proof_prc = RPCEndpoint("zks_getL2ToL1MsgProof")
@@ -182,11 +181,6 @@ class ZkSync(Eth, ABC):
         , result_formatters=zksync_get_result_formatters
     )
 
-    # _zks_is_token_liquid: Method[Callable[[TokenAddress], ZksIsTokenLiquid]] = Method(
-    #     zks_is_token_liquid_rpc,
-    #     mungers=[default_root_munger]
-    # )
-
     _zks_get_token_price: Method[Callable[[TokenAddress], ZksTokenPrice]] = Method(
         zks_get_token_price_rpc,
         mungers=[default_root_munger]
@@ -196,11 +190,6 @@ class ZkSync(Eth, ABC):
         zks_l1_chain_id_rpc,
         mungers=None
     )
-
-    # _zks_eth_get_balance: Method[Callable[[Address, Any, TokenAddress], Any]] = Method(
-    #     zks_eth_get_balance_rpc,
-    #     mungers=[default_root_munger]
-    # )
 
     _zks_get_all_account_balances: Method[Callable[[Address], ZksAccountBalances]] = Method(
         zks_get_all_account_balances_rpc,
@@ -258,20 +247,11 @@ class ZkSync(Eth, ABC):
     def zks_get_confirmed_tokens(self, offset: From, limit: Limit) -> List[Token]:
         return self._zks_get_confirmed_tokens(offset, limit)
 
-    # def zks_is_token_liquid(self, token_address: TokenAddress) -> bool:
-    #     return self._zks_is_token_liquid(token_address)
-
     def zks_get_token_price(self, token_address: TokenAddress) -> Decimal:
         return self._zks_get_token_price(token_address)
 
     def zks_l1_chain_id(self) -> int:
         return self._zks_l1_chain_id()
-
-    # def eth_get_balance(self, address: Address, default_block, token_address: TokenAddress) -> Any:
-    #     return self._zks_eth_get_balance(address, default_block, token_address)
-
-    # def eth_get_balance(self, address: Address, default_block) -> Any:
-    #     return self._zks_eth_get_balance(address, default_block)
 
     def zks_get_all_account_balances(self, addr: Address) -> ZksAccountBalances:
         return self._zks_get_all_account_balances(addr)

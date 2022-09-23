@@ -1,9 +1,8 @@
-# from dataclasses import dataclass, field
 from decimal import Decimal
-from typing import TypedDict, Union, NewType, Dict, Optional, List
+from typing import TypedDict, NewType, Dict, List
 from eth_typing import HexStr
 from web3.types import TxData
-from protocol.core.types import TokenAddress, Token, VmDebugTrace, Fee
+from protocol.core.types import Token, VmDebugTrace, Fee
 
 ZksAccountBalances = Dict[str, int]
 

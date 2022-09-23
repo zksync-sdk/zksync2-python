@@ -33,10 +33,6 @@ class ERC20Contract(ContractBase):
         return self.contract.functions.approve(zksync_address, max_erc20_approve_amount).transaction(
             {"from": self.account.address})
 
-    # def is_deposit_approved(self, zksync_address: HexStr, to: str, erc20_approve_threshold=ERC20_APPROVE_THRESHOLD):
-    #     allowance = self.contract.functions.allowance(to, zksync_address).call()
-    #     return allowance >= erc20_approve_threshold
-
     def allowance(self, owner: HexStr, sender: HexStr) -> int:
         return self.contract.functions.allowance(owner, sender).call()
 

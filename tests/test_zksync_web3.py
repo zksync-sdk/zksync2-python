@@ -42,7 +42,6 @@ class ZkSyncWeb3Tests(TestCase):
 
     def setUp(self) -> None:
         self.web3 = ZkSyncBuilder.build(self.ZKSYNC_TEST_URL)
-        # INFO: address under Java from bigint(1) private key: "0x7e5f4552091a69125d5dfcb7b8c2659029395bdf"
         self.account: LocalAccount = Account.from_key(self.PRIVATE_KEY)
         self.chain_id = self.web3.zksync.chain_id
         self.signer = PrivateKeyEthSigner(self.account, self.chain_id)
@@ -54,7 +53,6 @@ class ZkSyncWeb3Tests(TestCase):
         web3 = Web3(Web3.HTTPProvider(self.ETH_TEST_URL))
         web3.middleware_onion.inject(geth_poa_middleware, layer=0)
         account = web3.eth.accounts[0]
-        # account = self.account.address
         transaction: TxParams = {
             "from": account,
             "gasPrice": web3.toWei(1, "gwei"),
@@ -62,8 +60,6 @@ class ZkSyncWeb3Tests(TestCase):
             "to": self.account.address,
             "value": web3.toWei(1000000, 'ether')
         }
-        # signed_tx = self.account.sign_transaction(transaction)
-        # tx_hash = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
         tx_hash = web3.eth.send_transaction(transaction)
         txn_receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
         self.assertEqual(txn_receipt['status'], 1)
@@ -118,11 +114,9 @@ class ZkSyncWeb3Tests(TestCase):
         self.assertGreater(estimate_gas, 0, "test_estimate_gas_transfer_native, estimate_gas must be greater 0")
 
     def test_transfer_native_to_self(self):
-        nonce = self.web3.zksync.get_transaction_count(self.account.address, self.DEFAULT_BLOCK_PARAM_NAME)
-        to = HexStr(Web3.toChecksumAddress("0xc513d436b5ac85a36cc4f6956ec11b500693aabd"))
-
+        nonce = self.web3.zksync.get_transaction_count(self.account.address, ZkBlockParams.COMMITTED.value)
         tx = create_function_call_transaction(from_=self.account.address,
-                                              to=to,
+                                              to=self.account.address,
                                               ergs_price=0,
                                               ergs_limit=0,
                                               data=HexStr("0x"))
@@ -143,10 +137,10 @@ class ZkSyncWeb3Tests(TestCase):
                                 meta=tx["eip712Meta"])
 
         eip712_structured = tx_712.to_eip712_struct()
-        signature = self.signer.sign_typed_data(eip712_structured)
-        msg = Transaction712Encoder.encode(tx_712, signature)
+        singable_message = self.signer.sign_typed_data_msg_hash(eip712_structured)
+        msg = Transaction712Encoder.encode(tx_712, singable_message)
         tx_hash = self.web3.zksync.send_raw_transaction(msg)
-        tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash)
+        tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
         self.assertEqual(1, tx_receipt["status"])
 
     def test_transfer_native_to_self_web3_legacy(self):
@@ -189,10 +183,10 @@ class ZkSyncWeb3Tests(TestCase):
                                 from_=self.account.address,
                                 meta=tx["eip712Meta"])
         eip712_structured = tx_712.to_eip712_struct()
-        signature = self.signer.sign_typed_data(eip712_structured)
-        msg = Transaction712Encoder.encode(tx_712, signature)
+        singable_message = self.signer.sign_typed_data_msg_hash(eip712_structured)
+        msg = Transaction712Encoder.encode(tx_712, singable_message)
         tx_hash = self.web3.zksync.send_raw_transaction(msg)
-        tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash)
+        tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
         self.assertEqual(1, tx_receipt["status"])
 
     def test_estimate_gas_withdraw(self):
@@ -244,11 +238,12 @@ class ZkSyncWeb3Tests(TestCase):
                                 maxFeePerGas=gas_price,
                                 from_=self.account.address,
                                 meta=tx["eip712Meta"])
+
         eip712_structured = tx_712.to_eip712_struct()
-        signature = self.signer.sign_typed_data(eip712_structured)
-        msg = Transaction712Encoder.encode(tx_712, signature)
+        singable_message = self.signer.sign_typed_data_msg_hash(eip712_structured)
+        msg = Transaction712Encoder.encode(tx_712, singable_message)
         tx_hash = self.web3.zksync.send_raw_transaction(msg)
-        tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash)
+        tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
         self.assertEqual(1, tx_receipt["status"])
 
     def test_estimate_gas_execute(self):
