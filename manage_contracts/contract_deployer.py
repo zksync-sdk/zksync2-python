@@ -7,8 +7,8 @@ from typing import Optional
 import json
 from web3.types import Nonce, TxReceipt
 from eth_utils.crypto import keccak
-from .. import contract_abi
-from ..core.utils import pad_front_bytes, get_data, int_to_bytes
+from manage_contracts import contract_abi
+from core.utils import pad_front_bytes, get_data, int_to_bytes
 
 icontract_deployer_abi_cache = None
 

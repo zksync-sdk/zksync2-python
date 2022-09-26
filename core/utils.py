@@ -10,10 +10,6 @@ def int_to_bytes(x: int) -> bytes:
     return x.to_bytes((x.bit_length() + 7) // 8, byteorder=sys.byteorder)
 
 
-# def to_int(x: bytes) -> int:
-#     return int.from_bytes(x, "big", signed=True)
-
-
 def get_data(data: Union[bytes, HexStr]) -> bytes:
     if isinstance(data, bytes):
         return data

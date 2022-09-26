@@ -2,7 +2,7 @@ from decimal import Decimal
 from typing import TypedDict, NewType, Dict, List
 from eth_typing import HexStr
 from web3.types import TxData
-from protocol.core.types import Token, VmDebugTrace, Fee
+from core.types import Token, VmDebugTrace, Fee
 
 ZksAccountBalances = Dict[str, int]
 

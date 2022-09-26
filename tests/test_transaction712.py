@@ -6,9 +6,9 @@ from eth_typing import HexStr
 from web3 import Web3, EthereumTesterProvider
 from web3.types import Nonce
 
-from protocol.request.request_types import EIP712Meta
+from module.request_types import EIP712Meta
 from transaction.transaction712 import Transaction712
-from counter_contract_utils import CounterContractEncoder
+from tests.contracts.counter_contract_utils import CounterContractEncoder
 
 
 class TestTransaction712(TestCase):

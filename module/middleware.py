@@ -4,7 +4,7 @@ from web3 import Web3
 from web3.middleware import Middleware
 from web3.types import RPCEndpoint, RPCResponse
 from typing import Any
-from protocol.zksync_web3.zksync_provider import ZkSyncProvider
+from module.zksync_provider import ZkSyncProvider
 
 ZK_METHODS = [
     "zks_estimateFee",

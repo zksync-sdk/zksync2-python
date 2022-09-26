@@ -3,11 +3,11 @@ from eth_typing import HexStr
 from web3 import Web3
 from pathlib import Path
 from eth_account.signers.base import BaseAccount
-from protocol.contract_base import ContractBase
+from manage_contracts.contract_base import ContractBase
 
 
 zksync_abi_cache = None
-zksync_abi_default_path = Path('./contract_abi/IZkSync.json')
+zksync_abi_default_path = Path('contract_abi/IZkSync.json')
 
 
 def _zksync_abi_default():
@@ -61,10 +61,8 @@ class ZkSyncContract(ContractBase):
                                  _op_tree)
 
     def deposit_base_cost(self, _gas_price: int, _queue_type: int, _op_tree: int):
-        # return self._call_method('depositBaseCost', _gasPrice=_gas_price, _queueType=_queue_type, _opTree=_op_tree)
         nonce = self.web3.eth.get_transaction_count(self.account.address)
         transaction = self.contract.functions.depositBaseCost(_gas_price, _queue_type, _op_tree).build_transaction({
-            # 'chainId': self.web3.eth.chain_id,
             'gas': 70000,
             'maxFeePerGas': Web3.toWei('2', 'gwei'),
             'maxPriorityFeePerGas': Web3.toWei('1', 'gwei'),

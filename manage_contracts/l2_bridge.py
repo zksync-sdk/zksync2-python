@@ -8,8 +8,8 @@ import json
 
 from web3.types import TxReceipt
 
-from protocol.utility_contracts.gas_provider import GasProvider
-from .. import contract_abi
+from manage_contracts.gas_provider import GasProvider
+from manage_contracts import contract_abi
 
 l2_bridge_abi_cache = None
 
@@ -55,7 +55,6 @@ class L2Bridge:
                                                      amount,
                                                      data).build_transaction(
             {
-                # "chainId": self.web3.zksync.zks_l1_chain_id(),
                 "from": self.zksync_account.address,
                 "nonce": self._get_nonce(),
                 "gas": self.gas_provider.gas_limit(),

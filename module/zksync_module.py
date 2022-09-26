@@ -3,7 +3,8 @@ from abc import ABC
 from eth_utils import to_checksum_address, is_dict
 from eth_utils.curried import apply_formatter_at_index
 from hexbytes import HexBytes
-from web3 import Web3
+from web3._utils.threads import Timeout
+from web3.exceptions import TransactionNotFound, TimeExhausted
 from web3.module import Module
 from web3._utils.formatters import integer_to_hex, apply_formatter_to_array
 from web3._utils.method_formatters import (
@@ -13,27 +14,20 @@ from web3._utils.method_formatters import (
     combine_formatters,
     apply_formatter_if,
     apply_formatters_to_dict,
-    is_not_null,
     apply_list_to_array_formatter,
-    to_hex_if_integer, to_hexbytes, to_ascii_if_bytes, PYTHONIC_RESULT_FORMATTERS, FILTER_RESULT_FORMATTERS,
+    to_hex_if_integer, to_ascii_if_bytes, PYTHONIC_RESULT_FORMATTERS, FILTER_RESULT_FORMATTERS,
     apply_module_to_formatters, not_attrdict
 )
 
-from web3._utils.normalizers import (
-    abi_address_to_hex,
-    abi_int_to_hex,
-    abi_bytes_to_hex,
-    abi_bytes_to_bytes
-)
 from web3.datastructures import AttributeDict
 
 from web3.eth import Eth
-from web3.types import RPCEndpoint
+from web3.types import RPCEndpoint, _Hash32, TxReceipt
 
-from protocol.core.types import TransactionHash, Limit, L2WithdrawTxHash, From, ContractSourceDebugInfo, \
+from core.types import TransactionHash, Limit, L2WithdrawTxHash, From, ContractSourceDebugInfo, \
     BridgeAddresses, TokenAddress
-from protocol.request.request_types import *
-from protocol.response.response_types import *
+from module.request_types import *
+from module.response_types import *
 from eth_typing import Address
 from eth_utils.toolz import compose
 from web3.method import Method, default_root_munger
@@ -269,4 +263,27 @@ class ZkSync(Eth, ABC):
     def eth_estimate_gas(self, tx: Transaction) -> str:
         return self._eth_estimate_gas(tx)
 
-    # def wait_for_transaction_receipt(self, tx_hash, timeout):
+    def wait_for_transaction_receipt(self,
+                                     transaction_hash: _Hash32,
+                                     timeout: float = 120,
+                                     poll_latency: float = 0.1) -> TxReceipt:
+        try:
+            with Timeout(timeout) as _timeout:
+                while True:
+                    try:
+                        tx_receipt = self._get_transaction_receipt(transaction_hash)
+                    except TransactionNotFound:
+                        tx_receipt = None
+                    # INFO: differs from original once only by condition
+                    #       for some cases ZkSync server could provider Nonce fields
+                    if tx_receipt is not None and \
+                            tx_receipt["blockHash"] is not None:
+                        break
+                    _timeout.sleep(poll_latency)
+            return tx_receipt
+
+        except Timeout:
+            raise TimeExhausted(
+                f"Transaction {HexBytes(transaction_hash) !r} is not in the chain "
+                f"after {timeout} seconds"
+            )

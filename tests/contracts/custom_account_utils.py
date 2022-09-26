@@ -1,22 +1,8 @@
-import json
 from eth_account.signers.base import BaseAccount
 from web3 import Web3
-from pathlib import Path
 from eth_typing import HexStr
 from web3.types import TxReceipt
-
-
-def _get_custom_account_binary() -> bytes:
-    p = Path('./custom_account.bin')
-    with p.open(mode='rb') as contact_file:
-        data = contact_file.read()
-        return data
-
-
-def _get_custom_account_abi():
-    p = Path('./custom_account_abi.json')
-    with p.open(mode='r') as json_f:
-        return json.load(json_f)
+from tests.contracts.utils import get_abi, get_binary
 
 
 class CustomAccountContract:
@@ -24,7 +10,7 @@ class CustomAccountContract:
     def __init__(self, web3: Web3, address: HexStr, abi=None):
         self.web3 = web3
         if abi is None:
-            abi = _get_custom_account_abi()
+            abi = get_abi("custom_account_abi.json")
         self.contract = self.web3.zksync.contract(address=address, abi=abi)
 
     def get(self):
@@ -37,9 +23,9 @@ class CustomAccountContract:
 
     @classmethod
     def deploy(cls, web3: Web3, account: BaseAccount) -> 'CustomAccountContract':
-        abi = _get_custom_account_abi()
+        abi = get_abi("custom_account_abi.json")
         counter_contract_instance = web3.zksync.contract(abi=abi,
-                                                         bytecode=_get_custom_account_binary())
+                                                         bytecode=get_binary("custom_account.bin"))
         tx_hash = counter_contract_instance.constructor().transact(
             {
                 "from": account.address,
@@ -57,8 +43,8 @@ class CustomAccountEncoder:
 
     def __init__(self, web3: Web3):
         self.web3 = web3
-        self.counter_contract = self.web3.eth.contract(abi=_get_custom_account_abi(),
-                                                       bytecode=_get_custom_account_binary())
+        self.counter_contract = self.web3.eth.contract(abi=get_abi("custom_account_abi.json"),
+                                                       bytecode=get_binary("custom_account.bin"))
 
     def encode_method(self, fn_name, args: list):
         return self.counter_contract.encodeABI(fn_name, args)

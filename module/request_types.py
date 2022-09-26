@@ -3,9 +3,9 @@ from typing import TypedDict, List, Optional
 from eth_typing import HexStr
 from web3 import Web3
 from web3.types import AccessList
-from protocol.core.types import PaymasterParams
-from protocol.utility_contracts.contract_deployer import ContractDeployer
-from protocol.utility_contracts.deploy_addresses import ZkSyncAddresses
+from core.types import PaymasterParams
+from manage_contracts.contract_deployer import ContractDeployer
+from manage_contracts.deploy_addresses import ZkSyncAddresses
 
 
 @dataclass

@@ -7,9 +7,9 @@ from rlp.sedes import big_endian_int, binary
 from rlp.sedes import List as rlpList
 
 from web3.types import Nonce
-from protocol.request.request_types import EIP712Meta
+from module.request_types import EIP712Meta
 from eip712_structs import EIP712Struct, Address, Uint, Bytes, Array
-from protocol.core.utils import get_data, hash_byte_code, encode_address
+from core.utils import get_data, hash_byte_code, encode_address
 
 # Special case: Length of 0 means a dynamic bytes type
 DynamicBytes = Bytes(0)
@@ -46,8 +46,6 @@ class Transaction712:
         # INFO: MUST BE TUPLE BECAUSE LIST IS MUTABLE TYPE => NOT HASHABLE
         if factory_deps is not None and len(factory_deps):
             factory_deps_hashes = tuple([hash_byte_code(bytecode) for bytecode in factory_deps])
-            # for bytecode in factory_deps:
-            #     factory_deps_hashes += hash_byte_code(bytecode)
 
         setattr(Transaction, 'txType',                   Uint(256))
         setattr(Transaction, 'from',                     Uint(256))
@@ -61,7 +59,6 @@ class Transaction712:
         setattr(Transaction, 'value',                    Uint(256))
         setattr(Transaction, 'data',                     DynamicBytes)
         setattr(Transaction, 'factoryDeps',              Array(Bytes(32)))
-        # setattr(Transaction, 'factoryDeps',              DynamicBytes)
         setattr(Transaction, 'paymasterInput',           DynamicBytes)
 
         paymaster_input = b''

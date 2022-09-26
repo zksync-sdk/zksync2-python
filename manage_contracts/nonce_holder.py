@@ -1,16 +1,13 @@
 import importlib.resources as pkg_resources
 from eth_account.signers.base import BaseAccount
 from web3 import Web3
-from web3.contract import Contract
 from eth_typing import HexStr
-from typing import Optional
 import json
 
-from web3.types import TxReceipt, Nonce
+from web3.types import Nonce
 
-from protocol.utility_contracts.gas_provider import GasProvider
 from .deploy_addresses import ZkSyncAddresses
-from .. import contract_abi
+from manage_contracts import contract_abi
 
 nonce_holder_abi_cache = None
 

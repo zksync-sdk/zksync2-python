@@ -1,6 +1,6 @@
-from protocol.zksync_web3.zksync_module import ZkSync
-from protocol.zksync_web3.zksync_provider import ZkSyncProvider
-from protocol.zksync_web3.middleware import build_zksync_middleware
+from module.zksync_module import ZkSync
+from module.zksync_provider import ZkSyncProvider
+from module.middleware import build_zksync_middleware
 
 from typing import Union
 from web3._utils.module import attach_modules

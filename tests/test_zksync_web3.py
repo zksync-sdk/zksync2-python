@@ -5,24 +5,24 @@ from web3 import Web3
 from web3.types import TxParams, BlockParams
 from web3.middleware import geth_poa_middleware
 
-from protocol.request.request_types import create_contract_transaction, create2_contract_transaction, \
+from module.request_types import create_contract_transaction, create2_contract_transaction, \
     create_function_call_transaction
-from protocol.utility_contracts.contract_deployer import ContractDeployer
-from protocol.utility_contracts.erc20_contract import ERC20FunctionEncoder
-from protocol.utility_contracts.gas_provider import StaticGasProvider
-from protocol.utility_contracts.nonce_holder import NonceHolder
-from protocol.zksync_web3.zksync_web3_builder import ZkSyncBuilder
-from protocol.utility_contracts.l2_bridge import L2BridgeEncoder
-from protocol.core.types import Token, ZkBlockParams, BridgeAddresses, EthBlockParams
+from manage_contracts.contract_deployer import ContractDeployer
+from manage_contracts.erc20_contract import ERC20FunctionEncoder
+from manage_contracts.gas_provider import StaticGasProvider
+from manage_contracts.nonce_holder import NonceHolder
+from module.module_builder import ZkSyncBuilder
+from manage_contracts.l2_bridge import L2BridgeEncoder
+from core.types import Token, ZkBlockParams, BridgeAddresses, EthBlockParams
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
 
-from crypto.eth_signer import PrivateKeyEthSigner
-from protocol.eth_provider import EthereumProvider
-from tests.constructor_contract_utils import ConstructorContractEncoder
-from tests.counter_contract_utils import _get_counter_contract_binary, CounterContract, CounterContractEncoder
+from signer.eth_signer import PrivateKeyEthSigner
+from provider.eth_provider import EthereumProvider
+from tests.contracts.constructor_contract_utils import ConstructorContractEncoder
+from tests.contracts.counter_contract_utils import CounterContract, CounterContractEncoder
+from tests.contracts.utils import get_binary
 from transaction.transaction712 import Transaction712, Transaction712Encoder
-from pathlib import Path
 
 
 class ZkSyncWeb3Tests(TestCase):
@@ -90,7 +90,7 @@ class ZkSyncWeb3Tests(TestCase):
                                           self.account.address)
         self.assertEqual(1, tx_receipt["status"])
 
-    def test_nonce(self):
+    def test_get_nonce(self):
         nonce = self.web3.zksync.get_transaction_count(self.account.address, self.DEFAULT_BLOCK_PARAM_NAME)
         print(f"Nonce: {nonce}")
 
@@ -98,10 +98,15 @@ class ZkSyncWeb3Tests(TestCase):
         nonce_holder = NonceHolder(self.web3, self.account)
         print(f"Deployment nonce: {nonce_holder.get_deployment_nonce(self.account.address)}")
 
-    def test_transaction_receipt(self):
-        tx_hash = "0xf53d38388cd8e5292683509c9a9f373e2c7d3766f41256b9cbf7d966552a46ff"
+    def test_get_transaction_receipt(self):
+        tx_hash = '0xa645ee8ab4e827a6695f205d8e75afdf97f28d2822b449f9803b986b81e877bc'
         receipt = self.web3.zksync.get_transaction_receipt(tx_hash)
         print(f"receipt: {receipt}")
+
+    def test_get_transaction(self):
+        tx_hash = '0xa645ee8ab4e827a6695f205d8e75afdf97f28d2822b449f9803b986b81e877bc'
+        tx = self.web3.zksync.get_transaction(tx_hash)
+        print(f"transaction nonce: {tx['nonce']}")
 
     def test_estimate_gas_transfer_native(self):
         tx = create_function_call_transaction(from_=self.account.address,
@@ -137,7 +142,7 @@ class ZkSyncWeb3Tests(TestCase):
                                 meta=tx["eip712Meta"])
 
         eip712_structured = tx_712.to_eip712_struct()
-        singable_message = self.signer.sign_typed_data_msg_hash(eip712_structured)
+        singable_message = self.signer.sign_typed_data(eip712_structured)
         msg = Transaction712Encoder.encode(tx_712, singable_message)
         tx_hash = self.web3.zksync.send_raw_transaction(msg)
         tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
@@ -183,7 +188,7 @@ class ZkSyncWeb3Tests(TestCase):
                                 from_=self.account.address,
                                 meta=tx["eip712Meta"])
         eip712_structured = tx_712.to_eip712_struct()
-        singable_message = self.signer.sign_typed_data_msg_hash(eip712_structured)
+        singable_message = self.signer.sign_typed_data(eip712_structured)
         msg = Transaction712Encoder.encode(tx_712, singable_message)
         tx_hash = self.web3.zksync.send_raw_transaction(msg)
         tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
@@ -195,7 +200,7 @@ class ZkSyncWeb3Tests(TestCase):
         call_data = l2_func_encoder.encode_function(fn_name="withdraw", args=[
             self.account.address,
             self.ETH_TOKEN.l2_address,
-            self.ETH_TOKEN.to_int(1)
+            self.ETH_TOKEN.to_int(Decimal("0.001"))
         ])
 
         tx = create_function_call_transaction(from_=self.account.address,
@@ -215,7 +220,7 @@ class ZkSyncWeb3Tests(TestCase):
         call_data = l2_func_encoder.encode_function(fn_name="withdraw", args=[
             self.account.address,
             self.ETH_TOKEN.l2_address,
-            self.ETH_TOKEN.to_int(1)
+            self.ETH_TOKEN.to_int(Decimal("0.001"))
         ])
 
         tx = create_function_call_transaction(from_=self.account.address,
@@ -240,7 +245,7 @@ class ZkSyncWeb3Tests(TestCase):
                                 meta=tx["eip712Meta"])
 
         eip712_structured = tx_712.to_eip712_struct()
-        singable_message = self.signer.sign_typed_data_msg_hash(eip712_structured)
+        singable_message = self.signer.sign_typed_data(eip712_structured)
         msg = Transaction712Encoder.encode(tx_712, singable_message)
         tx_hash = self.web3.zksync.send_raw_transaction(msg)
         tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
@@ -295,8 +300,10 @@ class ZkSyncWeb3Tests(TestCase):
 
     def test_deploy_contract_create(self):
         nonce = self.web3.zksync.get_transaction_count(self.account.address, EthBlockParams.PENDING.value)
+        nonce_holder = NonceHolder(self.web3, self.account)
+        deployment_nonce = nonce_holder.get_deployment_nonce(self.account.address)
         deployer = ContractDeployer(self.web3)
-        precomputed_address = deployer.compute_l2_create_address(self.account.address, nonce)
+        precomputed_address = deployer.compute_l2_create_address(self.account.address, deployment_nonce)
 
         print(f"precomputed address: {precomputed_address}")
 
@@ -320,7 +327,7 @@ class ZkSyncWeb3Tests(TestCase):
                                 from_=self.account.address,
                                 meta=tx["eip712Meta"])
         eip712_structured = tx_712.to_eip712_struct()
-        singable_message = self.signer.sign_typed_data_msg_hash(eip712_structured)
+        singable_message = self.signer.sign_typed_data(eip712_structured)
         msg = Transaction712Encoder.encode(tx_712, singable_message)
         tx_hash = self.web3.zksync.send_raw_transaction(msg)
         tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
@@ -372,7 +379,7 @@ class ZkSyncWeb3Tests(TestCase):
                                 from_=self.account.address,
                                 meta=tx["eip712Meta"])
         eip712_structured = tx_712.to_eip712_struct()
-        singable_message = self.signer.sign_typed_data_msg_hash(eip712_structured)
+        singable_message = self.signer.sign_typed_data(eip712_structured)
         msg = Transaction712Encoder.encode(tx_712, singable_message)
         tx_hash = self.web3.zksync.send_raw_transaction(msg)
         tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
@@ -419,7 +426,7 @@ class ZkSyncWeb3Tests(TestCase):
                                 from_=self.account.address,
                                 meta=tx["eip712Meta"])
         eip712_structured = tx_712.to_eip712_struct()
-        singable_message = self.signer.sign_typed_data_msg_hash(eip712_structured)
+        singable_message = self.signer.sign_typed_data(eip712_structured)
         msg = Transaction712Encoder.encode(tx_712, singable_message)
         tx_hash = self.web3.zksync.send_raw_transaction(msg)
         tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
@@ -440,20 +447,9 @@ class ZkSyncWeb3Tests(TestCase):
         eth_ret = self.web3.zksync.call(eth_tx, ZkBlockParams.COMMITTED.value)
         print(f"Call method for deployed contract, address: {contract_address}, value: {eth_ret}")
 
-    @staticmethod
-    def get_contract_bin(name: str) -> bytes:
-        """
-        INFO: create.sol & Foo.sol must be compiled by ZkSync solidity compiler
-              here is used only compiled versions
-        """
-        p = Path(f'./{name}.bin')
-        with p.open(mode='rb') as contact_file:
-            data = contact_file.read()
-            return data
-
     def test_deploy_contract_with_deps_create(self):
-        create_bin = self.get_contract_bin("create")
-        foo_bin = self.get_contract_bin("foo")
+        create_bin = get_binary("create.bin")
+        foo_bin = get_binary("foo.bin")
         nonce = self.web3.zksync.get_transaction_count(self.account.address, EthBlockParams.PENDING.value)
         nonce_holder = NonceHolder(self.web3, self.account)
         deployment_nonce = nonce_holder.get_deployment_nonce(self.account.address)
@@ -481,7 +477,7 @@ class ZkSyncWeb3Tests(TestCase):
                                 from_=self.account.address,
                                 meta=tx["eip712Meta"])
         eip712_structured = tx_712.to_eip712_struct()
-        singable_message = self.signer.sign_typed_data_msg_hash(eip712_structured)
+        singable_message = self.signer.sign_typed_data(eip712_structured)
         msg = Transaction712Encoder.encode(tx_712, singable_message)
         tx_hash = self.web3.zksync.send_raw_transaction(msg)
         tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
@@ -492,8 +488,8 @@ class ZkSyncWeb3Tests(TestCase):
         self.assertEqual(precomputed_address.lower(), contract_address.lower())
 
     def test_deploy_contract_with_deps_create2(self):
-        create_bin = self.get_contract_bin("create")
-        foo_bin = self.get_contract_bin("foo")
+        create_bin = get_binary("create.bin")
+        foo_bin = get_binary("foo.bin")
         nonce = self.web3.zksync.get_transaction_count(self.account.address, EthBlockParams.PENDING.value)
         contract_deployer = ContractDeployer(self.web3)
         precomputed_address = contract_deployer.compute_l2_create2_address(self.account.address,
@@ -521,7 +517,7 @@ class ZkSyncWeb3Tests(TestCase):
                                 from_=self.account.address,
                                 meta=tx["eip712Meta"])
         eip712_structured = tx_712.to_eip712_struct()
-        singable_message = self.signer.sign_typed_data_msg_hash(eip712_structured)
+        singable_message = self.signer.sign_typed_data(eip712_structured)
         msg = Transaction712Encoder.encode(tx_712, singable_message)
         tx_hash = self.web3.zksync.send_raw_transaction(msg)
         tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
@@ -567,7 +563,7 @@ class ZkSyncWeb3Tests(TestCase):
                                 from_=self.account.address,
                                 meta=tx["eip712Meta"])
         eip712_structured = tx_712.to_eip712_struct()
-        singable_message = self.signer.sign_typed_data_msg_hash(eip712_structured)
+        singable_message = self.signer.sign_typed_data(eip712_structured)
         msg = Transaction712Encoder.encode(tx_712, singable_message)
         tx_hash = self.web3.zksync.send_raw_transaction(msg)
         tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)

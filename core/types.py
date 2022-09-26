@@ -9,12 +9,9 @@ ADDRESS_DEFAULT = HexStr("0x" + "0" * 40)
 
 TokenAddress = NewType('token_address', HexStr)
 TransactionHash = Union[Hash32, HexBytes, HexStr]
-# L1WithdrawHash = Union[Hash32, HexBytes, HexStr]
 L2WithdrawTxHash = Union[Hash32, HexBytes, HexStr]
 From = NewType("from", int)
-# Before = NewType('offset', int)
 Limit = NewType('limit', int)
-# ZkBlockParams = Literal["committed", "finalized"]
 
 
 class ZkBlockParams(Enum):
@@ -24,6 +21,7 @@ class ZkBlockParams(Enum):
 
 class EthBlockParams(Enum):
     PENDING = "pending"
+    LATEST = "latest"
 
 
 @dataclass
