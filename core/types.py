@@ -66,8 +66,6 @@ class Fee:
         return val
 
 
-# TODO: check names, may be add field=meta for castings
-
 @dataclass
 class BridgeAddresses:
     l1_eth_default_bridge: HexStr
@@ -91,9 +89,3 @@ class VmDebugTrace:
 class PaymasterParams(dict):
     paymaster: HexStr
     paymaster_input: bytes
-
-    def __iter__(self):
-        yield astuple(self)
-
-    def items(self):
-        return asdict(self).items()

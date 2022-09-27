@@ -1,8 +1,9 @@
 from decimal import Decimal
-from unittest import TestCase
+from unittest import TestCase, skip
+
 from eth_typing import HexStr
 from web3 import Web3
-from web3.types import TxParams, BlockParams
+from web3.types import TxParams
 from web3.middleware import geth_poa_middleware
 
 from module.request_types import create_contract_transaction, create2_contract_transaction, \
@@ -20,22 +21,17 @@ from eth_account.signers.local import LocalAccount
 from signer.eth_signer import PrivateKeyEthSigner
 from provider.eth_provider import EthereumProvider
 from tests.contracts.constructor_contract_utils import ConstructorContractEncoder
-from tests.contracts.counter_contract_utils import CounterContract, CounterContractEncoder
-from tests.contracts.utils import get_binary
+from tests.contracts.counter_contract_utils import CounterContractEncoder
+from tests.contracts.utils import get_binary, get_hex_binary
 from transaction.transaction712 import Transaction712, Transaction712Encoder
 
 
 class ZkSyncWeb3Tests(TestCase):
     GAS_LIMIT = 21000
-    # ETH_TEST_URL = "http://206.189.96.247:8545"
-    # ZKSYNC_TEST_URL = "http://206.189.96.247:3050"
-
     ETH_TEST_URL = "https://goerli.infura.io/v3/25be7ab42c414680a5f89297f8a11a4d"
     ZKSYNC_TEST_URL = "https://zksync2-testnet.zksync.dev"
 
     ETH_TOKEN = Token.create_eth()
-    DEFAULT_BLOCK_PARAM_NAME: BlockParams = "latest"
-    # PRIVATE_KEY = b'\00' * 31 + b'\01'
     PRIVATE_KEY = b'\00' * 31 + b'\02'
     ETH_AMOUNT_BALANCE = 100
     ETH_TEST_NET_AMOUNT_BALANCE = Decimal(1)
@@ -49,6 +45,7 @@ class ZkSyncWeb3Tests(TestCase):
         self.gas_provider = StaticGasProvider(Web3.toWei(1, "gwei"), 555000)
         self.CONTRACT_ADDRESS = Web3.toChecksumAddress("0xca9e8bfcd17df56ae90c2a5608e8824dfd021067")
 
+    @skip("Integration test, used for develop purposes only")
     def test_send_money(self):
         web3 = Web3(Web3.HTTPProvider(self.ETH_TEST_URL))
         web3.middleware_onion.inject(geth_poa_middleware, layer=0)
@@ -64,6 +61,7 @@ class ZkSyncWeb3Tests(TestCase):
         txn_receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
         self.assertEqual(txn_receipt['status'], 1)
 
+    @skip("Integration test, used for develop purposes only")
     def test_get_balance_of_token_l1(self):
         """
         INFO: For minting use: https://goerli-faucet.pk910.de
@@ -73,10 +71,12 @@ class ZkSyncWeb3Tests(TestCase):
         print(f"Eth: balance: {Web3.fromWei(eth_balance, 'ether')}")
         self.assertNotEqual(eth_balance, 0)
 
+    @skip("Integration test, used for develop purposes only")
     def test_get_balance_of_native(self):
-        zk_balance = self.web3.zksync.get_balance(self.account.address, self.DEFAULT_BLOCK_PARAM_NAME)
+        zk_balance = self.web3.zksync.get_balance(self.account.address, EthBlockParams.LATEST.value)
         print(f"ZkSync balance: {zk_balance}")
 
+    @skip("Integration test, used for develop purposes only")
     def test_deposit(self):
         print(f"gas price: {self.web3.eth.gas_price}")
         eth_web3 = Web3(Web3.HTTPProvider(self.ETH_TEST_URL))
@@ -90,24 +90,29 @@ class ZkSyncWeb3Tests(TestCase):
                                           self.account.address)
         self.assertEqual(1, tx_receipt["status"])
 
+    @skip("Integration test, used for develop purposes only")
     def test_get_nonce(self):
-        nonce = self.web3.zksync.get_transaction_count(self.account.address, self.DEFAULT_BLOCK_PARAM_NAME)
+        nonce = self.web3.zksync.get_transaction_count(self.account.address, EthBlockParams.LATEST.value)
         print(f"Nonce: {nonce}")
 
+    @skip("Integration test, used for develop purposes only")
     def test_get_deployment_nonce(self):
         nonce_holder = NonceHolder(self.web3, self.account)
         print(f"Deployment nonce: {nonce_holder.get_deployment_nonce(self.account.address)}")
 
+    @skip("Integration test, used for develop purposes only")
     def test_get_transaction_receipt(self):
         tx_hash = '0xa645ee8ab4e827a6695f205d8e75afdf97f28d2822b449f9803b986b81e877bc'
         receipt = self.web3.zksync.get_transaction_receipt(tx_hash)
         print(f"receipt: {receipt}")
 
+    @skip("Integration test, used for develop purposes only")
     def test_get_transaction(self):
         tx_hash = '0xa645ee8ab4e827a6695f205d8e75afdf97f28d2822b449f9803b986b81e877bc'
         tx = self.web3.zksync.get_transaction(tx_hash)
         print(f"transaction nonce: {tx['nonce']}")
 
+    @skip("Integration test, used for develop purposes only")
     def test_estimate_gas_transfer_native(self):
         tx = create_function_call_transaction(from_=self.account.address,
                                               to=self.account.address,
@@ -118,6 +123,18 @@ class ZkSyncWeb3Tests(TestCase):
         print(f"test_estimate_gas_transfer_native, estimate_gas: {estimate_gas}")
         self.assertGreater(estimate_gas, 0, "test_estimate_gas_transfer_native, estimate_gas must be greater 0")
 
+    @skip("Integration test, used for develop purposes only")
+    def test_estimate_fee_transfer_native(self):
+        tx = create_function_call_transaction(
+            from_=self.account.address,
+            to=self.account.address,
+            ergs_price=0,
+            ergs_limit=0,
+            data=HexStr("0x"))
+        estimated_fee = self.web3.zksync.zks_estimate_fee(tx)
+        print(f"Estimated fee: {estimated_fee}")
+
+    @skip("Integration test, used for develop purposes only")
     def test_transfer_native_to_self(self):
         nonce = self.web3.zksync.get_transaction_count(self.account.address, ZkBlockParams.COMMITTED.value)
         tx = create_function_call_transaction(from_=self.account.address,
@@ -148,14 +165,7 @@ class ZkSyncWeb3Tests(TestCase):
         tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
         self.assertEqual(1, tx_receipt["status"])
 
-    def test_transfer_native_to_self_web3_legacy(self):
-        # TODO: add implementation
-        pass
-
-    def test_transfer_native_to_self_web3(self):
-        # TODO: add implementation
-        pass
-
+    @skip("Integration test, used for develop purposes only")
     def test_transfer_token_to_self(self):
         nonce = self.web3.zksync.get_transaction_count(self.account.address, ZkBlockParams.COMMITTED.value)
         tokens = self.web3.zksync.zks_get_confirmed_tokens(0, 100)
@@ -194,6 +204,7 @@ class ZkSyncWeb3Tests(TestCase):
         tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
         self.assertEqual(1, tx_receipt["status"])
 
+    @skip("Integration test, used for develop purposes only")
     def test_estimate_gas_withdraw(self):
         bridges = self.web3.zksync.zks_get_bridge_contracts()
         l2_func_encoder = L2BridgeEncoder(self.web3)
@@ -212,6 +223,7 @@ class ZkSyncWeb3Tests(TestCase):
         print(f"test_estimate_gas_withdraw, estimate_gas: {estimate_gas}")
         self.assertGreater(estimate_gas, 0, "test_estimate_gas_withdraw, estimate_gas must be greater 0")
 
+    @skip("Integration test, used for develop purposes only")
     def test_withdraw(self):
         nonce = self.web3.zksync.get_transaction_count(self.account.address, ZkBlockParams.COMMITTED.value)
         bridges: BridgeAddresses = self.web3.zksync.zks_get_bridge_contracts()
@@ -251,6 +263,7 @@ class ZkSyncWeb3Tests(TestCase):
         tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
         self.assertEqual(1, tx_receipt["status"])
 
+    @skip("Integration test, used for develop purposes only")
     def test_estimate_gas_execute(self):
         erc20func_encoder = ERC20FunctionEncoder(self.web3)
         transfer_args = [
@@ -268,8 +281,9 @@ class ZkSyncWeb3Tests(TestCase):
         print(f"test_estimate_gas_execute, estimate_gas: {estimate_gas}")
         self.assertGreater(estimate_gas, 0, "test_estimate_withdraw, estimate_gas must be greater 0")
 
+    @skip("Integration test, used for develop purposes only")
     def test_estimate_gas_deploy_contract(self):
-        counter_contract_bin = _get_counter_contract_binary()
+        counter_contract_bin = get_hex_binary("counter_contract.hex")
         tx = create2_contract_transaction(web3=self.web3,
                                           from_=self.account.address,
                                           ergs_price=0,
@@ -279,25 +293,7 @@ class ZkSyncWeb3Tests(TestCase):
         print(f"test_estimate_gas_deploy_contract, estimate_gas: {estimate_gas}")
         self.assertGreater(estimate_gas, 0, "test_estimate_gas_deploy_contract, estimate_gas must be greater 0")
 
-    def test_wen3py_deploy_contract(self):
-        """
-        INFO: ZkSycn needs Ctor & Binary data as separate params:
-               public static Function encodeCreate2(byte[] bytecode, byte[] calldata);
-               but under Eth Web3J it's hard to split.
-               Might possible under Python
-        """
-        counter_contract = CounterContract.deploy(self.web3, self.account)
-        print(f"Counter Contract address: {counter_contract.address}")
-
-        v = counter_contract.get()
-        self.assertEqual(v, 0)
-
-        tx = counter_contract.increment(10)
-        self.assertEqual(1, tx["status"])
-
-        v = counter_contract.get()
-        self.assertEqual(10, v)
-
+    @skip("Integration test, used for develop purposes only")
     def test_deploy_contract_create(self):
         nonce = self.web3.zksync.get_transaction_count(self.account.address, EthBlockParams.PENDING.value)
         nonce_holder = NonceHolder(self.web3, self.account)
@@ -311,7 +307,7 @@ class ZkSyncWeb3Tests(TestCase):
                                          from_=self.account.address,
                                          ergs_limit=0,
                                          ergs_price=0,
-                                         bytecode=_get_counter_contract_binary())
+                                         bytecode=get_hex_binary("counter_contract.hex"))
         estimate_gas = self.web3.zksync.eth_estimate_gas(tx)
         gas_price = self.web3.zksync.gas_price
         print(f"Fee for transaction is: {estimate_gas * gas_price}")
@@ -346,6 +342,7 @@ class ZkSyncWeb3Tests(TestCase):
         eth_ret = self.web3.zksync.call(eth_tx, ZkBlockParams.COMMITTED.value)
         print(f"Call method for deployed contract, address: {contract_address}, value: {eth_ret}")
 
+    @skip("Integration test, used for develop purposes only")
     def test_deploy_contract_with_constructor_create(self):
         nonce = self.web3.zksync.get_transaction_count(self.account.address, EthBlockParams.PENDING.value)
 
@@ -398,10 +395,11 @@ class ZkSyncWeb3Tests(TestCase):
         eth_ret = self.web3.zksync.call(eth_tx, ZkBlockParams.COMMITTED.value)
         print(f"Call method for deployed contract, address: {contract_address}, value: {eth_ret}")
 
+    @skip("Integration test, used for develop purposes only")
     def test_deploy_contract_create2(self):
         nonce = self.web3.zksync.get_transaction_count(self.account.address, EthBlockParams.PENDING.value)
         deployer = ContractDeployer(self.web3)
-        counter_contract_bin = _get_counter_contract_binary()
+        counter_contract_bin = get_hex_binary("counter_contract.hex")
         precomputed_address = deployer.compute_l2_create2_address(sender=self.account.address,
                                                                   bytecode=counter_contract_bin,
                                                                   constructor=b'',
@@ -447,6 +445,7 @@ class ZkSyncWeb3Tests(TestCase):
         eth_ret = self.web3.zksync.call(eth_tx, ZkBlockParams.COMMITTED.value)
         print(f"Call method for deployed contract, address: {contract_address}, value: {eth_ret}")
 
+    @skip("Integration test, used for develop purposes only")
     def test_deploy_contract_with_deps_create(self):
         create_bin = get_binary("create.bin")
         foo_bin = get_binary("foo.bin")
@@ -487,6 +486,7 @@ class ZkSyncWeb3Tests(TestCase):
         print(f"contract address: {contract_address}")
         self.assertEqual(precomputed_address.lower(), contract_address.lower())
 
+    @skip("Integration test, used for develop purposes only")
     def test_deploy_contract_with_deps_create2(self):
         create_bin = get_binary("create.bin")
         foo_bin = get_binary("foo.bin")
@@ -527,6 +527,7 @@ class ZkSyncWeb3Tests(TestCase):
         print(f"contract address: {contract_address}")
         self.assertEqual(precomputed_address.lower(), contract_address.lower())
 
+    @skip("Integration test, used for develop purposes only")
     def test_execute_contract(self):
         # TODO: link to another test for getting right contract address
         self.CONTRACT_ADDRESS = HexStr("0xfc2037739c537CCAf5F184eb105B69cA612a208F")
@@ -573,22 +574,27 @@ class ZkSyncWeb3Tests(TestCase):
         updated_result = int.from_bytes(eth_ret2, "big", signed=True)
         self.assertEqual(result + 1, updated_result)
 
+    @skip("Integration test, used for develop purposes only")
     def test_get_all_account_balances(self):
         balances = self.web3.zksync.zks_get_all_account_balances(self.account.address)
         print(f"balances : {balances}")
 
+    @skip("Integration test, used for develop purposes only")
     def test_get_confirmed_tokens(self):
         confirmed = self.web3.zksync.zks_get_confirmed_tokens(0, 10)
         print(f"confirmed tokens: {confirmed}")
 
+    @skip("Integration test, used for develop purposes only")
     def test_get_token_price(self):
         price = self.web3.zksync.zks_get_token_price(self.ETH_TOKEN.l2_address)
         print(f"price: {price}")
 
+    @skip("Integration test, used for develop purposes only")
     def test_get_l1_chain_id(self):
         l1_chain_id = self.web3.zksync.zks_l1_chain_id()
         print(f"L1 chain ID: {l1_chain_id} ")
 
+    @skip("Integration test, used for develop purposes only")
     def test_get_bridge_addresses(self):
         addresses = self.web3.zksync.zks_get_bridge_contracts()
         print(f"Bridge addresses: {addresses}")

@@ -47,6 +47,7 @@ eth_estimate_gas_rpc = RPCEndpoint("eth_estimateGas")
 zks_set_contract_debug_info_rpc = RPCEndpoint("zks_setContractDebugInfo")
 zks_get_contract_debug_info_rpc = RPCEndpoint("zks_getContractDebugInfo")
 zks_get_transaction_trace_rpc = RPCEndpoint("zks_getTransactionTrace")
+zks_get_testnet_paymaster_address = RPCEndpoint("zks_getTestnetPaymaster")
 
 
 def meta_formatter(eip712: EIP712Meta) -> dict:
@@ -60,8 +61,12 @@ def meta_formatter(eip712: EIP712Meta) -> dict:
     if eip712.factory_deps is not None:
         ret["factoryDeps"] = [factory_formatter(dep)
                               for dep in eip712.factory_deps]
-    # if self.paymaster_params is not None:
-    #     ret["paymasterParams"] = self.paymaster_params.as_dict()
+    pp_params = eip712.paymaster_params
+    if pp_params is not None:
+        ret["paymasterParams"] = {
+            "paymaster": pp_params.paymaster,
+            "paymasterInput": to_ascii_if_bytes(pp_params.paymaster_input)
+        }
     return ret
 
 
@@ -82,6 +87,7 @@ zks_transaction_request_formatter = apply_formatters_to_dict(ZKS_TRANSACTION_PAR
 
 ZKSYNC_REQUEST_FORMATTERS: [RPCEndpoint, Callable[..., Any]] = {
     eth_estimate_gas_rpc: apply_formatter_at_index(zks_transaction_request_formatter, 0),
+    zks_estimate_fee_rpc: apply_formatter_at_index(zks_transaction_request_formatter, 0)
 }
 
 
@@ -156,7 +162,8 @@ def zksync_get_result_formatters(
 class ZkSync(Eth, ABC):
     _zks_estimate_fee: Method[Callable[[Transaction], ZksEstimateFee]] = Method(
         zks_estimate_fee_rpc,
-        mungers=[default_root_munger]
+        mungers=[default_root_munger],
+        request_formatters=zksync_get_request_formatters
     )
 
     _zks_main_contract: Method[Callable[[], ZksMainContract]] = Method(
@@ -171,8 +178,8 @@ class ZkSync(Eth, ABC):
 
     _zks_get_confirmed_tokens: Method[Callable[[From, Limit], ZksTokens]] = Method(
         zks_get_confirmed_tokens_rpc,
-        mungers=[default_root_munger]
-        , result_formatters=zksync_get_result_formatters
+        mungers=[default_root_munger],
+        result_formatters=zksync_get_result_formatters
     )
 
     _zks_get_token_price: Method[Callable[[TokenAddress], ZksTokenPrice]] = Method(
@@ -226,6 +233,11 @@ class ZkSync(Eth, ABC):
         mungers=[default_root_munger]
     )
 
+    _zks_get_testnet_paymaster_address: Method[Callable[[], HexStr]] = Method(
+        zks_get_testnet_paymaster_address,
+        mungers=[default_root_munger]
+    )
+
     def __init__(self, web3: "Web3"):
         super(ZkSync, self).__init__(web3)
 
@@ -259,6 +271,9 @@ class ZkSync(Eth, ABC):
                                    message: str,
                                    l2log_pos: Optional[int]) -> ZksMessageProof:
         return self._zks_get_l2_to_l1_msg_proof(block, sender, message, l2log_pos)
+
+    def zks_get_testnet_paymaster_address(self) -> HexStr:
+        return self._zks_get_testnet_paymaster_address()
 
     def eth_estimate_gas(self, tx: Transaction) -> str:
         return self._eth_estimate_gas(tx)
