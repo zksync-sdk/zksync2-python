@@ -6,8 +6,8 @@ from eth_typing import HexStr
 from typing import List, Optional
 import json
 
-from manage_contracts.gas_provider import GasProvider
-from manage_contracts import contract_abi
+from zksync2.manage_contracts.gas_provider import GasProvider
+from zksync2.manage_contracts import contract_abi
 
 l1_bridge_abi_cache = None
 

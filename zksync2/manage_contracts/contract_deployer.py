@@ -7,8 +7,8 @@ from typing import Optional
 import json
 from web3.types import Nonce, TxReceipt
 from eth_utils.crypto import keccak
-from manage_contracts import contract_abi
-from core.utils import pad_front_bytes, get_data, int_to_bytes
+from zksync2.manage_contracts import contract_abi
+from zksync2.core.utils import pad_front_bytes, to_bytes, int_to_bytes
 
 icontract_deployer_abi_cache = None
 
@@ -29,7 +29,6 @@ class ContractDeployer:
     CREATE_FUNC = "create"
     CREATE2_FUNC = "create2"
     MAX_BYTE_CODE_LENGTH = 2 ** 16
-    # INFO: see implementation of: class ByteStringEncoder(BaseEncoder):
     EMPTY_BYTES = b''
 
     CREATE_PREFIX = keccak(text="zksyncCreate")
@@ -53,11 +52,6 @@ class ContractDeployer:
     def encode_create2(self, bytecode: bytes,
                        call_data: Optional[bytes] = None,
                        salt: Optional[bytes] = None) -> HexStr:
-
-        # INFO: function encoding under the Python is different from web3 java
-        #       Reason: class ByteStringEncoder(BaseEncoder): for empty bytes generates 32 bytes empty value
-        #       meanwhile under Web3 java it's empty array
-        #       Under the Solidity engine it must be the same values
 
         if salt is None:
             salt = self.DEFAULT_SALT
@@ -98,7 +92,7 @@ class ContractDeployer:
         return HexStr(encoded_function)
 
     def compute_l2_create_address(self, sender: HexStr, nonce: Nonce) -> HexStr:
-        sender_bytes = get_data(sender)
+        sender_bytes = to_bytes(sender)
         sender_bytes = pad_front_bytes(sender_bytes, 32)
         nonce = int_to_bytes(nonce)
         nonce_bytes = pad_front_bytes(nonce, 32)
@@ -116,10 +110,9 @@ class ContractDeployer:
         if len(salt) != 32:
             raise OverflowError("Salt data must be 32 length")
 
-        sender_bytes = get_data(sender)
+        sender_bytes = to_bytes(sender)
         sender_bytes = pad_front_bytes(sender_bytes, 32)
         bytecode_hash = self._hash_byte_code(bytecode)
-        # INFO: working for empty values meanwhile sha256 gives different result
         ctor_hash = keccak(constructor)
         result = self.CREATE2_PREFIX + sender_bytes + salt + bytecode_hash + ctor_hash
         sha_result = keccak(result)

@@ -11,14 +11,6 @@ from eth_account.messages import encode_defunct, SignableMessage
 class EthSignerBase:
 
     @abstractmethod
-    def get_address(self) -> ChecksumAddress:
-        raise NotImplementedError
-
-    @abstractmethod
-    def get_domain(self):
-        raise NotImplemented
-
-    @abstractmethod
     def sign_typed_data(self, typed_data: EIP712Struct, domain=None) -> SignedMessage:
         raise NotImplemented
 
@@ -62,4 +54,4 @@ class PrivateKeyEthSigner(EthSignerBase, ABC):
         singable_message = self.typed_data_to_signed_bytes(typed_data, domain)
         msg_hash = keccak(singable_message.body)
         address = web3.Account.recoverHash(message_hash=msg_hash, signature=sig)
-        return address.lower() == self.get_address().lower()
+        return address.lower() == self.address.lower()

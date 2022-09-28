@@ -24,10 +24,10 @@ from web3.datastructures import AttributeDict
 from web3.eth import Eth
 from web3.types import RPCEndpoint, _Hash32, TxReceipt
 
-from core.types import TransactionHash, Limit, L2WithdrawTxHash, From, ContractSourceDebugInfo, \
+from zksync2.core.types import TransactionHash, Limit, L2WithdrawTxHash, From, ContractSourceDebugInfo, \
     BridgeAddresses, TokenAddress
-from module.request_types import *
-from module.response_types import *
+from zksync2.module.request_types import *
+from zksync2.module.response_types import *
 from eth_typing import Address
 from eth_utils.toolz import compose
 from web3.method import Method, default_root_munger
@@ -125,10 +125,6 @@ def zksync_get_request_formatters(
     request_formatter_maps = (
         ZKSYNC_REQUEST_FORMATTERS,
         ABI_REQUEST_FORMATTERS,
-        # METHOD_NORMALIZERS needs to be after ABI_REQUEST_FORMATTERS
-        # so that eth_getLogs's apply_formatter_at_index formatter
-        # is applied to the whole address
-        # rather than on the first byte of the address
         METHOD_NORMALIZERS,
         PYTHONIC_REQUEST_FORMATTERS,
     )
@@ -289,8 +285,6 @@ class ZkSync(Eth, ABC):
                         tx_receipt = self._get_transaction_receipt(transaction_hash)
                     except TransactionNotFound:
                         tx_receipt = None
-                    # INFO: differs from original once only by condition
-                    #       for some cases ZkSync server could provider Nonce fields
                     if tx_receipt is not None and \
                             tx_receipt["blockHash"] is not None:
                         break

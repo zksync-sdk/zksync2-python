@@ -1,0 +1,4 @@
+include README.md
+include requirements.txt
+recursive-exclude * __pycache__
+recursive-include zksync2/manage_contracts/contract_abi/*

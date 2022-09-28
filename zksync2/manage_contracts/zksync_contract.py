@@ -3,7 +3,7 @@ from eth_typing import HexStr
 from web3 import Web3
 from pathlib import Path
 from eth_account.signers.base import BaseAccount
-from manage_contracts.contract_base import ContractBase
+from zksync2.manage_contracts.contract_base import ContractBase
 
 
 zksync_abi_cache = None

@@ -3,15 +3,15 @@ from unittest import TestCase, skip
 from eth_typing import HexStr
 from eth_utils import keccak
 from web3 import Web3
-from module.request_types import create2_contract_transaction
-from manage_contracts.gas_provider import StaticGasProvider
-from module.module_builder import ZkSyncBuilder
-from core.types import Token, EthBlockParams
+from zksync2.module.request_types import create2_contract_transaction
+from zksync2.manage_contracts.gas_provider import StaticGasProvider
+from zksync2.module.module_builder import ZkSyncBuilder
+from zksync2.core.types import Token, EthBlockParams
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
-from signer.eth_signer import PrivateKeyEthSigner
+from zksync2.signer.eth_signer import PrivateKeyEthSigner
 from tests.contracts.utils import get_binary
-from transaction.transaction712 import Transaction712, Transaction712Encoder
+from zksync2.transaction.transaction712 import Transaction712
 
 
 class PaymasterTests(TestCase):
@@ -61,8 +61,8 @@ class PaymasterTests(TestCase):
                                 meta=tx["eip712Meta"])
 
         eip712_structured = tx_712.to_eip712_struct()
-        singable_message = self.signer.sign_typed_data(eip712_structured)
-        msg = Transaction712Encoder.encode(tx_712, singable_message)
+        singed_message = self.signer.sign_typed_data(eip712_structured)
+        msg = tx_712.encode(singed_message)
         tx_hash = self.web3.zksync.send_raw_transaction(msg)
         tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
         self.assertEqual(1, tx_receipt["status"])

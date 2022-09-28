@@ -8,8 +8,8 @@ import json
 
 from web3.types import TxReceipt
 
-from manage_contracts.gas_provider import GasProvider
-from manage_contracts import contract_abi
+from zksync2.manage_contracts.gas_provider import GasProvider
+from zksync2.manage_contracts import contract_abi
 
 l2_bridge_abi_cache = None
 

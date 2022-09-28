@@ -6,24 +6,24 @@ from web3 import Web3
 from web3.types import TxParams
 from web3.middleware import geth_poa_middleware
 
-from module.request_types import create_contract_transaction, create2_contract_transaction, \
+from zksync2.module.request_types import create_contract_transaction, create2_contract_transaction, \
     create_function_call_transaction
-from manage_contracts.contract_deployer import ContractDeployer
-from manage_contracts.erc20_contract import ERC20FunctionEncoder
-from manage_contracts.gas_provider import StaticGasProvider
-from manage_contracts.nonce_holder import NonceHolder
-from module.module_builder import ZkSyncBuilder
-from manage_contracts.l2_bridge import L2BridgeEncoder
-from core.types import Token, ZkBlockParams, BridgeAddresses, EthBlockParams
+from zksync2.manage_contracts.contract_deployer import ContractDeployer
+from zksync2.manage_contracts.erc20_contract import ERC20FunctionEncoder
+from zksync2.manage_contracts.gas_provider import StaticGasProvider
+from zksync2.manage_contracts.nonce_holder import NonceHolder
+from zksync2.module.module_builder import ZkSyncBuilder
+from zksync2.manage_contracts.l2_bridge import L2BridgeEncoder
+from zksync2.core.types import Token, ZkBlockParams, BridgeAddresses, EthBlockParams
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
 
-from signer.eth_signer import PrivateKeyEthSigner
-from provider.eth_provider import EthereumProvider
+from zksync2.signer.eth_signer import PrivateKeyEthSigner
+from zksync2.provider.eth_provider import EthereumProvider
 from tests.contracts.constructor_contract_utils import ConstructorContractEncoder
 from tests.contracts.counter_contract_utils import CounterContractEncoder
 from tests.contracts.utils import get_binary, get_hex_binary
-from transaction.transaction712 import Transaction712, Transaction712Encoder
+from zksync2.transaction.transaction712 import Transaction712
 
 
 class ZkSyncWeb3Tests(TestCase):
@@ -158,9 +158,8 @@ class ZkSyncWeb3Tests(TestCase):
                                 from_=self.account.address,
                                 meta=tx["eip712Meta"])
 
-        eip712_structured = tx_712.to_eip712_struct()
-        singable_message = self.signer.sign_typed_data(eip712_structured)
-        msg = Transaction712Encoder.encode(tx_712, singable_message)
+        singed_message = self.signer.sign_typed_data(tx_712.to_eip712_struct())
+        msg = tx_712.encode(singed_message)
         tx_hash = self.web3.zksync.send_raw_transaction(msg)
         tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
         self.assertEqual(1, tx_receipt["status"])
@@ -197,9 +196,8 @@ class ZkSyncWeb3Tests(TestCase):
                                 maxFeePerGas=gas_price,
                                 from_=self.account.address,
                                 meta=tx["eip712Meta"])
-        eip712_structured = tx_712.to_eip712_struct()
-        singable_message = self.signer.sign_typed_data(eip712_structured)
-        msg = Transaction712Encoder.encode(tx_712, singable_message)
+        singed_message = self.signer.sign_typed_data(tx_712.to_eip712_struct())
+        msg = tx_712.encode(singed_message)
         tx_hash = self.web3.zksync.send_raw_transaction(msg)
         tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
         self.assertEqual(1, tx_receipt["status"])
@@ -256,9 +254,8 @@ class ZkSyncWeb3Tests(TestCase):
                                 from_=self.account.address,
                                 meta=tx["eip712Meta"])
 
-        eip712_structured = tx_712.to_eip712_struct()
-        singable_message = self.signer.sign_typed_data(eip712_structured)
-        msg = Transaction712Encoder.encode(tx_712, singable_message)
+        singed_message = self.signer.sign_typed_data(tx_712.to_eip712_struct())
+        msg = tx_712.encode(singed_message)
         tx_hash = self.web3.zksync.send_raw_transaction(msg)
         tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
         self.assertEqual(1, tx_receipt["status"])
@@ -322,9 +319,9 @@ class ZkSyncWeb3Tests(TestCase):
                                 maxFeePerGas=gas_price,
                                 from_=self.account.address,
                                 meta=tx["eip712Meta"])
-        eip712_structured = tx_712.to_eip712_struct()
-        singable_message = self.signer.sign_typed_data(eip712_structured)
-        msg = Transaction712Encoder.encode(tx_712, singable_message)
+
+        singed_message = self.signer.sign_typed_data(tx_712.to_eip712_struct())
+        msg = tx_712.encode(singed_message)
         tx_hash = self.web3.zksync.send_raw_transaction(msg)
         tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
         self.assertEqual(1, tx_receipt["status"])
@@ -375,9 +372,8 @@ class ZkSyncWeb3Tests(TestCase):
                                 maxFeePerGas=gas_price,
                                 from_=self.account.address,
                                 meta=tx["eip712Meta"])
-        eip712_structured = tx_712.to_eip712_struct()
-        singable_message = self.signer.sign_typed_data(eip712_structured)
-        msg = Transaction712Encoder.encode(tx_712, singable_message)
+        singed_message = self.signer.sign_typed_data(tx_712.to_eip712_struct())
+        msg = tx_712.encode(singed_message)
         tx_hash = self.web3.zksync.send_raw_transaction(msg)
         tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
         self.assertEqual(1, tx_receipt["status"])
@@ -423,9 +419,8 @@ class ZkSyncWeb3Tests(TestCase):
                                 maxFeePerGas=gas_price,
                                 from_=self.account.address,
                                 meta=tx["eip712Meta"])
-        eip712_structured = tx_712.to_eip712_struct()
-        singable_message = self.signer.sign_typed_data(eip712_structured)
-        msg = Transaction712Encoder.encode(tx_712, singable_message)
+        singed_message = self.signer.sign_typed_data(tx_712.to_eip712_struct())
+        msg = tx_712.encode(singed_message)
         tx_hash = self.web3.zksync.send_raw_transaction(msg)
         tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
 
@@ -475,9 +470,8 @@ class ZkSyncWeb3Tests(TestCase):
                                 maxFeePerGas=gas_price,
                                 from_=self.account.address,
                                 meta=tx["eip712Meta"])
-        eip712_structured = tx_712.to_eip712_struct()
-        singable_message = self.signer.sign_typed_data(eip712_structured)
-        msg = Transaction712Encoder.encode(tx_712, singable_message)
+        singed_message = self.signer.sign_typed_data(tx_712.to_eip712_struct())
+        msg = tx_712.encode(singed_message)
         tx_hash = self.web3.zksync.send_raw_transaction(msg)
         tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
         self.assertEqual(1, tx_receipt["status"])
@@ -516,9 +510,8 @@ class ZkSyncWeb3Tests(TestCase):
                                 maxFeePerGas=gas_price,
                                 from_=self.account.address,
                                 meta=tx["eip712Meta"])
-        eip712_structured = tx_712.to_eip712_struct()
-        singable_message = self.signer.sign_typed_data(eip712_structured)
-        msg = Transaction712Encoder.encode(tx_712, singable_message)
+        singed_message = self.signer.sign_typed_data(tx_712.to_eip712_struct())
+        msg = tx_712.encode(singed_message)
         tx_hash = self.web3.zksync.send_raw_transaction(msg)
         tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
         self.assertEqual(1, tx_receipt["status"])
@@ -563,9 +556,8 @@ class ZkSyncWeb3Tests(TestCase):
                                 maxFeePerGas=gas_price,
                                 from_=self.account.address,
                                 meta=tx["eip712Meta"])
-        eip712_structured = tx_712.to_eip712_struct()
-        singable_message = self.signer.sign_typed_data(eip712_structured)
-        msg = Transaction712Encoder.encode(tx_712, singable_message)
+        singed_message = self.signer.sign_typed_data(tx_712.to_eip712_struct())
+        msg = tx_712.encode(singed_message)
         tx_hash = self.web3.zksync.send_raw_transaction(msg)
         tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
         self.assertEqual(1, tx_receipt["status"])

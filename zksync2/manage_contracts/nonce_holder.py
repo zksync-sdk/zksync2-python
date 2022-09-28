@@ -7,7 +7,7 @@ import json
 from web3.types import Nonce
 
 from .deploy_addresses import ZkSyncAddresses
-from manage_contracts import contract_abi
+from zksync2.manage_contracts import contract_abi
 
 nonce_holder_abi_cache = None
 

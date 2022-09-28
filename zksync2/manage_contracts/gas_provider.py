@@ -1,9 +1,5 @@
 from abc import ABC, abstractmethod
 
-# INFO: gas price strategy (set_gas_price_strategy) method of Module
-#       does not fit the requirements of custom set of Gas price & limit
-#       So these types are used instead
-
 
 class GasProvider(ABC):
 

@@ -1,7 +1,7 @@
-from dataclasses import dataclass, astuple, asdict
+from dataclasses import dataclass
 from decimal import Decimal
 from eth_typing import HexStr, Hash32
-from typing import Union, NewType, Dict, List, Any, Literal
+from typing import Union, NewType, Dict, List, Any
 from hexbytes import HexBytes
 from enum import Enum
 
@@ -74,7 +74,6 @@ class BridgeAddresses:
     l2_erc20_default_bridge: HexStr
 
 
-# TODO: implement corresponded types
 VmExecutionSteps = NewType("VmExecutionSteps", Any)
 ContractSourceDebugInfo = NewType("ContractSourceDebugInfo", Any)
 

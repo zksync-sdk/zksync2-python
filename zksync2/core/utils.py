@@ -10,7 +10,7 @@ def int_to_bytes(x: int) -> bytes:
     return x.to_bytes((x.bit_length() + 7) // 8, byteorder=sys.byteorder)
 
 
-def get_data(data: Union[bytes, HexStr]) -> bytes:
+def to_bytes(data: Union[bytes, HexStr]) -> bytes:
     if isinstance(data, bytes):
         return data
     return bytes.fromhex(remove_0x_prefix(data))

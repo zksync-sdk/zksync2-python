@@ -10,7 +10,7 @@ from eth_account._utils.structured_data.hashing import (
     load_and_validate_structured_message,
 )
 
-from signer.eth_account_patch.validation import validate_structured_data
+from zksync2.signer.eth_account_patch.validation import validate_structured_data
 
 
 def encode_structured_data(

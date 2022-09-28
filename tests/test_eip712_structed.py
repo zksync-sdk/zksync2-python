@@ -2,8 +2,8 @@ import json
 from unittest import TestCase
 from eth_utils.crypto import keccak_256
 from eip712_structs import EIP712Struct, String, Address, make_domain
-from signer.eth_account_patch.encode_structed_data import encode_structured_data
-from core.utils import pad_front_bytes
+from zksync2.signer.eth_account_patch.encode_structed_data import encode_structured_data
+from zksync2.core.utils import pad_front_bytes
 
 
 class Person(EIP712Struct):
@@ -75,9 +75,6 @@ class TestEIP712Structured(TestCase):
         self.assertEqual('b5aadf3154a261abdd9086fc627b61efca26ae5702701d05cd2305f7c52a2fc8', ret.hex())
 
     def test_encode_domain(self):
-        """
-        INFO: interesting, type_hash at the beginning does the job
-        """
         type_hash = self.domain.type_hash()
         ret = self.domain.encode_value()
         ret = type_hash + ret

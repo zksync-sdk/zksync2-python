@@ -3,9 +3,9 @@ import importlib.resources as pkg_resources
 from typing import Optional
 from eth_typing import HexStr
 from web3 import Web3
-from manage_contracts.contract_base import ContractBase
+from zksync2.manage_contracts.contract_base import ContractBase
 from eth_account.signers.base import BaseAccount
-from manage_contracts import contract_abi
+from zksync2.manage_contracts import contract_abi
 
 erc_20_abi_cache = None
 

@@ -4,13 +4,13 @@ from typing import Optional
 from eth_account.signers.base import BaseAccount
 from eth_typing import HexStr
 from web3 import Web3
-from manage_contracts.erc20_contract import ERC20Contract
-from manage_contracts.gas_provider import GasProvider
-from manage_contracts.l1_bridge import L1Bridge
-from manage_contracts.priority_op_tree import PriorityOpTree
-from manage_contracts.priority_queue_type import PriorityQueueType
-from manage_contracts.zksync_contract import ZkSyncContract
-from core.types import Token, ADDRESS_DEFAULT, BridgeAddresses
+from zksync2.manage_contracts.erc20_contract import ERC20Contract
+from zksync2.manage_contracts.gas_provider import GasProvider
+from zksync2.manage_contracts.l1_bridge import L1Bridge
+from zksync2.manage_contracts.priority_op_tree import PriorityOpTree
+from zksync2.manage_contracts.priority_queue_type import PriorityQueueType
+from zksync2.manage_contracts.zksync_contract import ZkSyncContract
+from zksync2.core.types import Token, ADDRESS_DEFAULT, BridgeAddresses
 
 
 class EthereumProvider:
