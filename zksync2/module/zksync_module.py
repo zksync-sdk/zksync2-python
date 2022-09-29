@@ -112,10 +112,18 @@ def to_zks_account_balances(t: dict) -> ZksAccountBalances:
     return result
 
 
+def to_fee(v: dict) -> Fee:
+    return Fee(ergs_limit=v['ergs_limit'],
+               max_fee_per_erg=v['max_fee_per_erg'],
+               max_priority_fee_per_erg=v['max_priority_fee_per_erg'],
+               ergs_per_pub_data_limit=v['ergs_per_pubdata_limit'])
+
+
 ZKSYNC_RESULT_FORMATTERS: Dict[RPCEndpoint, Callable[..., Any]] = {
     zks_get_confirmed_tokens_rpc: apply_list_to_array_formatter(to_token),
     zks_get_bridge_contracts_rpc: to_bridge_address,
-    zks_get_all_account_balances_rpc: to_zks_account_balances
+    zks_get_all_account_balances_rpc: to_zks_account_balances,
+    zks_estimate_fee_rpc: to_fee,
 }
 
 
@@ -159,7 +167,8 @@ class ZkSync(Eth, ABC):
     _zks_estimate_fee: Method[Callable[[Transaction], ZksEstimateFee]] = Method(
         zks_estimate_fee_rpc,
         mungers=[default_root_munger],
-        request_formatters=zksync_get_request_formatters
+        request_formatters=zksync_get_request_formatters,
+        result_formatters=zksync_get_result_formatters
     )
 
     _zks_main_contract: Method[Callable[[], ZksMainContract]] = Method(

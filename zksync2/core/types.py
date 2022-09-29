@@ -52,18 +52,10 @@ class Token:
 
 @dataclass
 class Fee:
-    feeToken: TokenAddress
-    ergsLimit: int
-    ergsPriceLimit: int
-    ergsPerPubdataLimit: int
-
-    @classmethod
-    def default_fee(cls, address: TokenAddress) -> 'Fee':
-        val = cls(feeToken=address,
-                  ergsLimit=0,
-                  ergsPriceLimit=0,
-                  ergsPerPubdataLimit=0)
-        return val
+    ergs_limit: int = 0
+    max_fee_per_erg: int = 0
+    max_priority_fee_per_erg : int = 0
+    ergs_per_pub_data_limit: int = 0
 
 
 @dataclass
