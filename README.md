@@ -35,27 +35,31 @@ from eth_account.signers.local import LocalAccount
 from zksync2.manage_contracts.gas_provider import StaticGasProvider
 from zksync2.module.module_builder import ZkSyncBuilder
 from zksync2.core.types import Token
+from zksync2.provider.eth_provider import EthereumProvider
 
 
-def deposite():
-        URL_TO_ETH_NETWORK: str = 'https://'
-        ZKSYNC_NETWORK_URL: str = 'https://'
-        eth_web3 = Web3(Web3.HTTPProvider(URL_TO_ETH_NETWORK))
-        eth_web3.middleware_onion.inject(geth_poa_middleware, layer=0)
-        zksync_web3 = ZkSyncBuilder.build(ZKSYNC_NETWORK_URL)
-        account: LocalAccount = Account.from_key('YOUR_PRIVATE_KEY')
-        eth_provider = EthereumProvider.build_ethereum_provider(zksync=zksync_web3
-                                                                eth=eth_web3,
-                                                                account=account,
-                                                                gas_provider=gas_provider)
-        tx_receipt = eth_provider.deposit(Token.create_eth(),
-                                          eth_web3.toWei("YOUR_AMOUNT_OF_ETH", "ether"),
-                                          account.address)
-        print(f"tx status: {tx_receipt['status']}")
+def deposit():
+    URL_TO_ETH_NETWORK = "https://goerli.infura.io/v3/25be7ab42c414680a5f89297f8a11a4d"
+    ZKSYNC_NETWORK_URL = "https://zksync2-testnet.zksync.dev"
+
+    eth_web3 = Web3(Web3.HTTPProvider(URL_TO_ETH_NETWORK))
+    eth_web3.middleware_onion.inject(geth_poa_middleware, layer=0)
+    zksync_web3 = ZkSyncBuilder.build(ZKSYNC_NETWORK_URL)
+    account: LocalAccount = Account.from_key('YOUR_PRIVATE_KEY')
+    gas_provider = StaticGasProvider(Web3.toWei(1, "gwei"), 555000)
+    eth_provider = EthereumProvider.build_ethereum_provider(zksync=zksync_web3,
+                                                            eth=eth_web3,
+                                                            account=account,
+                                                            gas_provider=gas_provider)
+    tx_receipt = eth_provider.deposit(Token.create_eth(),
+                                      eth_web3.toWei("YOUR_AMOUNT_OF_ETH", "ether"),
+                                      account.address)
+    print(f"tx status: {tx_receipt['status']}")
 
 
 if __name__ == "__main__":
-    deposite()
+    deposit()
+
 ```
 
 
@@ -77,8 +81,9 @@ def get_account_balance():
     zk_balance = zksync_web3.zksync.get_balance(account.address, EthBlockParams.LATEST.value)
     print(f"ZkSync balance: {zk_balance}")
 
+
 if __name__ == "__main__":
-   get_account_balance()
+    get_account_balance()
 
 ```
 
@@ -88,11 +93,10 @@ Here is example how to transfer funds in ZkSync network
 
 ```
 from eth_typing import HexStr
-from web3.middleware import geth_poa_middleware
-
+from web3 import Web3
 from zksync2.module.request_types import create_function_call_transaction
 from zksync2.module.module_builder import ZkSyncBuilder
-from zksync2.core.types import ZkBlockParams 
+from zksync2.core.types import ZkBlockParams
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
 
@@ -135,8 +139,9 @@ def transfer_to_self():
     tx_receipt = zksync_web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
     print(f"tx status: {tx_receipt['status']}")
 
+
 if __name__ == "__main__":
-   get_account_balance()
+    transfer_to_self()
 
 ```
 
@@ -145,19 +150,17 @@ if __name__ == "__main__":
 Example of transferring ERC20 tokens
 
 ```
-from eth_typing import HexStr
 from zksync2.module.request_types import create_function_call_transaction
 from zksync2.manage_contracts.erc20_contract import ERC20FunctionEncoder
 from zksync2.module.module_builder import ZkSyncBuilder
-from zksync2.core.types import Token, ZkBlockParams, BridgeAddresses, EthBlockParams
+from zksync2.core.types import ZkBlockParams
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
-
 from zksync2.signer.eth_signer import PrivateKeyEthSigner
 from zksync2.transaction.transaction712 import Transaction712
 
-def transfer_erc20_token():
 
+def transfer_erc20_token():
     ZKSYNC_NETWORK_URL: str = 'https://'
     account: LocalAccount = Account.from_key('YOUR_PRIVATE_KEY')
     zksync_web3 = ZkSyncBuilder.build(ZKSYNC_NETWORK_URL)
@@ -199,26 +202,29 @@ def transfer_erc20_token():
     tx_receipt = zksync_web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
     print(f"tx status: {tx_receipt['status']}")
 
+
 if __name__ == "__main__":
-   transfer_erc20_token()
+    transfer_erc20_token()
 
 ```
 
 ### Withdraw funds (Native coins)
 
 ```
+from decimal import Decimal
 from eth_typing import HexStr
 from zksync2.module.request_types import create_function_call_transaction
 from zksync2.manage_contracts.l2_bridge import L2BridgeEncoder
 from zksync2.module.module_builder import ZkSyncBuilder
-from zksync2.core.types import Token, ZkBlockParams, BridgeAddresses, EthBlockParams
+from zksync2.core.types import Token, ZkBlockParams, BridgeAddresses
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
 
 from zksync2.signer.eth_signer import PrivateKeyEthSigner
 from zksync2.transaction.transaction712 import Transaction712
 
-def withdraw(self):
+
+def withdraw():
     ZKSYNC_NETWORK_URL: str = 'https://'
     account: LocalAccount = Account.from_key('YOUR_PRIVATE_KEY')
     zksync_web3 = ZkSyncBuilder.build(ZKSYNC_NETWORK_URL)
@@ -242,7 +248,7 @@ def withdraw(self):
                                           ergs_price=0,
                                           data=HexStr(call_data))
     estimate_gas = zksync_web3.zksync.eth_estimate_gas(tx)
-    gas_price = zksync_web3.web3.zksync.gas_price
+    gas_price = zksync_web3.zksync.gas_price
 
     print(f"Fee for transaction is: {estimate_gas * gas_price}")
 
@@ -263,8 +269,9 @@ def withdraw(self):
     tx_receipt = zksync_web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
     print(f"tx status: {tx_receipt['status']}")
 
+
 if __name__ == "__main__":
-   withdraw()
+    withdraw()
 
 ```
 
@@ -307,7 +314,6 @@ Contract ABI needs for calling its methods in standard web3 way<br>
 ```
 import json
 from pathlib import Path
-from decimal import Decimal
 from eth_typing import HexStr
 from web3 import Web3
 from web3.types import TxParams
@@ -315,7 +321,7 @@ from zksync2.module.request_types import create_contract_transaction
 from zksync2.manage_contracts.contract_deployer import ContractDeployer
 from zksync2.manage_contracts.nonce_holder import NonceHolder
 from zksync2.module.module_builder import ZkSyncBuilder
-from zksync2.core.types import Token, ZkBlockParams, BridgeAddresses, EthBlockParams
+from zksync2.core.types import ZkBlockParams, EthBlockParams
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
 from zksync2.signer.eth_signer import PrivateKeyEthSigner
@@ -326,6 +332,7 @@ def read_binary(p: Path) -> bytes:
     with p.open(mode='rb') as contact_file:
         data = contact_file.read()
         return data
+
 
 def get_abi(p: Path):
     with p.open(mode='r') as json_f:
@@ -343,7 +350,6 @@ class CounterContractEncoder:
 
 
 def deploy_contract_create():
-
     ZKSYNC_NETWORK_URL: str = 'https://'
     account: LocalAccount = Account.from_key('YOUR_PRIVATE_KEY')
     zksync_web3 = ZkSyncBuilder.build(ZKSYNC_NETWORK_URL)
@@ -390,7 +396,9 @@ def deploy_contract_create():
     contract_address = tx_receipt["contractAddress"]
     print(f"contract address: {contract_address}")
 
-    counter_contract_encoder = CounterContractEncoder(zksync_web3, "PATH_TO_BINARY_COMPILED_CONTRACT", "PATH_TO_CONTRACT_ABI")
+    counter_contract_encoder = CounterContractEncoder(zksync_web3, "PATH_TO_BINARY_COMPILED_CONTRACT",
+                                                      "PATH_TO_CONTRACT_ABI")
+
     call_data = counter_contract_encoder.encode_method(fn_name="get", args=[])
     eth_tx: TxParams = {
         "from": account.address,
@@ -404,7 +412,7 @@ def deploy_contract_create():
 
 
 if __name__ == "__main__":
-   deploy_contract_create()
+    deploy_contract_create()
 
 ```
 
@@ -414,15 +422,13 @@ if __name__ == "__main__":
 ```
 import json
 from pathlib import Path
-from decimal import Decimal
 from eth_typing import HexStr
 from web3 import Web3
 from web3.types import TxParams
 from zksync2.module.request_types import create2_contract_transaction
 from zksync2.manage_contracts.contract_deployer import ContractDeployer
-from zksync2.manage_contracts.nonce_holder import NonceHolder
 from zksync2.module.module_builder import ZkSyncBuilder
-from zksync2.core.types import Token, ZkBlockParams, BridgeAddresses, EthBlockParams
+from zksync2.core.types import ZkBlockParams, EthBlockParams
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
 from zksync2.signer.eth_signer import PrivateKeyEthSigner
@@ -433,6 +439,7 @@ def read_binary(p: Path) -> bytes:
     with p.open(mode='rb') as contact_file:
         data = contact_file.read()
         return data
+
 
 def get_abi(p: Path):
     with p.open(mode='r') as json_f:
@@ -464,6 +471,8 @@ def deploy_contract_create2():
                                                               bytecode=counter_contract_bin,
                                                               constructor=b'',
                                                               salt=b'\0' * 32)
+    print(f"precomputed address: {precomputed_address}")
+
     tx = create2_contract_transaction(web3=zksync_web3,
                                       from_=account.address,
                                       ergs_price=0,
@@ -501,8 +510,9 @@ def deploy_contract_create2():
     }
     eth_ret = zksync_web3.zksync.call(eth_tx, ZkBlockParams.COMMITTED.value)
     print(f"Call method for deployed contract, address: {contract_address}, value: {eth_ret}")
-    
+
+
 if __name__ == "__main__":
-   deploy_contract_create2()    
-    
+    deploy_contract_create2()
+
 ```
