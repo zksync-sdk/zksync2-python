@@ -1,3 +1,4 @@
+import os
 from decimal import Decimal
 from unittest import TestCase, skip
 
@@ -24,6 +25,10 @@ from tests.contracts.constructor_contract_utils import ConstructorContractEncode
 from tests.contracts.counter_contract_utils import CounterContractEncoder
 from tests.contracts.utils import get_binary, get_hex_binary
 from zksync2.transaction.transaction712 import Transaction712
+
+
+def generate_random_salt() -> bytes:
+    return os.urandom(32)
 
 
 class ZkSyncWeb3Tests(TestCase):
@@ -393,18 +398,20 @@ class ZkSyncWeb3Tests(TestCase):
 
     @skip("Integration test, used for develop purposes only")
     def test_deploy_contract_create2(self):
+        random_salt = generate_random_salt()
         nonce = self.web3.zksync.get_transaction_count(self.account.address, EthBlockParams.PENDING.value)
         deployer = ContractDeployer(self.web3)
         counter_contract_bin = get_hex_binary("counter_contract.hex")
         precomputed_address = deployer.compute_l2_create2_address(sender=self.account.address,
                                                                   bytecode=counter_contract_bin,
                                                                   constructor=b'',
-                                                                  salt=b'\0' * 32)
+                                                                  salt=random_salt)
         tx = create2_contract_transaction(web3=self.web3,
                                           from_=self.account.address,
                                           ergs_price=0,
                                           ergs_limit=0,
-                                          bytecode=counter_contract_bin)
+                                          bytecode=counter_contract_bin,
+                                          salt=random_salt)
         estimate_gas = self.web3.zksync.eth_estimate_gas(tx)
         gas_price = self.web3.zksync.gas_price
         print(f"Fee for transaction is: {estimate_gas * gas_price}")
@@ -422,7 +429,7 @@ class ZkSyncWeb3Tests(TestCase):
         singed_message = self.signer.sign_typed_data(tx_712.to_eip712_struct())
         msg = tx_712.encode(singed_message)
         tx_hash = self.web3.zksync.send_raw_transaction(msg)
-        tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
+        tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=1.0)
 
         self.assertEqual(1, tx_receipt["status"])
 
@@ -438,7 +445,8 @@ class ZkSyncWeb3Tests(TestCase):
             "data": call_data
         }
         eth_ret = self.web3.zksync.call(eth_tx, ZkBlockParams.COMMITTED.value)
-        print(f"Call method for deployed contract, address: {contract_address}, value: {eth_ret}")
+        result = int.from_bytes(eth_ret, "big", signed=True)
+        print(f"Call method for deployed contract, address: {contract_address}, value: {result}")
 
     @skip("Integration test, used for develop purposes only")
     def test_deploy_contract_with_deps_create(self):

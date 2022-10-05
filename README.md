@@ -420,6 +420,7 @@ if __name__ == "__main__":
 
 
 ```
+import os
 import json
 from pathlib import Path
 from eth_typing import HexStr
@@ -433,6 +434,10 @@ from eth_account import Account
 from eth_account.signers.local import LocalAccount
 from zksync2.signer.eth_signer import PrivateKeyEthSigner
 from zksync2.transaction.transaction712 import Transaction712
+
+
+def generate_random_salt() -> bytes:
+    return os.urandom(32)
 
 
 def read_binary(p: Path) -> bytes:
@@ -467,17 +472,19 @@ def deploy_contract_create2():
 
     nonce = zksync_web3.zksync.get_transaction_count(account.address, EthBlockParams.PENDING.value)
     deployer = ContractDeployer(zksync_web3)
+    random_salt = generate_random_salt()
     precomputed_address = deployer.compute_l2_create2_address(sender=account.address,
                                                               bytecode=counter_contract_bin,
                                                               constructor=b'',
-                                                              salt=b'\0' * 32)
+                                                              salt=random_salt)
     print(f"precomputed address: {precomputed_address}")
 
     tx = create2_contract_transaction(web3=zksync_web3,
                                       from_=account.address,
                                       ergs_price=0,
                                       ergs_limit=0,
-                                      bytecode=counter_contract_bin)
+                                      bytecode=counter_contract_bin,
+                                      salt=random_salt)
     estimate_gas = zksync_web3.zksync.eth_estimate_gas(tx)
     gas_price = zksync_web3.zksync.gas_price
     print(f"Fee for transaction is: {estimate_gas * gas_price}")
@@ -509,7 +516,8 @@ def deploy_contract_create2():
         "data": call_data
     }
     eth_ret = zksync_web3.zksync.call(eth_tx, ZkBlockParams.COMMITTED.value)
-    print(f"Call method for deployed contract, address: {contract_address}, value: {eth_ret}")
+    result = int.from_bytes(eth_ret, "big", signed=True)
+    print(f"Call method for deployed contract, address: {contract_address}, value: {result}")
 
 
 if __name__ == "__main__":
