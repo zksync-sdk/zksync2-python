@@ -25,7 +25,7 @@ pip install zksync2-0.0.1-py3-none-any.whl
 ```
 
 ### Deposit funds
-This is example how to deposit from Etherium account to ZkSync account:
+This is example how to deposit from Ethereum account to ZkSync account:
 
 ```
 from web3 import Web3
