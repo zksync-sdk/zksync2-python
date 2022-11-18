@@ -29,6 +29,7 @@ from zksync2.core.types import TransactionHash, Limit, L2WithdrawTxHash, From, C
 from zksync2.module.request_types import *
 from zksync2.module.response_types import *
 from eth_typing import Address
+from eth_utils import remove_0x_prefix
 from eth_utils.toolz import compose
 from web3.method import Method, default_root_munger
 from typing import Any, Callable, List, Union
@@ -113,10 +114,15 @@ def to_zks_account_balances(t: dict) -> ZksAccountBalances:
 
 
 def to_fee(v: dict) -> Fee:
-    return Fee(ergs_limit=v['ergs_limit'],
-               max_fee_per_erg=v['max_fee_per_erg'],
-               max_priority_fee_per_erg=v['max_priority_fee_per_erg'],
-               ergs_per_pub_data_limit=v['ergs_per_pubdata_limit'])
+
+    ergs_limit = int(remove_0x_prefix(v['ergs_limit']), 16)
+    max_fee_per_erg  = int(remove_0x_prefix(v['max_fee_per_erg']), 16)
+    max_priority_fee_per_erg = int(remove_0x_prefix(v['max_priority_fee_per_erg']), 16)
+    ergs_per_pubdata_limit = int(remove_0x_prefix(v['ergs_per_pubdata_limit']), 16)
+    return Fee(ergs_limit=ergs_limit,
+               max_fee_per_erg=max_fee_per_erg,
+               max_priority_fee_per_erg=max_priority_fee_per_erg,
+               ergs_per_pub_data_limit=ergs_per_pubdata_limit)
 
 
 ZKSYNC_RESULT_FORMATTERS: Dict[RPCEndpoint, Callable[..., Any]] = {

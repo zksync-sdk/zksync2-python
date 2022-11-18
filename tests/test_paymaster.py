@@ -20,8 +20,9 @@ class PaymasterTests(TestCase):
     ZKSYNC_TEST_URL = "https://zksync2-testnet.zksync.dev"
 
     ETH_TOKEN = Token.create_eth()
-    PRIVATE_KEY = b'\00' * 31 + b'\02'
-    ETH_AMOUNT_BALANCE = 100
+    # PRIVATE_KEY = b'\00' * 31 + b'\02'
+    PRIVATE_KEY = bytes.fromhex("1f0245d47b3a84299aeb121ac33c2dbd1cdb3d3c2079b3240e63796e75ee8b70")
+    ETH_AMOUNT_BALANCE = 1
     ETH_TEST_NET_AMOUNT_BALANCE = Decimal(1)
     SALT = keccak(text="TestPaymaster")
 

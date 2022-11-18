@@ -2,13 +2,13 @@ import importlib.resources as pkg_resources
 
 from eth_typing import HexStr
 from web3 import Web3
-from hashlib import sha256
+# from hashlib import sha256
 from typing import Optional
 import json
 from web3.types import Nonce, TxReceipt
 from eth_utils.crypto import keccak
 from zksync2.manage_contracts import contract_abi
-from zksync2.core.utils import pad_front_bytes, to_bytes, int_to_bytes
+from zksync2.core.utils import pad_front_bytes, to_bytes, int_to_bytes, hash_byte_code
 
 icontract_deployer_abi_cache = None
 
@@ -41,14 +41,6 @@ class ContractDeployer:
 
         self.contract_deployer = self.web3.eth.contract(address=None, abi=abi)
 
-    def _hash_byte_code(self, bytecode: bytes) -> bytes:
-        bytecode_len = int(len(bytecode) / 32)
-        if bytecode_len > self.MAX_BYTE_CODE_LENGTH:
-            raise OverflowError("ContractDeployer._hash_byte_code, bytecode length must be less than 2^16")
-        byte_code_hash = bytes.fromhex(sha256(bytecode).hexdigest())
-        ret = bytecode_len.to_bytes(2, byteorder='big') + byte_code_hash[2:]
-        return ret
-
     def encode_create2(self, bytecode: bytes,
                        call_data: Optional[bytes] = None,
                        salt: Optional[bytes] = None) -> HexStr:
@@ -61,11 +53,10 @@ class ContractDeployer:
         if len(salt) != 32:
             raise OverflowError("Salt data must be 32 length")
 
-        bytecode_hash = self._hash_byte_code(bytecode)
+        bytecode_hash = hash_byte_code(bytecode)
         args = (
             salt,
             bytecode_hash,
-            0,
             call_data
         )
 
@@ -81,11 +72,10 @@ class ContractDeployer:
         if len(salt_data) != 32:
             raise OverflowError("Salt data must be 32 length")
 
-        bytecode_hash = self._hash_byte_code(bytecode)
+        bytecode_hash = hash_byte_code(bytecode)
         args = [
             salt_data,
             bytecode_hash,
-            0,
             call_data
         ]
         encoded_function = self.contract_deployer.encodeABI(fn_name=self.CREATE_FUNC, args=args)
@@ -112,7 +102,7 @@ class ContractDeployer:
 
         sender_bytes = to_bytes(sender)
         sender_bytes = pad_front_bytes(sender_bytes, 32)
-        bytecode_hash = self._hash_byte_code(bytecode)
+        bytecode_hash = hash_byte_code(bytecode)
         ctor_hash = keccak(constructor)
         result = self.CREATE2_PREFIX + sender_bytes + salt + bytecode_hash + ctor_hash
         sha_result = keccak(result)

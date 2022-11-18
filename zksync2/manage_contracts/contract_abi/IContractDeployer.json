@@ -37,11 +37,6 @@
         "type": "bytes32"
       },
       {
-        "internalType": "uint256",
-        "name": "_value",
-        "type": "uint256"
-      },
-      {
         "internalType": "bytes",
         "name": "_input",
         "type": "bytes"
@@ -60,7 +55,7 @@
         "type": "bytes"
       }
     ],
-    "stateMutability": "nonpayable",
+    "stateMutability": "payable",
     "type": "function"
   },
   {
@@ -74,11 +69,6 @@
         "internalType": "bytes32",
         "name": "_bytecodeHash",
         "type": "bytes32"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_value",
-        "type": "uint256"
       },
       {
         "internalType": "bytes",
@@ -99,7 +89,7 @@
         "type": "bytes"
       }
     ],
-    "stateMutability": "nonpayable",
+    "stateMutability": "payable",
     "type": "function"
   },
   {
@@ -113,11 +103,6 @@
         "internalType": "bytes32",
         "name": "_bytecodeHash",
         "type": "bytes32"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_value",
-        "type": "uint256"
       },
       {
         "internalType": "bytes",
@@ -138,7 +123,7 @@
         "type": "bytes"
       }
     ],
-    "stateMutability": "nonpayable",
+    "stateMutability": "payable",
     "type": "function"
   },
   {
@@ -152,11 +137,6 @@
         "internalType": "bytes32",
         "name": "_bytecodeHash",
         "type": "bytes32"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_value",
-        "type": "uint256"
       },
       {
         "internalType": "bytes",
@@ -177,7 +157,7 @@
         "type": "bytes"
       }
     ],
-    "stateMutability": "nonpayable",
+    "stateMutability": "payable",
     "type": "function"
   },
   {
@@ -193,11 +173,6 @@
         "type": "address"
       },
       {
-        "internalType": "uint256",
-        "name": "_value",
-        "type": "uint256"
-      },
-      {
         "internalType": "bytes",
         "name": "_input",
         "type": "bytes"
@@ -211,7 +186,7 @@
         "type": "address"
       }
     ],
-    "stateMutability": "nonpayable",
+    "stateMutability": "payable",
     "type": "function"
   },
   {
@@ -304,11 +279,6 @@
         "type": "bytes32"
       },
       {
-        "internalType": "uint256",
-        "name": "_value",
-        "type": "uint256"
-      },
-      {
         "internalType": "address",
         "name": "_newAddress",
         "type": "address"
@@ -326,20 +296,7 @@
     ],
     "name": "performDeployOnAddress",
     "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "bytes32",
-        "name": "_bytecodeHash",
-        "type": "bytes32"
-      }
-    ],
-    "name": "publishBytecode",
-    "outputs": [],
-    "stateMutability": "nonpayable",
+    "stateMutability": "payable",
     "type": "function"
   }
 ]

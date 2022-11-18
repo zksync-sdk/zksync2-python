@@ -1,7 +1,4 @@
-import importlib.resources as pkg_resources
-import json
 from typing import Any
-
 from eth_account.signers.base import BaseAccount
 from eth_utils import remove_0x_prefix
 from web3 import Web3
@@ -9,7 +6,7 @@ from eth_typing import HexStr
 from web3._utils.abi import get_constructor_abi, merge_args_and_kwargs
 from web3._utils.contracts import encode_abi
 from web3.types import TxReceipt
-from tests.contracts.utils import get_abi, get_binary
+from tests.contracts.utils import get_abi, get_hex_binary
 
 
 class ConstructorContract:
@@ -32,7 +29,7 @@ class ConstructorContract:
     def deploy(cls, web3: Web3, account: BaseAccount) -> 'ConstructorContract':
         abi = get_abi("constructor_contract_abi.json")
         counter_contract_instance = web3.zksync.contract(abi=abi,
-                                                         bytecode=get_binary("constructor_contract.bin"))
+                                                         bytecode=get_hex_binary("constructor_contract.hex"))
         tx_hash = counter_contract_instance.constructor().transact(
             {
                 "from": account.address,
@@ -52,7 +49,7 @@ class ConstructorContractEncoder:
         self.web3 = web3
         self.abi = get_abi("constructor_contract_abi.json")
         self.contract = self.web3.eth.contract(abi=self.abi,
-                                               bytecode=get_binary("constructor_contract.bin"))
+                                               bytecode=get_hex_binary("constructor_contract.hex"))
 
     def encode_method(self, fn_name, args: list):
         return self.contract.encodeABI(fn_name, args)

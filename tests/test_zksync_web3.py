@@ -33,11 +33,13 @@ def generate_random_salt() -> bytes:
 
 class ZkSyncWeb3Tests(TestCase):
     GAS_LIMIT = 21000
-    ETH_TEST_URL = "https://goerli.infura.io/v3/25be7ab42c414680a5f89297f8a11a4d"
+    # ETH_TEST_URL = "https://goerli.infura.io/v3/25be7ab42c414680a5f89297f8a11a4d"
+    ETH_TEST_URL = "https://rpc.ankr.com/eth_goerli"
     ZKSYNC_TEST_URL = "https://zksync2-testnet.zksync.dev"
 
     ETH_TOKEN = Token.create_eth()
-    PRIVATE_KEY = b'\00' * 31 + b'\02'
+    # PRIVATE_KEY = b'\00' * 31 + b'\02'
+    PRIVATE_KEY = bytes.fromhex("1f0245d47b3a84299aeb121ac33c2dbd1cdb3d3c2079b3240e63796e75ee8b70")
     ETH_AMOUNT_BALANCE = 100
     ETH_TEST_NET_AMOUNT_BALANCE = Decimal(1)
 
@@ -67,7 +69,7 @@ class ZkSyncWeb3Tests(TestCase):
         self.assertEqual(txn_receipt['status'], 1)
 
     @skip("Integration test, used for develop purposes only")
-    def test_get_balance_of_token_l1(self):
+    def test_get_l1_balance(self):
         """
         INFO: For minting use: https://goerli-faucet.pk910.de
         """
@@ -77,7 +79,7 @@ class ZkSyncWeb3Tests(TestCase):
         self.assertNotEqual(eth_balance, 0)
 
     @skip("Integration test, used for develop purposes only")
-    def test_get_balance_of_native(self):
+    def test_get_l2_balance(self):
         zk_balance = self.web3.zksync.get_balance(self.account.address, EthBlockParams.LATEST.value)
         print(f"ZkSync balance: {zk_balance}")
 
@@ -450,8 +452,8 @@ class ZkSyncWeb3Tests(TestCase):
 
     @skip("Integration test, used for develop purposes only")
     def test_deploy_contract_with_deps_create(self):
-        create_bin = get_binary("create.bin")
-        foo_bin = get_binary("foo.bin")
+        foo = get_hex_binary("foo.hex")
+        foo_deps = get_hex_binary("foo_deps.hex")
         nonce = self.web3.zksync.get_transaction_count(self.account.address, EthBlockParams.PENDING.value)
         nonce_holder = NonceHolder(self.web3, self.account)
         deployment_nonce = nonce_holder.get_deployment_nonce(self.account.address)
@@ -461,8 +463,8 @@ class ZkSyncWeb3Tests(TestCase):
                                          from_=self.account.address,
                                          ergs_price=0,
                                          ergs_limit=0,
-                                         bytecode=create_bin,
-                                         deps=[foo_bin])
+                                         bytecode=foo,
+                                         deps=[foo_deps])
 
         estimate_gas = self.web3.zksync.eth_estimate_gas(tx)
         gas_price = self.web3.zksync.gas_price
@@ -490,20 +492,20 @@ class ZkSyncWeb3Tests(TestCase):
 
     @skip("Integration test, used for develop purposes only")
     def test_deploy_contract_with_deps_create2(self):
-        create_bin = get_binary("create.bin")
-        foo_bin = get_binary("foo.bin")
+        foo = get_hex_binary("foo.hex")
+        foo_deps = get_hex_binary("foo_deps.hex")
         nonce = self.web3.zksync.get_transaction_count(self.account.address, EthBlockParams.PENDING.value)
         contract_deployer = ContractDeployer(self.web3)
         precomputed_address = contract_deployer.compute_l2_create2_address(self.account.address,
-                                                                           bytecode=create_bin,
+                                                                           bytecode=foo,
                                                                            constructor=b'',
                                                                            salt=b'\0' * 32)
         tx = create2_contract_transaction(web3=self.web3,
                                           from_=self.account.address,
                                           ergs_price=0,
                                           ergs_limit=0,
-                                          bytecode=create_bin,
-                                          deps=[foo_bin])
+                                          bytecode=foo,
+                                          deps=[foo_deps])
         estimate_gas = self.web3.zksync.eth_estimate_gas(tx)
         gas_price = self.web3.zksync.gas_price
         print(f"Fee for transaction is: {estimate_gas * gas_price}")
