@@ -34,7 +34,7 @@ jobs:
       - name: Check distribution
         run: python3 -m twine check --strict dist/*
       - name: Publish package
-        run: python3 -m twine upload --repository testpypi dist/*
+        run: python3 -m twine upload dist/*
         env:
           VERSION: ${{ env.lib_version }}
           TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
