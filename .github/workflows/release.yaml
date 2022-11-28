@@ -1,0 +1,41 @@
+name: Release Python library
+
+on:
+  push:
+    tags:
+      - "v*"
+
+env:
+  GITHUB_REF: "${{ github.ref }}"
+
+jobs:
+  build_and_publish:
+    name: Build distribution of library
+    runs-on: ubuntu-latest
+    steps:
+      - name: Query app version number
+        id: get_version
+        shell: bash
+        run: |
+          echo "using app version ${GITHUB_REF:11}"
+          echo "lib_version=${GITHUB_REF:11}" >> $GITHUB_ENV
+      - uses: actions/checkout@v3
+      - name: Set up Python 3
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+          cache: 'pip' # caching pip dependencies
+      - name: Prepare build
+        run: python3 -m pip install --upgrade build
+      - name: Install Twine
+        run: python3 -m pip install --upgrade twine
+      - name: Build package
+        run: python3 -m build
+      - name: Check distribution
+        run: python3 -m twine check --strict dist/*
+      - name: Publish package
+        run: python3 -m twine upload dist/*
+        env:
+          VERSION: ${{ env.lib_version }}
+          TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}

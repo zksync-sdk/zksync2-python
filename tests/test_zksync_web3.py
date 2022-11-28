@@ -149,7 +149,8 @@ class ZkSyncWeb3Tests(TestCase):
                                               ergs_price=0,
                                               ergs_limit=0,
                                               data=HexStr("0x"))
-        estimate_gas = self.web3.zksync.eth_estimate_gas(tx)
+        # estimate_gas = self.web3.zksync.eth_estimate_gas(tx)
+        estimate_gas = 20 * 10 ** 6
         gas_price = self.web3.zksync.gas_price
 
         print(f"Fee for transaction is: {estimate_gas * gas_price}")

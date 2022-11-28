@@ -116,19 +116,6 @@ def create_contract_transaction(web3: Web3,
                              custom_signature=None,
                              factory_deps=factory_deps,
                              paymaster_params=None)
-
-    # tx: Transaction = {
-    #     "from": from_,
-    #     "to": Web3.toChecksumAddress(ZkSyncAddresses.CONTRACT_DEPLOYER_ADDRESS.value),
-    #     "gasLimit": ergs_limit,
-    #     "gasPrice": ergs_price,
-    #     "maxFeePerGas": 0,
-    #     "maxPriorityFeePerGas": 0,
-    #     "value": value,
-    #     "data": HexStr(call_data),
-    #     "transactionType": TransactionType.EIP_712_TX_TYPE.value,
-    #     "eip712Meta": eip712_meta
-    # }
     tx: Transaction = {
         "from": from_,
         "to": Web3.toChecksumAddress(ZkSyncAddresses.CONTRACT_DEPLOYER_ADDRESS.value),
