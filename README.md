@@ -1,7 +1,8 @@
 # zkSync2 client sdk
 
-## Basics
-
+## Contents
+- [Getting started](#getting-started)
+- [Provider](#provider-zksyncbuilder)
 - [How to install](#how-to-install)
 - [Deposit funds](#deposit-funds)
 - [Check balance](#check-balance)
@@ -12,17 +13,63 @@
 - [Deploy contract with method create2](#deploy-contract-with-method-create2)
 
 
+### Getting started
 
-### How to install
+#### Requirements
+| Tool  | Required  |
+|-------|-----------|
+| python| >= 3.8    |
+| package manager| pip |
 
-Currently, package is not deployed to public repository yet and can be only installed by
-local installation from .whl, download [here](https://github.com/zksync-sdk/zksync2-python)<br>
-Test environment file can be got from this repo too
+### how to install
 
+```console
+pip install zksync2
 ```
-conda env create -n zksync2_test
-pip install zksync2-0.0.1-py3-none-any.whl
+
+
+### Provider (zkSyncBuilder)
+
+
+#### Design
+ZkSync 2.0 is designed with the same styling as web3.<br>
+It defines the zksync module based on Etherium and extends it with zkSync-specific methods.<br>
+
+#### How to construct
+For usage, there is `ZkSyncBuilder` that returns a Web3 object with an instance of zksync module.<br>
+Construction only needs the URL to the zkSync blockchain.
+
+Example:
+```python
+from zksync2.module.module_builder import ZkSyncBuilder
+...
+web3 = ZkSyncBuilder.build("ZKSYNC_NET_URL")
 ```
+
+#### Module parameters and methods
+
+ZkSync module attributes:
+
+|  Attribute | Description |
+|------------|-------------|
+|chain_id    | Returns an integer value for the currently configured "ChainId" |
+|gas_price   | Returns the current gas price in Wei |
+
+
+ZkSync module methods:
+
+|  Method | Parameters | Return value |Description |
+|---------|------------|--------------|------------|
+|zks_estimate_fee | zkSync Transaction | Fee structure | Gets Fee for ZkSync transaction|
+|zks_main_contract | - | Address of main contract | Return address of main contract |
+|zks_get_confirmed_tokens | , int | 
+
+
+
+
+
+
+
 
 ### Deposit funds
 This is example how to deposit from Ethereum account to ZkSync account:
