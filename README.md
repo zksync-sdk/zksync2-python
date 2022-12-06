@@ -3,14 +3,10 @@
 ## Contents
 - [Getting started](#getting-started)
 - [Provider](#provider-zksyncbuilder)
-- [How to install](#how-to-install)
-- [Deposit funds](#deposit-funds)
-- [Check balance](#check-balance)
-- [Transfer](#transfer)
-- [Transfer funds (ERC20 tokens)](#transfer-funds-erc20-tokens)
-- [Withdraw funds (Native coins)](#withdraw-funds-native-coins)
-- [Deploy contract with method create](#deploy-contract-with-method-create)
-- [Deploy contract with method create2](#deploy-contract-with-method-create2)
+- [Account](#account)
+- [Signer](#signer)
+- [Contract interfaces](#contract-interfaces)
+- [Examples](#examples)
 
 
 ### Getting started
@@ -62,16 +58,46 @@ ZkSync module methods:
 |---------|------------|--------------|------------|
 |zks_estimate_fee | zkSync Transaction | Fee structure | Gets Fee for ZkSync transaction|
 |zks_main_contract | - | Address of main contract | Return address of main contract |
-|zks_get_confirmed_tokens | , int | 
+|zks_get_confirmed_tokens | from, limit | List[Token]| Returns all tokens in the set range by global index|
+|zks_l1_chain_id | - | ChainID | Return etherium chain ID|
+|zks_get_all_account_balances| Address | Dict[str, int] | Return dictionary of token address and its value |
+|zks_get_bridge_contracts | - | BridgeAddresses | Returns addresses of all bridge contracts that are interacting with L1 layer|
+| eth_estimate_gas | Transaction | estimated gas | Overloaded method of eth_estimate_gas for ZkSync transaction gas estimation |
+| wait_for_transaction_receipt | Tx Hash and optional timeout and tries | TxReceipt| Waits for the transaction to be included into block by its hash and returns its reciept. Optional arguments are `timeout` and `poll_latency` in seconds|
+
+
+### Account
+
+#### what is this?
+Account incapsulate private key and, frequently based on it, the unique user identifier in the network.<br> This unique identifier also mean by wallet address.
+
+#### Account contruction
+
+ZkSync2 Python SDK account is compatible with `eth_account` package
+In most cases user has its private key and gets account instance by using it.
+
+Example:
+```python
+from eth_account import Account
+from eth_account.signers.local import LocalAccount
+...
+account: LocalAccount = Account.from_key(self.PRIVATE_KEY)
+
+```
+
+The base property that is used directly of account is: `Account.address`
+
+
+### Signer
 
 
 
 
 
 
+### Examples
 
-
-### Deposit funds
+#### Deposit funds
 This is example how to deposit from Ethereum account to ZkSync account:
 
 ```
@@ -110,7 +136,7 @@ if __name__ == "__main__":
 ```
 
 
-### Check balance
+#### Check balance
 
 After depositing there could be needed to check the account balance under ZkSync network:
 
@@ -134,7 +160,7 @@ if __name__ == "__main__":
 
 ```
 
-### Transfer
+#### Transfer
 
 Here is example how to transfer funds in ZkSync network
 
@@ -192,7 +218,7 @@ if __name__ == "__main__":
 
 ```
 
-### Transfer funds (ERC20 tokens)
+#### Transfer funds (ERC20 tokens)
 
 Example of transferring ERC20 tokens
 
@@ -255,7 +281,7 @@ if __name__ == "__main__":
 
 ```
 
-### Withdraw funds (Native coins)
+#### Withdraw funds (Native coins)
 
 ```
 from decimal import Decimal
@@ -323,7 +349,7 @@ if __name__ == "__main__":
 ```
 
 
-### Deploy contract with method create
+#### Deploy contract with method create
 
 ZkSync tools allows to build the contract into binary format. Then it can be deployed to the network<br>
 Here is the code of simple contract:
@@ -463,7 +489,7 @@ if __name__ == "__main__":
 
 ```
 
-### Deploy contract with method create2
+#### Deploy contract with method create2
 
 
 ```

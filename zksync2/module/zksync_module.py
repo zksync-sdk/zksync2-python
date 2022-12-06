@@ -215,7 +215,7 @@ class ZkSync(Eth, ABC):
         request_formatters=zksync_get_request_formatters
     )
 
-    _eth_estimate_gas: Method[Callable[[Transaction], str]] = Method(
+    _eth_estimate_gas: Method[Callable[[Transaction], int]] = Method(
         eth_estimate_gas_rpc,
         mungers=[default_root_munger],
         request_formatters=zksync_get_request_formatters
@@ -277,7 +277,7 @@ class ZkSync(Eth, ABC):
     def zks_get_testnet_paymaster_address(self) -> HexStr:
         return self._zks_get_testnet_paymaster_address()
 
-    def eth_estimate_gas(self, tx: Transaction) -> str:
+    def eth_estimate_gas(self, tx: Transaction) -> int:
         return self._eth_estimate_gas(tx)
 
     def wait_for_transaction_receipt(self,
