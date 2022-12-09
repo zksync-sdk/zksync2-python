@@ -5,6 +5,7 @@
 - [Provider](#provider-zksyncbuilder)
 - [Account](#account)
 - [Signer](#signer)
+- [Transactions](#transactions)
 - [Contract interfaces](#contract-interfaces)
 - [Examples](#examples)
 
@@ -30,6 +31,7 @@ pip install zksync2
 #### Design
 ZkSync 2.0 is designed with the same styling as web3.<br>
 It defines the zksync module based on Etherium and extends it with zkSync-specific methods.<br>
+
 
 #### How to construct
 For usage, there is `ZkSyncBuilder` that returns a Web3 object with an instance of zksync module.<br>
@@ -63,12 +65,11 @@ ZkSync module methods:
 |zks_get_all_account_balances| Address | Dict[str, int] | Return dictionary of token address and its value |
 |zks_get_bridge_contracts | - | BridgeAddresses | Returns addresses of all bridge contracts that are interacting with L1 layer|
 | eth_estimate_gas | Transaction | estimated gas | Overloaded method of eth_estimate_gas for ZkSync transaction gas estimation |
-| wait_for_transaction_receipt | Tx Hash and optional timeout and tries | TxReceipt| Waits for the transaction to be included into block by its hash and returns its reciept. Optional arguments are `timeout` and `poll_latency` in seconds|
+| wait_for_transaction_receipt | Tx Hash, optional timeout,poll_latency | TxReceipt| Waits for the transaction to be included into block by its hash and returns its reciept. Optional arguments are `timeout` and `poll_latency` in seconds|
 
 
 ### Account
 
-#### what is this?
 Account incapsulate private key and, frequently based on it, the unique user identifier in the network.<br> This unique identifier also mean by wallet address.
 
 #### Account contruction
@@ -90,9 +91,72 @@ The base property that is used directly of account is: `Account.address`
 
 ### Signer
 
+Signer is used to generate signature of provided transaction based on your account(your private key)<br>
+This signature is added to the final EIP712 transaction for its validation
+
+
+#### Singer contruction
+
+zkSync2 already has implementation of signer. For contruct the instance it needs only account and chain_id
+
+Example:
+
+```python
+from zksync2.signer.eth_signer import PrivateKeyEthSigner
+
+account: LocalAccount = Account.from_key(PRIVATE_KEY)
+...
+chain_id = web3.zksync.chain_id
+signer = PrivateKeyEthSigner(account, chain_id)
+```
+
+
+#### Methods
+
+
+Signer has a few methods to generate signature and verify message
+
+|  Method | Parameters | Return value |Description |
+|---------|------------|--------------|------------|
+|sign_typed_data| EIP712 Structure, optional domain| Web3 py SignedMessage | Builds `SignedMessage` based on the encoded in EIP712 format Transaction |
+|verify_typed_data | signature, EIP712 structure, optional domain| bool | return True if this encoded transaction is signed with provided signature |
+
+Signer class also has the following properties:
+
+|  Attribute | Description |
+|------------|-------------|
+|address    | Account address|
+|domain   | domain that is used to generate signature. It's depends on chain_id of network |
 
 
 
+### Transactions
+
+Basic type of ZkSync transaction is quite similar to the Web3 based one<br>
+It's defined in the package: zksync2.module.request_type<br>
+
+But for sending and signed transaction it's neccessary to sign and encode it in EIP712 structure<br>
+EIP712 transaction type can be found in package: zksync2.transaction.transaction712
+
+For convert ordinary transaction to EIP712 type there are defined helped classes:
+
+* TxFunctionCall
+* TxCreateContract
+* TxCreate2Contract
+
+Usage will be described in the examples [section][#Examples]
+
+
+### Contract interfaces
+
+There is a set of system contract that helps execute and interact with ZkSync2 network<br>
+For user needs there are the following contracts:
+
+* ContractDeployer
+* ERC20Contract
+* NonceHolder
+
+All of them are based on the ABI
 
 
 ### Examples
