@@ -1,6 +1,10 @@
 import importlib.resources as pkg_resources
 import json
+
+from eth_typing import HexStr
+
 from tests import contracts
+from eth_utils import remove_0x_prefix
 
 
 def get_binary(name: str) -> bytes:
@@ -15,7 +19,7 @@ def get_hex_binary(name: str) -> bytes:
         with p.open(mode='r') as contact_file:
             lines = contact_file.readlines()
             data = "".join(lines)
-            return bytes.fromhex(data)
+            return bytes.fromhex(remove_0x_prefix(HexStr(data)))
 
 
 def get_abi(name: str):

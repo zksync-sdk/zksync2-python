@@ -75,12 +75,13 @@ ZKS_TRANSACTION_PARAMS_FORMATTERS = {
     'from': to_checksum_address,
     'gas': to_hex_if_integer,
     'gasPrice': to_hex_if_integer,
+    'maxPriorityFeePerGas': to_hex_if_integer,
     'nonce': to_hex_if_integer,
     'to': to_checksum_address,
     'value': to_hex_if_integer,
     'chainId': to_hex_if_integer,
     'transactionType': to_hex_if_integer,
-    'eip712Meta': meta_formatter
+    'eip712Meta': meta_formatter,
 }
 
 zks_transaction_request_formatter = apply_formatters_to_dict(ZKS_TRANSACTION_PARAMS_FORMATTERS)

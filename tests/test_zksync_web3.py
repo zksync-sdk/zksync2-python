@@ -6,9 +6,6 @@ from eth_typing import HexStr
 from web3 import Web3
 from web3.types import TxParams
 from web3.middleware import geth_poa_middleware
-
-from zksync2.module.request_types import create_contract_transaction, create2_contract_transaction, \
-    create_function_call_transaction
 from zksync2.manage_contracts.contract_deployer import ContractDeployer
 from zksync2.manage_contracts.erc20_contract import ERC20FunctionEncoder
 from zksync2.manage_contracts.gas_provider import StaticGasProvider
@@ -24,7 +21,7 @@ from zksync2.provider.eth_provider import EthereumProvider
 from tests.contracts.constructor_contract_utils import ConstructorContractEncoder
 from tests.contracts.counter_contract_utils import CounterContractEncoder
 from tests.contracts.utils import get_binary, get_hex_binary
-from zksync2.transaction.transaction712 import Transaction712
+from zksync2.transaction.transaction712 import TxFunctionCall, TxCreateContract, TxCreate2Contract
 
 
 def generate_random_salt() -> bytes:
@@ -33,12 +30,10 @@ def generate_random_salt() -> bytes:
 
 class ZkSyncWeb3Tests(TestCase):
     GAS_LIMIT = 21000
-    # ETH_TEST_URL = "https://goerli.infura.io/v3/25be7ab42c414680a5f89297f8a11a4d"
     ETH_TEST_URL = "https://rpc.ankr.com/eth_goerli"
     ZKSYNC_TEST_URL = "https://zksync2-testnet.zksync.dev"
 
     ETH_TOKEN = Token.create_eth()
-    # PRIVATE_KEY = b'\00' * 31 + b'\02'
     PRIVATE_KEY = bytes.fromhex("1f0245d47b3a84299aeb121ac33c2dbd1cdb3d3c2079b3240e63796e75ee8b70")
     ETH_AMOUNT_BALANCE = 100
     ETH_TEST_NET_AMOUNT_BALANCE = Decimal(1)
@@ -119,53 +114,52 @@ class ZkSyncWeb3Tests(TestCase):
         tx = self.web3.zksync.get_transaction(tx_hash)
         print(f"transaction nonce: {tx['nonce']}")
 
-    @skip("Integration test, used for develop purposes only")
+    # @skip("Integration test, used for develop purposes only")
     def test_estimate_gas_transfer_native(self):
-        tx = create_function_call_transaction(from_=self.account.address,
-                                              to=self.account.address,
-                                              ergs_price=0,
-                                              ergs_limit=0,
-                                              data=HexStr("0x"))
-        estimate_gas = self.web3.zksync.eth_estimate_gas(tx)
+        nonce = self.web3.zksync.get_transaction_count(self.account.address, ZkBlockParams.COMMITTED.value)
+        gas_price = self.web3.zksync.gas_price
+        func_call = TxFunctionCall(chain_id=self.chain_id,
+                                   nonce=nonce,
+                                   from_=self.account.address,
+                                   to=self.account.address,
+                                   gas_limit=0,
+                                   gas_price=gas_price)
+
+        estimate_gas = self.web3.zksync.eth_estimate_gas(func_call.tx)
         print(f"test_estimate_gas_transfer_native, estimate_gas: {estimate_gas}")
         self.assertGreater(estimate_gas, 0, "test_estimate_gas_transfer_native, estimate_gas must be greater 0")
 
-    @skip("Integration test, used for develop purposes only")
+    # @skip("Integration test, used for develop purposes only")
     def test_estimate_fee_transfer_native(self):
-        tx = create_function_call_transaction(
-            from_=self.account.address,
-            to=self.account.address,
-            ergs_price=0,
-            ergs_limit=0,
-            data=HexStr("0x"))
-        estimated_fee = self.web3.zksync.zks_estimate_fee(tx)
-        print(f"Estimated fee: {estimated_fee}")
-
-    @skip("Integration test, used for develop purposes only")
-    def test_transfer_native_to_self(self):
         nonce = self.web3.zksync.get_transaction_count(self.account.address, ZkBlockParams.COMMITTED.value)
-        tx = create_function_call_transaction(from_=self.account.address,
-                                              to=self.account.address,
-                                              ergs_price=0,
-                                              ergs_limit=0,
-                                              data=HexStr("0x"))
-        # estimate_gas = self.web3.zksync.eth_estimate_gas(tx)
-        estimate_gas = 20 * 10 ** 6
         gas_price = self.web3.zksync.gas_price
 
+        func_call = TxFunctionCall(chain_id=self.chain_id,
+                                   nonce=nonce,
+                                   from_=self.account.address,
+                                   to=self.account.address,
+                                   gas_limit=0,
+                                   gas_price=gas_price)
+        estimated_fee = self.web3.zksync.zks_estimate_fee(func_call.tx)
+        print(f"Estimated fee: {estimated_fee}")
+
+    # @skip("Integration test, used for develop purposes only")
+    def test_transfer_native_to_self(self):
+        nonce = self.web3.zksync.get_transaction_count(self.account.address, ZkBlockParams.COMMITTED.value)
+        gas_price = self.web3.zksync.gas_price
+        tx_func_call = TxFunctionCall(chain_id=self.chain_id,
+                                      nonce=nonce,
+                                      from_=self.account.address,
+                                      to=self.account.address,
+                                      value=Web3.toWei(0.01, 'ether'),
+                                      data=HexStr("0x"),
+                                      gas_limit=0,  # UNKNOWN AT THIS STATE
+                                      gas_price=gas_price,
+                                      max_priority_fee_per_gas=100000000)
+        estimate_gas = self.web3.zksync.eth_estimate_gas(tx_func_call.tx)
         print(f"Fee for transaction is: {estimate_gas * gas_price}")
 
-        tx_712 = Transaction712(chain_id=self.chain_id,
-                                nonce=nonce,
-                                gas_limit=estimate_gas,
-                                to=tx["to"],
-                                value=Web3.toWei(0.01, 'ether'),
-                                data=tx["data"],
-                                maxPriorityFeePerGas=100000000,
-                                maxFeePerGas=gas_price,
-                                from_=self.account.address,
-                                meta=tx["eip712Meta"])
-
+        tx_712 = tx_func_call.tx712(estimate_gas)
         singed_message = self.signer.sign_typed_data(tx_712.to_eip712_struct())
         msg = tx_712.encode(singed_message)
         tx_hash = self.web3.zksync.send_raw_transaction(msg)
@@ -184,33 +178,26 @@ class ZkSyncWeb3Tests(TestCase):
         transfer_params = [self.account.address, 0]
         call_data = erc20_encoder.encode_method("transfer", args=transfer_params)
 
-        tx = create_function_call_transaction(from_=self.account.address,
-                                              to=token_address,
-                                              ergs_price=0,
-                                              ergs_limit=0,
-                                              data=call_data)
-        estimate_gas = self.web3.zksync.eth_estimate_gas(tx)
         gas_price = self.web3.zksync.gas_price
+        func_call = TxFunctionCall(chain_id=self.chain_id,
+                                   nonce=nonce,
+                                   from_=self.account.address,
+                                   to=token_address,
+                                   data=call_data,
+                                   gas_limit=0,  # UNKNOWN AT THIS STATE
+                                   gas_price=gas_price,
+                                   max_priority_fee_per_gas=100000000)
 
+        estimate_gas = self.web3.zksync.eth_estimate_gas(func_call.tx)
         print(f"Fee for transaction is: {estimate_gas * gas_price}")
-
-        tx_712 = Transaction712(chain_id=self.chain_id,
-                                nonce=nonce,
-                                gas_limit=estimate_gas,
-                                to=tx["to"],
-                                value=tx["value"],
-                                data=tx["data"],
-                                maxPriorityFeePerGas=100000000,
-                                maxFeePerGas=gas_price,
-                                from_=self.account.address,
-                                meta=tx["eip712Meta"])
+        tx_712 = func_call.tx712(estimated_gas=estimate_gas)
         singed_message = self.signer.sign_typed_data(tx_712.to_eip712_struct())
         msg = tx_712.encode(singed_message)
         tx_hash = self.web3.zksync.send_raw_transaction(msg)
         tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
         self.assertEqual(1, tx_receipt["status"])
 
-    @skip("Integration test, used for develop purposes only")
+    # @skip("Integration test, used for develop purposes only")
     def test_estimate_gas_withdraw(self):
         bridges = self.web3.zksync.zks_get_bridge_contracts()
         l2_func_encoder = L2BridgeEncoder(self.web3)
@@ -219,13 +206,17 @@ class ZkSyncWeb3Tests(TestCase):
             self.ETH_TOKEN.l2_address,
             self.ETH_TOKEN.to_int(Decimal("0.001"))
         ])
+        nonce = self.web3.zksync.get_transaction_count(self.account.address, ZkBlockParams.COMMITTED.value)
 
-        tx = create_function_call_transaction(from_=self.account.address,
-                                              to=bridges.l2_eth_default_bridge,
-                                              ergs_limit=0,
-                                              ergs_price=0,
-                                              data=HexStr(call_data))
-        estimate_gas = self.web3.zksync.eth_estimate_gas(tx)
+        gas_price = self.web3.zksync.gas_price
+        func_call = TxFunctionCall(chain_id=self.chain_id,
+                                   nonce=nonce,
+                                   from_=self.account.address,
+                                   to=bridges.l2_eth_default_bridge,
+                                   data=call_data,
+                                   gas_limit=0,
+                                   gas_price=gas_price)
+        estimate_gas = self.web3.zksync.eth_estimate_gas(func_call.tx)
         print(f"test_estimate_gas_withdraw, estimate_gas: {estimate_gas}")
         self.assertGreater(estimate_gas, 0, "test_estimate_gas_withdraw, estimate_gas must be greater 0")
 
@@ -241,34 +232,25 @@ class ZkSyncWeb3Tests(TestCase):
             self.ETH_TOKEN.to_int(Decimal("0.001"))
         ])
 
-        tx = create_function_call_transaction(from_=self.account.address,
-                                              to=bridges.l2_eth_default_bridge,
-                                              ergs_limit=0,
-                                              ergs_price=0,
-                                              data=HexStr(call_data))
-        estimate_gas = self.web3.zksync.eth_estimate_gas(tx)
         gas_price = self.web3.zksync.gas_price
-
+        func_call = TxFunctionCall(chain_id=self.chain_id,
+                                   nonce=nonce,
+                                   from_=self.account.address,
+                                   to=bridges.l2_eth_default_bridge,
+                                   data=HexStr(call_data),
+                                   gas_limit=0,
+                                   gas_price=gas_price,
+                                   max_priority_fee_per_gas=100000000)
+        estimate_gas = self.web3.zksync.eth_estimate_gas(func_call.tx)
         print(f"Fee for transaction is: {estimate_gas * gas_price}")
-
-        tx_712 = Transaction712(chain_id=self.chain_id,
-                                nonce=nonce,
-                                gas_limit=estimate_gas,
-                                to=tx["to"],
-                                value=tx["value"],
-                                data=tx["data"],
-                                maxPriorityFeePerGas=100000000,
-                                maxFeePerGas=gas_price,
-                                from_=self.account.address,
-                                meta=tx["eip712Meta"])
-
+        tx_712 = func_call.tx712(estimate_gas)
         singed_message = self.signer.sign_typed_data(tx_712.to_eip712_struct())
         msg = tx_712.encode(singed_message)
         tx_hash = self.web3.zksync.send_raw_transaction(msg)
         tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
         self.assertEqual(1, tx_receipt["status"])
 
-    @skip("Integration test, used for develop purposes only")
+    # @skip("Integration test, used for develop purposes only")
     def test_estimate_gas_execute(self):
         erc20func_encoder = ERC20FunctionEncoder(self.web3)
         transfer_args = [
@@ -276,30 +258,45 @@ class ZkSyncWeb3Tests(TestCase):
             1
         ]
         call_data = erc20func_encoder.encode_method(fn_name="transfer", args=transfer_args)
-        tx = create_function_call_transaction(from_=self.account.address,
-                                              to=Web3.toChecksumAddress(
-                                                  "0x79f73588fa338e685e9bbd7181b410f60895d2a3"),
-                                              ergs_limit=0,
-                                              ergs_price=0,
-                                              data=HexStr(call_data))
-        estimate_gas = self.web3.zksync.eth_estimate_gas(tx)
+        nonce = self.web3.zksync.get_transaction_count(self.account.address, ZkBlockParams.COMMITTED.value)
+        gas_price = self.web3.zksync.gas_price
+
+        to_addr = Web3.toChecksumAddress("0x79f73588fa338e685e9bbd7181b410f60895d2a3")
+        func_call = TxFunctionCall(chain_id=self.chain_id,
+                                   nonce=nonce,
+                                   from_=self.account.address,
+                                   to=to_addr,
+                                   data=HexStr(call_data),
+                                   gas_limit=0,
+                                   gas_price=gas_price)
+        estimate_gas = self.web3.zksync.eth_estimate_gas(func_call.tx)
         print(f"test_estimate_gas_execute, estimate_gas: {estimate_gas}")
         self.assertGreater(estimate_gas, 0, "test_estimate_withdraw, estimate_gas must be greater 0")
 
-    @skip("Integration test, used for develop purposes only")
+    # @skip("Integration test, used for develop purposes only")
     def test_estimate_gas_deploy_contract(self):
         counter_contract_bin = get_hex_binary("counter_contract.hex")
-        tx = create2_contract_transaction(web3=self.web3,
-                                          from_=self.account.address,
-                                          ergs_price=0,
-                                          ergs_limit=0,
-                                          bytecode=counter_contract_bin)
-        estimate_gas = self.web3.zksync.eth_estimate_gas(tx)
+        nonce = self.web3.zksync.get_transaction_count(self.account.address, EthBlockParams.PENDING.value)
+        gas_price = self.web3.zksync.gas_price
+        create2_contract = TxCreate2Contract(web3=self.web3,
+                                             chain_id=self.chain_id,
+                                             nonce=nonce,
+                                             from_=self.account.address,
+                                             gas_limit=0,
+                                             gas_price=gas_price,
+                                             bytecode=counter_contract_bin)
+        # tx = create2_contract_transaction(web3=self.web3,
+        #                                   from_=self.account.address,
+        #                                   ergs_price=0,
+        #                                   ergs_limit=0,
+        #                                   bytecode=counter_contract_bin)
+        estimate_gas = self.web3.zksync.eth_estimate_gas(create2_contract.tx)
         print(f"test_estimate_gas_deploy_contract, estimate_gas: {estimate_gas}")
         self.assertGreater(estimate_gas, 0, "test_estimate_gas_deploy_contract, estimate_gas must be greater 0")
 
-    @skip("Integration test, used for develop purposes only")
+    # @skip("Integration test, used for develop purposes only")
     def test_deploy_contract_create(self):
+        random_salt = generate_random_salt()
         nonce = self.web3.zksync.get_transaction_count(self.account.address, EthBlockParams.PENDING.value)
         nonce_holder = NonceHolder(self.web3, self.account)
         deployment_nonce = nonce_holder.get_deployment_nonce(self.account.address)
@@ -308,26 +305,18 @@ class ZkSyncWeb3Tests(TestCase):
 
         print(f"precomputed address: {precomputed_address}")
 
-        tx = create_contract_transaction(web3=self.web3,
-                                         from_=self.account.address,
-                                         ergs_limit=0,
-                                         ergs_price=0,
-                                         bytecode=get_hex_binary("counter_contract.hex"))
-        estimate_gas = self.web3.zksync.eth_estimate_gas(tx)
         gas_price = self.web3.zksync.gas_price
+        create_contract = TxCreateContract(web3=self.web3,
+                                           chain_id=self.chain_id,
+                                           nonce=nonce,
+                                           from_=self.account.address,
+                                           gas_limit=0,  # UNKNOWN AT THIS STATE
+                                           gas_price=gas_price,
+                                           bytecode=get_hex_binary("counter_contract.hex"),
+                                           salt=random_salt)
+        estimate_gas = self.web3.zksync.eth_estimate_gas(create_contract.tx)
         print(f"Fee for transaction is: {estimate_gas * gas_price}")
-
-        tx_712 = Transaction712(chain_id=self.chain_id,
-                                nonce=nonce,
-                                gas_limit=estimate_gas,
-                                to=tx["to"],
-                                value=tx["value"],
-                                data=tx["data"],
-                                maxPriorityFeePerGas=100000000,
-                                maxFeePerGas=gas_price,
-                                from_=self.account.address,
-                                meta=tx["eip712Meta"])
-
+        tx_712 = create_contract.tx712(estimate_gas)
         singed_message = self.signer.sign_typed_data(tx_712.to_eip712_struct())
         msg = tx_712.encode(singed_message)
         tx_hash = self.web3.zksync.send_raw_transaction(msg)
@@ -345,11 +334,15 @@ class ZkSyncWeb3Tests(TestCase):
             "data": call_data
         }
         eth_ret = self.web3.zksync.call(eth_tx, ZkBlockParams.COMMITTED.value)
-        print(f"Call method for deployed contract, address: {contract_address}, value: {eth_ret}")
+        # INFO: type dependent cast, signature of calling function must be known
+        result = int.from_bytes(eth_ret, "big", signed=True)
+        print(f"Call method for deployed contract, address: {contract_address}, value: {result}")
 
-    @skip("Integration test, used for develop purposes only")
+    # @skip("Integration test, used for develop purposes only")
     def test_deploy_contract_with_constructor_create(self):
+        random_salt = generate_random_salt()
         nonce = self.web3.zksync.get_transaction_count(self.account.address, EthBlockParams.PENDING.value)
+        gas_price = self.web3.zksync.gas_price
 
         nonce_holder = NonceHolder(self.web3, self.account)
         deployment_nonce = nonce_holder.get_deployment_nonce(self.account.address)
@@ -359,27 +352,23 @@ class ZkSyncWeb3Tests(TestCase):
 
         constructor_encoder = ConstructorContractEncoder(self.web3)
         encoded_ctor = constructor_encoder.encode_constructor(a=42, b=43, shouldRevert=False)
-        tx = create_contract_transaction(web3=self.web3,
-                                         from_=self.account.address,
-                                         ergs_price=0,
-                                         ergs_limit=0,
-                                         bytecode=constructor_encoder.bytecode,
-                                         call_data=encoded_ctor)
 
-        estimate_gas = self.web3.zksync.eth_estimate_gas(tx)
-        gas_price = self.web3.zksync.gas_price
+        create_contract = TxCreateContract(web3=self.web3,
+                                           chain_id=self.chain_id,
+                                           nonce=nonce,
+                                           from_=self.account.address,
+                                           gas_limit=0,  # UNKNOWN AT THIS STATE,
+                                           gas_price=gas_price,
+                                           bytecode=constructor_encoder.bytecode,
+                                           call_data=encoded_ctor,
+                                           salt=random_salt)
+
+        estimate_gas = self.web3.zksync.eth_estimate_gas(create_contract.tx)
+
         print(f"Fee for transaction is: {estimate_gas * gas_price}")
 
-        tx_712 = Transaction712(chain_id=self.chain_id,
-                                nonce=nonce,
-                                gas_limit=estimate_gas,
-                                to=tx["to"],
-                                value=tx["value"],
-                                data=tx["data"],
-                                maxPriorityFeePerGas=100000000,
-                                maxFeePerGas=gas_price,
-                                from_=self.account.address,
-                                meta=tx["eip712Meta"])
+        tx_712 = create_contract.tx712(estimate_gas)
+
         singed_message = self.signer.sign_typed_data(tx_712.to_eip712_struct())
         msg = tx_712.encode(singed_message)
         tx_hash = self.web3.zksync.send_raw_transaction(msg)
@@ -388,6 +377,7 @@ class ZkSyncWeb3Tests(TestCase):
 
         contract_address = tx_receipt["contractAddress"]
         print(f"contract address: {contract_address}")
+        # INFO: does not work, contract_address is None
         self.assertEqual(precomputed_address.lower(), contract_address.lower())
 
         call_data = constructor_encoder.encode_method(fn_name="get", args=[])
@@ -397,38 +387,33 @@ class ZkSyncWeb3Tests(TestCase):
             "data": call_data
         }
         eth_ret = self.web3.zksync.call(eth_tx, ZkBlockParams.COMMITTED.value)
-        print(f"Call method for deployed contract, address: {contract_address}, value: {eth_ret}")
+        # INFO: type dependent cast, signature of calling function must be known
+        result = int.from_bytes(eth_ret, "big", signed=True)
+        print(f"Call method for deployed contract, address: {contract_address}, value: {result}")
 
-    @skip("Integration test, used for develop purposes only")
+    # @skip("Integration test, used for develop purposes only")
     def test_deploy_contract_create2(self):
         random_salt = generate_random_salt()
         nonce = self.web3.zksync.get_transaction_count(self.account.address, EthBlockParams.PENDING.value)
+        gas_price = self.web3.zksync.gas_price
         deployer = ContractDeployer(self.web3)
         counter_contract_bin = get_hex_binary("counter_contract.hex")
         precomputed_address = deployer.compute_l2_create2_address(sender=self.account.address,
                                                                   bytecode=counter_contract_bin,
                                                                   constructor=b'',
                                                                   salt=random_salt)
-        tx = create2_contract_transaction(web3=self.web3,
-                                          from_=self.account.address,
-                                          ergs_price=0,
-                                          ergs_limit=0,
-                                          bytecode=counter_contract_bin,
-                                          salt=random_salt)
-        estimate_gas = self.web3.zksync.eth_estimate_gas(tx)
-        gas_price = self.web3.zksync.gas_price
+        create2_contract = TxCreate2Contract(web3=self.web3,
+                                             chain_id=self.chain_id,
+                                             nonce=nonce,
+                                             from_=self.account.address,
+                                             gas_limit=0,
+                                             gas_price=gas_price,
+                                             bytecode=counter_contract_bin,
+                                             salt=random_salt)
+        estimate_gas = self.web3.zksync.eth_estimate_gas(create2_contract.tx)
         print(f"Fee for transaction is: {estimate_gas * gas_price}")
 
-        tx_712 = Transaction712(chain_id=self.chain_id,
-                                nonce=nonce,
-                                gas_limit=estimate_gas,
-                                to=tx["to"],
-                                value=tx["value"],
-                                data=tx["data"],
-                                maxPriorityFeePerGas=100000000,
-                                maxFeePerGas=gas_price,
-                                from_=self.account.address,
-                                meta=tx["eip712Meta"])
+        tx_712 = create2_contract.tx712(estimate_gas)
         singed_message = self.signer.sign_typed_data(tx_712.to_eip712_struct())
         msg = tx_712.encode(singed_message)
         tx_hash = self.web3.zksync.send_raw_transaction(msg)
@@ -451,36 +436,34 @@ class ZkSyncWeb3Tests(TestCase):
         result = int.from_bytes(eth_ret, "big", signed=True)
         print(f"Call method for deployed contract, address: {contract_address}, value: {result}")
 
-    @skip("Integration test, used for develop purposes only")
+    # @skip("Integration test, used for develop purposes only")
     def test_deploy_contract_with_deps_create(self):
+        random_salt = generate_random_salt()
         foo = get_hex_binary("foo.hex")
         foo_deps = get_hex_binary("foo_deps.hex")
         nonce = self.web3.zksync.get_transaction_count(self.account.address, EthBlockParams.PENDING.value)
+        gas_price = self.web3.zksync.gas_price
         nonce_holder = NonceHolder(self.web3, self.account)
         deployment_nonce = nonce_holder.get_deployment_nonce(self.account.address)
         contract_deployer = ContractDeployer(self.web3)
-        precomputed_address = contract_deployer.compute_l2_create_address(self.account.address, deployment_nonce)
-        tx = create_contract_transaction(web3=self.web3,
-                                         from_=self.account.address,
-                                         ergs_price=0,
-                                         ergs_limit=0,
-                                         bytecode=foo,
-                                         deps=[foo_deps])
+        precomputed_address = contract_deployer.compute_l2_create_address(self.account.address,
+                                                                          deployment_nonce)
 
-        estimate_gas = self.web3.zksync.eth_estimate_gas(tx)
-        gas_price = self.web3.zksync.gas_price
+        create_contract = TxCreateContract(web3=self.web3,
+                                           chain_id=self.chain_id,
+                                           nonce=nonce,
+                                           from_=self.account.address,
+                                           gas_limit=0,
+                                           gas_price=gas_price,
+                                           bytecode=foo,
+                                           deps=[foo_deps],
+                                           salt=random_salt)
+
+        estimate_gas = self.web3.zksync.eth_estimate_gas(create_contract.tx)
         print(f"Fee for transaction is: {estimate_gas * gas_price}")
 
-        tx_712 = Transaction712(chain_id=self.chain_id,
-                                nonce=nonce,
-                                gas_limit=estimate_gas,
-                                to=tx["to"],
-                                value=tx["value"],
-                                data=tx["data"],
-                                maxPriorityFeePerGas=100000000,
-                                maxFeePerGas=gas_price,
-                                from_=self.account.address,
-                                meta=tx["eip712Meta"])
+        tx_712 = create_contract.tx712(estimate_gas)
+
         singed_message = self.signer.sign_typed_data(tx_712.to_eip712_struct())
         msg = tx_712.encode(singed_message)
         tx_hash = self.web3.zksync.send_raw_transaction(msg)
@@ -491,36 +474,33 @@ class ZkSyncWeb3Tests(TestCase):
         print(f"contract address: {contract_address}")
         self.assertEqual(precomputed_address.lower(), contract_address.lower())
 
-    @skip("Integration test, used for develop purposes only")
+    # @skip("Integration test, used for develop purposes only")
     def test_deploy_contract_with_deps_create2(self):
+        random_salt = generate_random_salt()
         foo = get_hex_binary("foo.hex")
         foo_deps = get_hex_binary("foo_deps.hex")
         nonce = self.web3.zksync.get_transaction_count(self.account.address, EthBlockParams.PENDING.value)
+        gas_price = self.web3.zksync.gas_price
+
         contract_deployer = ContractDeployer(self.web3)
         precomputed_address = contract_deployer.compute_l2_create2_address(self.account.address,
                                                                            bytecode=foo,
                                                                            constructor=b'',
-                                                                           salt=b'\0' * 32)
-        tx = create2_contract_transaction(web3=self.web3,
-                                          from_=self.account.address,
-                                          ergs_price=0,
-                                          ergs_limit=0,
-                                          bytecode=foo,
-                                          deps=[foo_deps])
-        estimate_gas = self.web3.zksync.eth_estimate_gas(tx)
-        gas_price = self.web3.zksync.gas_price
+                                                                           salt=random_salt)
+        create2_contract = TxCreate2Contract(web3=self.web3,
+                                             chain_id=self.chain_id,
+                                             nonce=nonce,
+                                             from_=self.account.address,
+                                             gas_limit=0,
+                                             gas_price=gas_price,
+                                             bytecode=foo,
+                                             deps=[foo_deps],
+                                             salt=random_salt)
+        estimate_gas = self.web3.zksync.eth_estimate_gas(create2_contract.tx)
         print(f"Fee for transaction is: {estimate_gas * gas_price}")
 
-        tx_712 = Transaction712(chain_id=self.chain_id,
-                                nonce=nonce,
-                                gas_limit=estimate_gas,
-                                to=tx["to"],
-                                value=tx["value"],
-                                data=tx["data"],
-                                maxPriorityFeePerGas=100000000,
-                                maxFeePerGas=gas_price,
-                                from_=self.account.address,
-                                meta=tx["eip712Meta"])
+        tx_712 = create2_contract.tx712(estimate_gas)
+
         singed_message = self.signer.sign_typed_data(tx_712.to_eip712_struct())
         msg = tx_712.encode(singed_message)
         tx_hash = self.web3.zksync.send_raw_transaction(msg)
@@ -546,27 +526,21 @@ class ZkSyncWeb3Tests(TestCase):
         }
         eth_ret = self.web3.zksync.call(eth_tx, ZkBlockParams.COMMITTED.value)
         result = int.from_bytes(eth_ret, "big", signed=True)
+        gas_price = self.web3.zksync.gas_price
 
         call_data = counter_contract_encoder.encode_method(fn_name="increment", args=[1])
-        tx = create_function_call_transaction(from_=self.account.address,
-                                              to=self.CONTRACT_ADDRESS,
-                                              ergs_price=0,
-                                              ergs_limit=0,
-                                              data=call_data)
-        estimate_gas = self.web3.zksync.eth_estimate_gas(tx)
-        gas_price = self.web3.zksync.gas_price
+        func_call = TxFunctionCall(chain_id=self.chain_id,
+                                   nonce=nonce,
+                                   from_=self.account.address,
+                                   to=self.CONTRACT_ADDRESS,
+                                   data=call_data,
+                                   gas_limit=0,  # UNKNOWN AT THIS STATE,
+                                   gas_price=gas_price)
+        estimate_gas = self.web3.zksync.eth_estimate_gas(func_call.tx)
         print(f"Fee for transaction is: {estimate_gas * gas_price}")
 
-        tx_712 = Transaction712(chain_id=self.chain_id,
-                                nonce=nonce,
-                                gas_limit=estimate_gas,
-                                to=tx["to"],
-                                value=tx["value"],
-                                data=tx["data"],
-                                maxPriorityFeePerGas=100000000,
-                                maxFeePerGas=gas_price,
-                                from_=self.account.address,
-                                meta=tx["eip712Meta"])
+        tx_712 = func_call.tx712(estimate_gas)
+
         singed_message = self.signer.sign_typed_data(tx_712.to_eip712_struct())
         msg = tx_712.encode(singed_message)
         tx_hash = self.web3.zksync.send_raw_transaction(msg)
@@ -577,27 +551,27 @@ class ZkSyncWeb3Tests(TestCase):
         updated_result = int.from_bytes(eth_ret2, "big", signed=True)
         self.assertEqual(result + 1, updated_result)
 
-    @skip("Integration test, used for develop purposes only")
+    # @skip("Integration test, used for develop purposes only")
     def test_get_all_account_balances(self):
         balances = self.web3.zksync.zks_get_all_account_balances(self.account.address)
         print(f"balances : {balances}")
 
-    @skip("Integration test, used for develop purposes only")
+    # @skip("Integration test, used for develop purposes only")
     def test_get_confirmed_tokens(self):
         confirmed = self.web3.zksync.zks_get_confirmed_tokens(0, 10)
         print(f"confirmed tokens: {confirmed}")
 
-    @skip("Integration test, used for develop purposes only")
+    # @skip("Integration test, used for develop purposes only")
     def test_get_token_price(self):
         price = self.web3.zksync.zks_get_token_price(self.ETH_TOKEN.l2_address)
         print(f"price: {price}")
 
-    @skip("Integration test, used for develop purposes only")
+    # @skip("Integration test, used for develop purposes only")
     def test_get_l1_chain_id(self):
         l1_chain_id = self.web3.zksync.zks_l1_chain_id()
         print(f"L1 chain ID: {l1_chain_id} ")
 
-    @skip("Integration test, used for develop purposes only")
+    # @skip("Integration test, used for develop purposes only")
     def test_get_bridge_addresses(self):
         addresses = self.web3.zksync.zks_get_bridge_contracts()
         print(f"Bridge addresses: {addresses}")

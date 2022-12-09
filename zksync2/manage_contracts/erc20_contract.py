@@ -47,5 +47,5 @@ class ERC20FunctionEncoder:
             abi = _erc_20_abi_default()
         self.contract = web3_eth.eth.contract(address=None, abi=abi)
 
-    def encode_method(self, fn_name, args):
+    def encode_method(self, fn_name, args) -> HexStr:
         return self.contract.encodeABI(fn_name=fn_name, args=args)
