@@ -195,8 +195,44 @@ It has functionality to interact at L1 level
 
 
 More interested type is `ERC20FunctionEncoder`. it's using to provide method encoding in the case of<br> 
-sending non-native tokens inside the network
+sending non-native tokens inside the network.
 
+Construction needs only Web3 object with appended zksync module(ZkSyncBuilder)
+
+It has only 1 single method: `python encode_method` with arguments of function name, and it's args
+Usage example you may find in [section](#examples) `Transfer funds (ERC20 tokens)`   
+
+
+#### ContractDeployer
+
+ContractDeployer is utility contract represented as type to cover the following functionality:
+
+* encode binary contract representation by `create` method for further deploying
+* encode binary contract representation by `create2` method for further deploying
+* Precompute contract address for `create` and `create2` methods
+
+Construction: needs only web3 object with appended zksync module
+
+
+Example:
+```python
+from zksync2.manage_contracts.contract_deployer import ContractDeployer
+from zksync2.module.module_builder import ZkSyncBuilder
+
+zksync_web3 = ZkSyncBuilder.build("ZKSYNC_NETWORK_URL")
+deployer = ContractDeployer(zksync_web3)
+```
+
+The most functionality is hidden in the function builder helper types. See transaction [section](#transactions)  
+
+Methods:
+
+| Method                    | Parameters                                  | Return value | Description                                                                                                                                                                                                                                          |
+|---------------------------|---------------------------------------------|--------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| encode_create             | bytecode, optional `call_data` & `salt`     | HexStr  | create binary represenation of contract in internal deploying format.<br/> bytecode - contract binary representation, call_data is used for ctor bytecode only, salt is used to generate unique identifier of deploying contract                     |
+| encode_create2            | bytecode, optional `call_data` & `salt`     | HexStr  | create binary represenation of contract in internal deploying format.<br/> bytecode - contract binary representation, call_data is used for ctor bytecode only, salt is used to generate unique identifier of deploying contract                     |
+ | compute_l2_create_address | Address, Nonce                              | Address | Accepts address of deployer and current deploing nonce and returns address of contract that is going to be deployed by `encode_create` method                                                                                                        |
+| compute_l2_create2_address | Address, bytecode, ctor bytecode, salt | Address | Accepts address of deployer, binary representation of contract, if needed it's constructor in binary format and salf. By default constructor can be b'0' value. Returns address of contract that is going to be deployed by  `encode_create2` method |
 
 
 

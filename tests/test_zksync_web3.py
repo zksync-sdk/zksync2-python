@@ -501,7 +501,6 @@ class ZkSyncWeb3Tests(TestCase):
         tx_hash = self.web3.zksync.send_raw_transaction(msg)
         tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
         self.assertEqual(1, tx_receipt["status"])
-
         contract_address = contract_deployer.extract_contract_address(tx_receipt)
         print(f"contract address: {contract_address}")
         self.assertEqual(precomputed_address.lower(), contract_address.lower())
