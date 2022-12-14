@@ -36,7 +36,6 @@ from typing import Any, Callable, List, Union
 
 zks_estimate_fee_rpc = RPCEndpoint("zks_estimateFee")
 zks_main_contract_rpc = RPCEndpoint("zks_getMainContract")
-zks_get_l1_withdraw_tx_rpc = RPCEndpoint("zks_getL1WithdrawalTx")
 zks_get_confirmed_tokens_rpc = RPCEndpoint("zks_getConfirmedTokens")
 zks_get_token_price_rpc = RPCEndpoint("zks_getTokenPrice")
 zks_l1_chain_id_rpc = RPCEndpoint("zks_L1ChainId")
@@ -76,12 +75,13 @@ ZKS_TRANSACTION_PARAMS_FORMATTERS = {
     'from': to_checksum_address,
     'gas': to_hex_if_integer,
     'gasPrice': to_hex_if_integer,
+    'maxPriorityFeePerGas': to_hex_if_integer,
     'nonce': to_hex_if_integer,
     'to': to_checksum_address,
     'value': to_hex_if_integer,
     'chainId': to_hex_if_integer,
     'transactionType': to_hex_if_integer,
-    'eip712Meta': meta_formatter
+    'eip712Meta': meta_formatter,
 }
 
 zks_transaction_request_formatter = apply_formatters_to_dict(ZKS_TRANSACTION_PARAMS_FORMATTERS)
@@ -182,11 +182,6 @@ class ZkSync(Eth, ABC):
         mungers=None
     )
 
-    _zks_get_l1_withdraw_tx: Method[Callable[[L2WithdrawTxHash], TransactionHash]] = Method(
-        zks_get_l1_withdraw_tx_rpc,
-        mungers=[default_root_munger]
-    )
-
     _zks_get_confirmed_tokens: Method[Callable[[From, Limit], ZksTokens]] = Method(
         zks_get_confirmed_tokens_rpc,
         mungers=[default_root_munger],
@@ -221,7 +216,7 @@ class ZkSync(Eth, ABC):
         request_formatters=zksync_get_request_formatters
     )
 
-    _eth_estimate_gas: Method[Callable[[Transaction], str]] = Method(
+    _eth_estimate_gas: Method[Callable[[Transaction], int]] = Method(
         eth_estimate_gas_rpc,
         mungers=[default_root_munger],
         request_formatters=zksync_get_request_formatters
@@ -258,9 +253,6 @@ class ZkSync(Eth, ABC):
     def zks_main_contract(self) -> HexStr:
         return self._zks_main_contract()
 
-    def zks_get_l1_withdraw_tx(self, withdraw_hash: L2WithdrawTxHash) -> TransactionHash:
-        return self._zks_get_l1_withdraw_tx(withdraw_hash)
-
     def zks_get_confirmed_tokens(self, offset: From, limit: Limit) -> List[Token]:
         return self._zks_get_confirmed_tokens(offset, limit)
 
@@ -286,7 +278,7 @@ class ZkSync(Eth, ABC):
     def zks_get_testnet_paymaster_address(self) -> HexStr:
         return self._zks_get_testnet_paymaster_address()
 
-    def eth_estimate_gas(self, tx: Transaction) -> str:
+    def eth_estimate_gas(self, tx: Transaction) -> int:
         return self._eth_estimate_gas(tx)
 
     def wait_for_transaction_receipt(self,

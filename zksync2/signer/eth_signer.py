@@ -2,9 +2,9 @@ import web3
 from abc import abstractmethod, ABC
 from eip712_structs import make_domain, EIP712Struct
 from eth_account.datastructures import SignedMessage
+from eth_account.signers.base import BaseAccount
 from eth_typing import ChecksumAddress, HexStr
 from eth_utils import keccak
-from eth_account.signers.local import LocalAccount
 from eth_account.messages import encode_defunct, SignableMessage
 
 
@@ -23,7 +23,7 @@ class PrivateKeyEthSigner(EthSignerBase, ABC):
     _NAME = "zkSync"
     _VERSION = "2"
 
-    def __init__(self, creds: LocalAccount, chain_id: int):
+    def __init__(self, creds: BaseAccount, chain_id: int):
         self.credentials = creds
         self.chain_id = chain_id
         self.default_domain = make_domain(name=self._NAME,
