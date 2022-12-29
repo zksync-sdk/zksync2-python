@@ -1,0 +1,48 @@
+{
+  "_format": "hh-zksolc-artifact-1",
+  "contractName": "IPaymasterFlow",
+  "sourceName": "cache-zk/solpp-generated-contracts/interfaces/IPaymasterFlow.sol",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_token",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_minAllowance",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bytes",
+          "name": "_innerInput",
+          "type": "bytes"
+        }
+      ],
+      "name": "approvalBased",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes",
+          "name": "input",
+          "type": "bytes"
+        }
+      ],
+      "name": "general",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x",
+  "deployedBytecode": "0x",
+  "linkReferences": {},
+  "deployedLinkReferences": {},
+  "factoryDeps": {}
+}

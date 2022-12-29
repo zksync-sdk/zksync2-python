@@ -63,7 +63,7 @@ class ZkSyncWeb3Tests(TestCase):
         txn_receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
         self.assertEqual(txn_receipt['status'], 1)
 
-    @skip("Integration test, used for develop purposes only")
+    # @skip("Integration test, used for develop purposes only")
     def test_get_l1_balance(self):
         """
         INFO: For minting use: https://goerli-faucet.pk910.de
