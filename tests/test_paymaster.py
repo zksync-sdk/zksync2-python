@@ -43,7 +43,6 @@ class PaymasterTests(TestCase):
         self.custom_paymaster_contract_bin = get_hex_binary("custom_paymaster_binary.hex")
 
     def test_deposit_usdc(self):
-        print(f"gas price: {self.web3.eth.gas_price}")
         amount_usdc = 100000
         eth_web3 = Web3(Web3.HTTPProvider(self.ETH_TEST_URL))
         eth_web3.middleware_onion.inject(geth_poa_middleware, layer=0)
@@ -51,8 +50,8 @@ class PaymasterTests(TestCase):
                                                                 eth=eth_web3,
                                                                 account=self.account,
                                                                 gas_provider=self.gas_provider)
-        ret = eth_provider.approve_deposits(self.USDC_TOKEN, amount_usdc)
-        print(f"approve deposit: {ret}")
+        tx_receipt = eth_provider.approve_deposits(self.USDC_TOKEN, amount_usdc)
+        self.assertEqual(1, tx_receipt["status"])
         tx_receipt = eth_provider.deposit(self.USDC_TOKEN,
                                           amount_usdc,
                                           self.account.address)
@@ -111,9 +110,10 @@ class PaymasterTests(TestCase):
         fee = estimate_gas * gas_price
         print(f"Fee : {fee}")
 
-        token_contract = ERC20Contract(web3=self.web3,
+        token_contract = ERC20Contract(web3=self.web3.eth,
                                        contract_address=self.USDC_TOKEN.l2_address,
-                                       account=self.account)
+                                       account=self.account,
+                                       gas_provider=self.gas_provider)
         usdc_balance = token_contract.balance_of(self.account.address)
         print(f"USDC balance: {usdc_balance}")
 

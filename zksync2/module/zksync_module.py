@@ -3,6 +3,7 @@ from abc import ABC
 from eth_utils import to_checksum_address, is_dict
 from eth_utils.curried import apply_formatter_at_index
 from hexbytes import HexBytes
+from web3 import Web3
 from web3._utils.threads import Timeout
 from web3.exceptions import TransactionNotFound, TimeExhausted
 from web3.module import Module
@@ -276,7 +277,7 @@ class ZkSync(Eth, ABC):
         return self._zks_get_l2_to_l1_msg_proof(block, sender, message, l2log_pos)
 
     def zks_get_testnet_paymaster_address(self) -> HexStr:
-        return self._zks_get_testnet_paymaster_address()
+        return Web3.toChecksumAddress(self._zks_get_testnet_paymaster_address())
 
     def eth_estimate_gas(self, tx: Transaction) -> int:
         return self._eth_estimate_gas(tx)
