@@ -4,7 +4,6 @@ from typing import Optional
 from eth_typing import HexStr
 from web3 import Web3
 from web3.module import Module
-# from zksync2.manage_contracts.contract_base import ContractBase
 from eth_account.signers.base import BaseAccount
 from web3.types import TxReceipt
 
@@ -45,36 +44,32 @@ class ERC20Contract:
         return self.module.get_transaction_count(self.account.address)
 
     def approve_deposit(self, zksync_address: HexStr, max_erc20_approve_amount=MAX_ERC20_APPROVE_AMOUNT) -> TxReceipt:
-        # return self.contract.functions.approve(zksync_address, max_erc20_approve_amount).call()
-        tx = self.contract.functions.approve(zksync_address, max_erc20_approve_amount).build_transaction(
+        return self.contract.functions.approve(zksync_address, max_erc20_approve_amount).call(
             {
                 "chainId": self.module.chain_id,
                 "from": self.account.address,
-                "nonce": self._nonce(),
-                "gas": self.gas_provider.gas_limit(),
-                "gasPrice": self.gas_provider.gas_price()
             })
-        signed_tx = self.account.sign_transaction(tx)
-        txn_hash = self.module.send_raw_transaction(signed_tx.rawTransaction)
-        txn_receipt = self.module.wait_for_transaction_receipt(txn_hash)
-        return txn_receipt
 
     def allowance(self, owner: HexStr, sender: HexStr) -> int:
-        return self.contract.functions.allowance(owner, sender).call()
-
-    def transfer(self, _to: str, _value: int) -> TxReceipt:
-        tx = self.contract.functions.transfer(_to, _value).build_transaction(
+        return self.contract.functions.allowance(owner, sender).call(
             {
-                "from": self.account.address
-            }
-        )
-        signed_tx = self.account.sign_transaction(tx)
-        txn_hash = self.module.send_raw_transaction(signed_tx.rawTransaction)
-        txn_receipt = self.module.wait_for_transaction_receipt(txn_hash)
-        return txn_receipt
+                "chainId": self.module.chain_id,
+                "from": self.account.address,
+            })
+
+    def transfer(self, _to: str, _value: int):
+        return self.contract.functions.transfer(_to, _value).call(
+            {
+                "chainId": self.module.chain_id,
+                "from": self.account.address,
+            })
 
     def balance_of(self, addr: HexStr):
-        return self.contract.functions.balanceOf(addr).call()
+        return self.contract.functions.balanceOf(addr).call(
+            {
+                "chainId": self.module.chain_id,
+                "from": self.account.address
+            })
 
 
 class ERC20FunctionEncoder:

@@ -26,9 +26,10 @@ class PaymasterTests(TestCase):
     PRIVATE_KEY = bytes.fromhex("1f0245d47b3a84299aeb121ac33c2dbd1cdb3d3c2079b3240e63796e75ee8b70")
     ETH_AMOUNT_BALANCE = 1
     ETH_TEST_NET_AMOUNT_BALANCE = Decimal(1)
+
     USDC_TOKEN = Token(
         Web3.toChecksumAddress("0xd35cceead182dcee0f148ebac9447da2c4d449c4"),
-        Web3.toChecksumAddress("0x72c4f199cb8784425542583d345e7c00d642e345"),
+        Web3.toChecksumAddress("0x852a4599217e76aa725f0ada8bf832a1f57a8a91"),
         "USDC",
         6)
     SALT = keccak(text="TestPaymaster")
@@ -50,8 +51,8 @@ class PaymasterTests(TestCase):
                                                                 eth=eth_web3,
                                                                 account=self.account,
                                                                 gas_provider=self.gas_provider)
-        tx_receipt = eth_provider.approve_deposits(self.USDC_TOKEN, amount_usdc)
-        self.assertEqual(1, tx_receipt["status"])
+        is_approved = eth_provider.approve_deposits(self.USDC_TOKEN, amount_usdc)
+        self.assertTrue(is_approved)
         tx_receipt = eth_provider.deposit(self.USDC_TOKEN,
                                           amount_usdc,
                                           self.account.address)
@@ -99,7 +100,17 @@ class PaymasterTests(TestCase):
         else:
             print("Skipping test, contract is already deployed")
 
-    def send_funds_for_fee(self):
+    def get_balance(self, addr: HexStr, token: Token, at: EthBlockParams = EthBlockParams.LATEST):
+        if token.is_eth():
+            return self.web3.zksync.get_balance(addr, at.value)
+        else:
+            erc20 = ERC20Contract(self.web3.zksync,
+                                  contract_address=token.l2_address,
+                                  account=self.account,
+                                  gas_provider=self.gas_provider)
+            return erc20.balance_of(addr)
+
+    def test_send_funds_for_fee(self):
         gas_price = self.web3.zksync.gas_price
         func_call = TxFunctionCall(self.chain_id,
                                    nonce=0,
@@ -109,12 +120,7 @@ class PaymasterTests(TestCase):
         estimate_gas = self.web3.zksync.eth_estimate_gas(func_call.tx)
         fee = estimate_gas * gas_price
         print(f"Fee : {fee}")
-
-        token_contract = ERC20Contract(web3=self.web3.eth,
-                                       contract_address=self.USDC_TOKEN.l2_address,
-                                       account=self.account,
-                                       gas_provider=self.gas_provider)
-        usdc_balance = token_contract.balance_of(self.account.address)
+        usdc_balance = self.get_balance(self.account.address, self.USDC_TOKEN)
         print(f"USDC balance: {usdc_balance}")
 
         self.assertTrue(usdc_balance >= fee, f"Not enough balance for pay fee {fee} with balance {usdc_balance}")
@@ -135,7 +141,7 @@ class PaymasterTests(TestCase):
         tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
         self.assertEqual(1, tx_receipt["status"])
 
-    def send_funds_with_paymaster(self):
+    def test_send_funds_with_paymaster(self):
         gas_price = self.web3.zksync.gas_price
         paymaster_address = self.paymaster_address
 

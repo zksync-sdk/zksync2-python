@@ -42,7 +42,7 @@ class EthereumProvider:
                        account=account)
         return provider
 
-    def approve_deposits(self, token: Token, limit: Optional[int]) -> TxReceipt:
+    def approve_deposits(self, token: Token, limit: Optional[int]) -> bool:
         token_contract = ERC20Contract(self.web3.eth,
                                        token.l1_address,
                                        self.account,
