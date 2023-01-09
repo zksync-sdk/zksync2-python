@@ -4,6 +4,7 @@ from typing import Union, Optional, List
 import rlp
 from eth_account.datastructures import SignedMessage
 from eth_typing import ChecksumAddress, HexStr
+from eth_utils import remove_0x_prefix
 from rlp.sedes import big_endian_int, binary
 from rlp.sedes import List as rlpList
 from web3 import Web3
@@ -50,7 +51,7 @@ class Transaction712:
                 paymaster_params.paymaster is not None and \
                 paymaster_params.paymaster_input is not None:
             paymaster_params_data = [
-                bytes.fromhex(paymaster_params.paymaster),
+                bytes.fromhex(remove_0x_prefix(paymaster_params.paymaster)),
                 paymaster_params.paymaster_input
             ]
             paymaster_params_elements = [binary, binary]

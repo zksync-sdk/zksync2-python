@@ -4,6 +4,8 @@ from eth_typing import HexStr
 from eth_utils import keccak, remove_0x_prefix
 from web3 import Web3
 from web3.middleware import geth_poa_middleware
+
+import zksync2.transaction.transaction712
 from zksync2.provider.eth_provider import EthereumProvider
 
 from zksync2.manage_contracts.paymaster_utils import PaymasterFlowEncoder
@@ -18,6 +20,14 @@ from tests.contracts.utils import get_hex_binary
 from zksync2.transaction.transaction712 import TxCreate2Contract, TxFunctionCall
 
 
+# mint tx hash of Test coins:
+# https://goerli.explorer.zksync.io/tx/0xaaafc0e4228336783ad4e996292123c6eebb36b5c1b257e5b628e7e0281cccab
+
+# https://goerli.explorer.zksync.io/tx/0xea09a90d09aa3644791ef300b5b5bbf397723812542a5040ff50237472e549fa
+# https://goerli.explorer.zksync.io/tx/0x86b1b6361cfe54dd54b2968fbfe97429d8876994a0240b27962ad9869acd512f
+# https://goerli.explorer.zksync.io/tx/0x78cf6db673a941495c6887badb84b4150bc09c3962a76c0d5c239190151e1ec5
+# SERC20
+
 class PaymasterTests(TestCase):
     ETH_TEST_URL = "https://rpc.ankr.com/eth_goerli"
     ZKSYNC_TEST_URL = "https://zksync2-testnet.zksync.dev"
@@ -27,11 +37,12 @@ class PaymasterTests(TestCase):
     ETH_AMOUNT_BALANCE = 1
     ETH_TEST_NET_AMOUNT_BALANCE = Decimal(1)
 
-    USDC_TOKEN = Token(
-        Web3.toChecksumAddress("0xd35cceead182dcee0f148ebac9447da2c4d449c4"),
-        Web3.toChecksumAddress("0x852a4599217e76aa725f0ada8bf832a1f57a8a91"),
-        "USDC",
-        6)
+    SERC20_TOKEN = Token(
+        Web3.toChecksumAddress("0x" + "0" * 40),
+        Web3.toChecksumAddress("0xFC174650BDEbE4D94736442307D4D7fdBe799EeC"),
+        "SERC20",
+        18)
+
     SALT = keccak(text="TestPaymaster")
 
     def setUp(self) -> None:
@@ -43,21 +54,6 @@ class PaymasterTests(TestCase):
 
         self.custom_paymaster_contract_bin = get_hex_binary("custom_paymaster_binary.hex")
 
-    def test_deposit_usdc(self):
-        amount_usdc = 100000
-        eth_web3 = Web3(Web3.HTTPProvider(self.ETH_TEST_URL))
-        eth_web3.middleware_onion.inject(geth_poa_middleware, layer=0)
-        eth_provider = EthereumProvider.build_ethereum_provider(zksync=self.web3,
-                                                                eth=eth_web3,
-                                                                account=self.account,
-                                                                gas_provider=self.gas_provider)
-        is_approved = eth_provider.approve_deposits(self.USDC_TOKEN, amount_usdc)
-        self.assertTrue(is_approved)
-        tx_receipt = eth_provider.deposit(self.USDC_TOKEN,
-                                          amount_usdc,
-                                          self.account.address)
-        self.assertEqual(1, tx_receipt["status"])
-
     def _is_deployed(self):
         return len(self.web3.zksync.get_code(self.paymaster_address)) > 0
 
@@ -65,7 +61,7 @@ class PaymasterTests(TestCase):
     def paymaster_address(self) -> HexStr:
         return self.web3.zksync.zks_get_testnet_paymaster_address()
 
-    # @skip("Integration test, paymaster params test not implemented yet")
+    @skip("Integration test, paymaster params test not implemented yet")
     def test_deploy_paymaster(self):
         if not self._is_deployed():
             nonce = self.web3.zksync.get_transaction_count(self.account.address, EthBlockParams.PENDING.value)
@@ -110,6 +106,7 @@ class PaymasterTests(TestCase):
                                   gas_provider=self.gas_provider)
             return erc20.balance_of(addr)
 
+    @skip("Integration test, paymaster params test not implemented yet")
     def test_send_funds_for_fee(self):
         gas_price = self.web3.zksync.gas_price
         func_call = TxFunctionCall(self.chain_id,
@@ -120,12 +117,12 @@ class PaymasterTests(TestCase):
         estimate_gas = self.web3.zksync.eth_estimate_gas(func_call.tx)
         fee = estimate_gas * gas_price
         print(f"Fee : {fee}")
-        usdc_balance = self.get_balance(self.account.address, self.USDC_TOKEN)
-        print(f"USDC balance: {usdc_balance}")
+        serc20_balance = self.get_balance(self.account.address, self.SERC20_TOKEN)
+        print(f"SERC20 balance: {serc20_balance}")
 
-        self.assertTrue(usdc_balance >= fee, f"Not enough balance for pay fee {fee} with balance {usdc_balance}")
+        self.assertTrue(serc20_balance >= fee, f"Not enough balance for pay fee {fee} with balance {serc20_balance}")
 
-        nonce = self.web3.zksync.get_transaction_count(self.account.address, ZkBlockParams.COMMITTED)
+        nonce = self.web3.zksync.get_transaction_count(self.account.address, ZkBlockParams.COMMITTED.value)
         transfer_for_fee = TxFunctionCall(chain_id=self.chain_id,
                                           nonce=nonce,
                                           from_=self.account.address,
@@ -141,43 +138,59 @@ class PaymasterTests(TestCase):
         tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
         self.assertEqual(1, tx_receipt["status"])
 
+    def build_paymaster(self, trans: TxFunctionCall, fee: int) -> TxFunctionCall:
+        paymaster_encoder = PaymasterFlowEncoder(self.web3)
+        encoded_approval_base = paymaster_encoder.encode_approval_based(self.SERC20_TOKEN.l2_address,
+                                                                        fee,
+                                                                        b'')
+        encoded_approval_bin = bytes.fromhex(remove_0x_prefix(encoded_approval_base))
+        trans.tx["eip712Meta"].paymaster_params = PaymasterParams(paymaster=self.paymaster_address,
+                                                                  paymaster_input=encoded_approval_bin)
+        return trans
+
+    @skip("Integration test, paymaster params test not implemented yet")
     def test_send_funds_with_paymaster(self):
         gas_price = self.web3.zksync.gas_price
         paymaster_address = self.paymaster_address
-
         nonce = self.web3.zksync.get_transaction_count(self.account.address, EthBlockParams.PENDING.value)
         transaction = TxFunctionCall(self.chain_id,
                                      nonce=nonce,
                                      from_=self.account.address,
                                      to=self.account.address,
                                      gas_price=gas_price)
-        est_gas = self.web3.zksync.eth_estimate_gas(transaction.tx)
-        fee = est_gas * gas_price
-        balance = self.web3.zksync.get_balance(paymaster_address, EthBlockParams.LATEST)
-        self.assertTrue(balance > fee, "Not enough balance to process fee")
 
-        erc20 = ERC20Contract(self.web3, contract_address=self.USDC_TOKEN.l2_address, account=self.account)
+        # INFO: encode paymaster params with dummy fee to estimate real one
+        unknown_fee = 0
+        transaction = self.build_paymaster(transaction, unknown_fee)
+
+        paymaster_est_gas = self.web3.zksync.eth_estimate_gas(transaction.tx)
+        preprocessed_fee = gas_price * paymaster_est_gas
+
+        print(f"Paymaster fee: {preprocessed_fee}")
+
+        erc20 = ERC20Contract(self.web3.zksync, contract_address=self.SERC20_TOKEN.l2_address,
+                              account=self.account,
+                              gas_provider=self.gas_provider)
 
         allowance = erc20.allowance(self.account.address, paymaster_address)
-        if allowance < fee:
-            tx_receipt = erc20.approve_deposit(paymaster_address, fee)
-            self.assertEqual(1, tx_receipt["status"])
+        if allowance < preprocessed_fee:
+            is_approved = erc20.approve_deposit(paymaster_address, preprocessed_fee)
+            self.assertTrue(is_approved)
 
-        balance_before = self.web3.zksync.get_balance(self.account.address, EthBlockParams.PENDING)
-        paymaster_encoder = PaymasterFlowEncoder(self.web3)
-        encoded_approval_base = paymaster_encoder.encode_approval_based(self.USDC_TOKEN.l2_address,
-                                                                        fee,
-                                                                        b'')
-        encoded_approval_bin = bytes.fromhex(remove_0x_prefix(encoded_approval_base))
-        transaction.tx["eip712Meta"].paymaster_params = PaymasterParams(paymaster=paymaster_address,
-                                                                        paymaster_input=encoded_approval_bin)
-        tx712 = transaction.tx712(est_gas)
+        # INFO: encode paymaster params with real fee
+        transaction = self.build_paymaster(transaction, preprocessed_fee)
+
+        balance_before = self.web3.zksync.get_balance(self.account.address, EthBlockParams.PENDING.value)
+        print(f"balance before : {balance_before}")
+
+        tx712 = transaction.tx712(paymaster_est_gas)
         singed_message = self.signer.sign_typed_data(tx712.to_eip712_struct())
         msg = tx712.encode(singed_message)
         tx_hash = self.web3.zksync.send_raw_transaction(msg)
         tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
         self.assertEqual(1, tx_receipt["status"])
 
-        balance_after = self.web3.zksync.get_balance(self.account.address, EthBlockParams.PENDING)
-        self.assertEqual(balance_before, balance_after)
+        balance_after = self.web3.zksync.get_balance(self.account.address, EthBlockParams.PENDING.value)
+        print(f"balance after: {balance_after}")
 
+        self.assertEqual(balance_before, balance_after)

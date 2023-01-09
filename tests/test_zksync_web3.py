@@ -93,6 +93,28 @@ class ZkSyncWeb3Tests(TestCase):
         self.assertEqual(1, tx_receipt["status"])
 
     @skip("Integration test, used for develop purposes only")
+    def test_deposit_usdc(self):
+        USDC_TOKEN = Token(
+            Web3.toChecksumAddress("0xd35cceead182dcee0f148ebac9447da2c4d449c4"),
+            Web3.toChecksumAddress("0x852a4599217e76aa725f0ada8bf832a1f57a8a91"),
+            "USDC",
+            6)
+
+        amount_usdc = 100000
+        eth_web3 = Web3(Web3.HTTPProvider(self.ETH_TEST_URL))
+        eth_web3.middleware_onion.inject(geth_poa_middleware, layer=0)
+        eth_provider = EthereumProvider.build_ethereum_provider(zksync=self.web3,
+                                                                eth=eth_web3,
+                                                                account=self.account,
+                                                                gas_provider=self.gas_provider)
+        is_approved = eth_provider.approve_deposits(USDC_TOKEN, amount_usdc)
+        self.assertTrue(is_approved)
+        tx_receipt = eth_provider.deposit(USDC_TOKEN,
+                                          amount_usdc,
+                                          self.account.address)
+        self.assertEqual(1, tx_receipt["status"])
+
+    @skip("Integration test, used for develop purposes only")
     def test_get_nonce(self):
         nonce = self.web3.zksync.get_transaction_count(self.account.address, EthBlockParams.LATEST.value)
         print(f"Nonce: {nonce}")
@@ -545,7 +567,7 @@ class ZkSyncWeb3Tests(TestCase):
         updated_result = int.from_bytes(eth_ret2, "big", signed=True)
         self.assertEqual(result + 1, updated_result)
 
-    @skip("Integration test, used for develop purposes only")
+    # @skip("Integration test, used for develop purposes only")
     def test_get_all_account_balances(self):
         balances = self.web3.zksync.zks_get_all_account_balances(self.account.address)
         print(f"balances : {balances}")

@@ -24,9 +24,6 @@ class PaymasterFlowEncoder:
         self.web3 = zksync
         self.contract = self.web3.zksync.contract(address=None,
                                                   abi=_paymaster_flow_abi_default())
-    #
-    # def encode_method(self, fn_name, args) -> HexStr:
-    #     return self.contract.encodeABI(fn_name=fn_name, args=args)
 
     def encode_approval_based(self, address: HexStr, min_allowance: int, inner_input: bytes) -> HexStr:
         return self.contract.encodeABI(fn_name="approvalBased", args=[address, min_allowance, inner_input])

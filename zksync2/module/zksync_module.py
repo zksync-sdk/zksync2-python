@@ -64,9 +64,10 @@ def meta_formatter(eip712: EIP712Meta) -> dict:
                               for dep in eip712.factory_deps]
     pp_params = eip712.paymaster_params
     if pp_params is not None:
+        paymaster_input = factory_formatter(pp_params.paymaster_input)
         ret["paymasterParams"] = {
             "paymaster": pp_params.paymaster,
-            "paymasterInput": to_ascii_if_bytes(pp_params.paymaster_input)
+            "paymasterInput": paymaster_input
         }
     return ret
 
