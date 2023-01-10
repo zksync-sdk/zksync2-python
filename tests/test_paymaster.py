@@ -3,11 +3,6 @@ from unittest import TestCase, skip
 from eth_typing import HexStr
 from eth_utils import keccak, remove_0x_prefix
 from web3 import Web3
-from web3.middleware import geth_poa_middleware
-
-import zksync2.transaction.transaction712
-from zksync2.provider.eth_provider import EthereumProvider
-
 from zksync2.manage_contracts.paymaster_utils import PaymasterFlowEncoder
 from zksync2.manage_contracts.erc20_contract import ERC20Contract
 from zksync2.manage_contracts.gas_provider import StaticGasProvider
@@ -21,12 +16,7 @@ from zksync2.transaction.transaction712 import TxCreate2Contract, TxFunctionCall
 
 
 # mint tx hash of Test coins:
-# https://goerli.explorer.zksync.io/tx/0xaaafc0e4228336783ad4e996292123c6eebb36b5c1b257e5b628e7e0281cccab
-
-# https://goerli.explorer.zksync.io/tx/0xea09a90d09aa3644791ef300b5b5bbf397723812542a5040ff50237472e549fa
-# https://goerli.explorer.zksync.io/tx/0x86b1b6361cfe54dd54b2968fbfe97429d8876994a0240b27962ad9869acd512f
-# https://goerli.explorer.zksync.io/tx/0x78cf6db673a941495c6887badb84b4150bc09c3962a76c0d5c239190151e1ec5
-# SERC20
+# https://goerli.explorer.zksync.io/address/0xFC174650BDEbE4D94736442307D4D7fdBe799EeC#contract
 
 class PaymasterTests(TestCase):
     ETH_TEST_URL = "https://rpc.ankr.com/eth_goerli"
@@ -139,7 +129,7 @@ class PaymasterTests(TestCase):
         self.assertEqual(1, tx_receipt["status"])
 
     def build_paymaster(self, trans: TxFunctionCall, fee: int) -> TxFunctionCall:
-        paymaster_encoder = PaymasterFlowEncoder(self.web3)
+        paymaster_encoder = PaymasterFlowEncoder(self.web3.zksync)
         encoded_approval_base = paymaster_encoder.encode_approval_based(self.SERC20_TOKEN.l2_address,
                                                                         fee,
                                                                         b'')
@@ -148,7 +138,7 @@ class PaymasterTests(TestCase):
                                                                   paymaster_input=encoded_approval_bin)
         return trans
 
-    @skip("Integration test, paymaster params test not implemented yet")
+    # @skip("Integration test, paymaster params test not implemented yet")
     def test_send_funds_with_paymaster(self):
         gas_price = self.web3.zksync.gas_price
         paymaster_address = self.paymaster_address

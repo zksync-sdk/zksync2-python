@@ -159,6 +159,7 @@ For user needs there are the following contracts:
 * NonceHolder
 * ERC20Contract & ERC20FunctionEncoder
 * ContractDeployer
+* PaymasterFlowEncoder
 
 
 #### NonceHolder
@@ -234,7 +235,26 @@ Methods:
  | compute_l2_create_address | Address, Nonce                              | Address | Accepts address of deployer and current deploing nonce and returns address of contract that is going to be deployed by `encode_create` method                                                                                                        |
 | compute_l2_create2_address | Address, bytecode, ctor bytecode, salt | Address | Accepts address of deployer, binary representation of contract, if needed it's constructor in binary format and salf. By default constructor can be b'0' value. Returns address of contract that is going to be deployed by  `encode_create2` method |
 
+#### PaymasterFlowEncoder
 
+PaymasterFlowEncoder is utility contract for encoding Paymaster parameters.<br>
+Construction contract needs only Web3 Module object. It can be Eth or ZkSync.<br>
+
+Example:
+```python
+from zksync2.manage_contracts.paymaster_utils import PaymasterFlowEncoder
+from zksync2.module.module_builder import ZkSyncBuilder
+
+zksync_web3 = ZkSyncBuilder.build("ZKSYNC_NETWORK_URL")
+paymaster_encoder = PaymasterFlowEncoder(zksync_web3)
+```
+
+This utility contract has 2 methods wrapped directly to python:
+
+* encode_approval_based
+* encode_general
+
+For example and usage, please have a look into example [section](#examples)
 
 
 ### Examples
@@ -719,3 +739,119 @@ if __name__ == "__main__":
     deploy_contract_create2()
 
 ```
+
+#### Custom Paymaster
+This example is based on the `custom_paymaster_binary` that accepts any coin with <br>
+the 1:1 relation to native token( 18 decimals )
+
+
+```python
+
+from pathlib import Path
+from eth_account import Account
+from eth_account.signers.local import LocalAccount
+from eth_typing import HexStr
+from eth_utils import remove_0x_prefix
+from web3 import Web3
+from zksync2.manage_contracts.gas_provider import StaticGasProvider
+from zksync2.manage_contracts.paymaster_utils import PaymasterFlowEncoder
+from zksync2.signer.eth_signer import PrivateKeyEthSigner
+from zksync2.module.module_builder import ZkSyncBuilder
+from zksync2.manage_contracts.erc20_contract import ERC20Contract
+from zksync2.transaction.transaction712 import TxFunctionCall
+
+from zksync2.core.types import EthBlockParams, PaymasterParams, Token
+
+
+def read_hex_binary(name: str) -> bytes:
+    p = Path(f"./{name}")
+    with p.open(mode='r') as contact_file:
+        lines = contact_file.readlines()
+        data = "".join(lines)
+        return bytes.fromhex(data)
+
+
+# Contract to mint custom token under testnet:
+# https://goerli.explorer.zksync.io/address/0xFC174650BDEbE4D94736442307D4D7fdBe799EeC#contract
+
+class PaymasterExample:
+    SERC20_TOKEN = Token(
+        Web3.toChecksumAddress("0x" + "0" * 40),
+        Web3.toChecksumAddress("0xFC174650BDEbE4D94736442307D4D7fdBe799EeC"),
+        "SERC20",
+        18)
+
+    def __init__(self):
+        self.web3 = ZkSyncBuilder.build("ZKSYNC_NETWORK_URL")
+        self.account: LocalAccount = Account.from_key("YOUR_PRIVATE_KEY")
+        self.chain_id = self.web3.zksync.chain_id
+        self.signer = PrivateKeyEthSigner(self.account, self.chain_id)
+        self.gas_provider = StaticGasProvider(Web3.toWei(1, "gwei"), 555000)
+
+        self.custom_paymaster_contract_bin = read_hex_binary("custom_paymaster_binary.hex")
+
+    @property
+    def paymaster_address(self) -> HexStr:
+        return self.web3.zksync.zks_get_testnet_paymaster_address()
+
+    def build_paymaster(self, trans: TxFunctionCall, fee: int) -> TxFunctionCall:
+        paymaster_encoder = PaymasterFlowEncoder(self.web3.zksync)
+        encoded_approval_base = paymaster_encoder.encode_approval_based(self.SERC20_TOKEN.l2_address,
+                                                                        fee,
+                                                                        b'')
+        encoded_approval_bin = bytes.fromhex(remove_0x_prefix(encoded_approval_base))
+        trans.tx["eip712Meta"].paymaster_params = PaymasterParams(paymaster=self.paymaster_address,
+                                                                  paymaster_input=encoded_approval_bin)
+        return trans
+
+    def run(self):
+        gas_price = self.web3.zksync.gas_price
+        paymaster_address = self.paymaster_address
+        nonce = self.web3.zksync.get_transaction_count(self.account.address, EthBlockParams.PENDING.value)
+        transaction = TxFunctionCall(self.chain_id,
+                                     nonce=nonce,
+                                     from_=self.account.address,
+                                     to=self.account.address,
+                                     gas_price=gas_price)
+
+        # INFO: encode paymaster params with dummy fee to estimate real one
+        unknown_fee = 0
+        transaction = self.build_paymaster(transaction, unknown_fee)
+
+        paymaster_est_gas = self.web3.zksync.eth_estimate_gas(transaction.tx)
+        preprocessed_fee = gas_price * paymaster_est_gas
+
+        print(f"Paymaster fee: {preprocessed_fee}")
+
+        erc20 = ERC20Contract(self.web3.zksync, contract_address=self.SERC20_TOKEN.l2_address,
+                              account=self.account,
+                              gas_provider=self.gas_provider)
+
+        allowance = erc20.allowance(self.account.address, paymaster_address)
+        if allowance < preprocessed_fee:
+            is_approved = erc20.approve_deposit(paymaster_address, preprocessed_fee)
+            print(f"pass deposite: {is_approved}")
+
+        # INFO: encode paymaster params with real fee
+        transaction = self.build_paymaster(transaction, preprocessed_fee)
+
+        balance_before = self.web3.zksync.get_balance(self.account.address, EthBlockParams.PENDING.value)
+        print(f"balance before : {balance_before}")
+
+        tx712 = transaction.tx712(paymaster_est_gas)
+        singed_message = self.signer.sign_typed_data(tx712.to_eip712_struct())
+        msg = tx712.encode(singed_message)
+        tx_hash = self.web3.zksync.send_raw_transaction(msg)
+        tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
+        print(f"status: {tx_receipt['status']}")
+
+        balance_after = self.web3.zksync.get_balance(self.account.address, EthBlockParams.PENDING.value)
+        print(f"balance after: {balance_after}")
+
+
+if __name__ == "__main__":
+    paymaster = PaymasterExample()
+    paymaster.run()
+
+```
+

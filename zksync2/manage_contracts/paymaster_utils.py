@@ -2,6 +2,9 @@ import importlib.resources as pkg_resources
 from web3 import Web3
 from eth_typing import HexStr
 import json
+
+from web3.module import Module
+
 from zksync2.manage_contracts import contract_abi
 
 paymaster_flow_abi_cache = None
@@ -20,10 +23,9 @@ def _paymaster_flow_abi_default():
 
 class PaymasterFlowEncoder:
 
-    def __init__(self, zksync: Web3):
-        self.web3 = zksync
-        self.contract = self.web3.zksync.contract(address=None,
-                                                  abi=_paymaster_flow_abi_default())
+    def __init__(self, module: Module):
+        self.contract = module.contract(address=None,
+                                        abi=_paymaster_flow_abi_default())
 
     def encode_approval_based(self, address: HexStr, min_allowance: int, inner_input: bytes) -> HexStr:
         return self.contract.encodeABI(fn_name="approvalBased", args=[address, min_allowance, inner_input])

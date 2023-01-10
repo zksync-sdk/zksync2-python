@@ -43,7 +43,7 @@ class ERC20Contract:
     def _nonce(self) -> int:
         return self.module.get_transaction_count(self.account.address)
 
-    def approve_deposit(self, zksync_address: HexStr, max_erc20_approve_amount=MAX_ERC20_APPROVE_AMOUNT) -> TxReceipt:
+    def approve_deposit(self, zksync_address: HexStr, max_erc20_approve_amount=MAX_ERC20_APPROVE_AMOUNT) -> bool:
         return self.contract.functions.approve(zksync_address, max_erc20_approve_amount).call(
             {
                 "chainId": self.module.chain_id,
