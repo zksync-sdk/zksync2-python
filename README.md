@@ -740,6 +740,91 @@ if __name__ == "__main__":
 
 ```
 
+#### Execute contract method
+This is example of calling already deployed contract.<br>
+For this there is needed its ABI and deployed address
+
+```python
+from pathlib import Path
+import json
+from web3.types import TxParams
+from eth_account import Account
+from eth_account.signers.local import LocalAccount
+from eth_typing import HexStr
+from web3 import Web3
+from zksync2.signer.eth_signer import PrivateKeyEthSigner
+from zksync2.module.module_builder import ZkSyncBuilder
+from zksync2.transaction.transaction712 import TxFunctionCall
+from zksync2.core.types import ZkBlockParams
+
+
+def get_abi(p: Path):
+    with p.open(mode='r') as json_f:
+        return json.load(json_f)
+
+# INFO: this is contract wrapped that is used in the integration tests
+#       In general you may replace it with any other contract
+class CounterContractEncoder:
+    def __init__(self, web3: Web3, abi_path: Path):
+        self.web3 = web3
+        self.counter_contract = self.web3.eth.contract(abi=get_abi(abi_path))
+
+    def encode_method(self, fn_name, args: list) -> HexStr:
+        return self.counter_contract.encodeABI(fn_name, args)
+
+
+def execute_contract():
+    account: LocalAccount = Account.from_key("YOUR_PRIVATE_KEY")
+    zksync_web3 = ZkSyncBuilder.build("ZKSYNC_TEST_URL")
+    chain_id = zksync_web3.zksync.chain_id
+    signer = PrivateKeyEthSigner(account, chain_id)
+
+    contract_address = HexStr("ADDRESS_OF_DEPLOYED_CONTRACT")
+
+    nonce = zksync_web3.zksync.get_transaction_count(account.address, ZkBlockParams.COMMITTED.value)
+    counter_contract_encoder = CounterContractEncoder(zksync_web3, Path("./tests/contracts/counter_contract_abi.json"))
+    encoded_get = counter_contract_encoder.encode_method(fn_name="get", args=[])
+    eth_tx: TxParams = {
+        "from": account.address,
+        "to": contract_address,
+        "data": encoded_get,
+    }
+    eth_ret = zksync_web3.zksync.call(eth_tx, ZkBlockParams.COMMITTED.value)
+    result = int.from_bytes(eth_ret, "big", signed=True)
+    gas_price = zksync_web3.zksync.gas_price
+
+    call_data = counter_contract_encoder.encode_method(fn_name="increment", args=[1])
+    func_call = TxFunctionCall(chain_id=chain_id,
+                               nonce=nonce,
+                               from_=account.address,
+                               to=contract_address,
+                               data=call_data,
+                               gas_limit=0,
+                               gas_price=gas_price)
+    estimate_gas = zksync_web3.zksync.eth_estimate_gas(func_call.tx)
+    print(f"Fee for transaction is: {estimate_gas * gas_price}")
+
+    tx_712 = func_call.tx712(estimate_gas)
+
+    singed_message = signer.sign_typed_data(tx_712.to_eip712_struct())
+    msg = tx_712.encode(singed_message)
+    tx_hash = zksync_web3.zksync.send_raw_transaction(msg)
+    tx_receipt = zksync_web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
+    print(f"Status: {tx_receipt['status']}")
+
+    eth_ret2 = zksync_web3.zksync.call(eth_tx, ZkBlockParams.COMMITTED.value)
+    updated_result = int.from_bytes(eth_ret2, "big", signed=True)
+    # INFO: updated_result value must be equal result + 1
+    print(f"previous value: {result}, incremented result: {updated_result}")
+
+
+if __name__ == "__main__":
+    execute_contract()
+
+```
+
+
+
 #### Custom Paymaster
 This example is based on the `custom_paymaster_binary` that accepts any coin with <br>
 the 1:1 relation to native token( 18 decimals )
