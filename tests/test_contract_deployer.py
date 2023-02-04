@@ -6,8 +6,9 @@ from web3 import Web3
 from web3.types import Nonce
 
 from zksync2.core.utils import hash_byte_code
-from tests.contracts.utils import get_hex_binary
+from tests.contracts.utils import get_hex_binary, contract_path
 from zksync2.manage_contracts.contract_deployer import ContractDeployer
+from zksync2.manage_contracts.contract_encoder_base import ContractEncoder
 from zksync2.module.module_builder import ZkSyncBuilder
 
 
@@ -17,7 +18,8 @@ class ContractDeployerTests(TestCase):
     def setUp(self) -> None:
         self.web3 = ZkSyncBuilder.build(self.ZKSYNC_TEST_URL)
         self.contract_deployer = ContractDeployer(self.web3)
-        self.counter_contract_bin = get_hex_binary("counter_contract.hex")
+        counter_contract = ContractEncoder.from_json(self.web3, contract_path("Counter.json"))
+        self.counter_contract_bin = counter_contract.bytecode
 
     def test_compute_l2_create2(self):
         expected = Web3.toChecksumAddress("0x0790aff699b38f40929840469a72fb40e9763716")

@@ -26,3 +26,7 @@ def get_abi(name: str):
     with pkg_resources.path(contracts, name) as p:
         with p.open(mode='r') as json_f:
             return json.load(json_f)
+
+
+def contract_path(contract_name: str):
+    return pkg_resources.path(contracts, contract_name)

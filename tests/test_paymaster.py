@@ -3,6 +3,8 @@ from unittest import TestCase, skip
 from eth_typing import HexStr
 from eth_utils import keccak, remove_0x_prefix
 from web3 import Web3
+
+from zksync2.manage_contracts.contract_encoder_base import ContractEncoder
 from zksync2.manage_contracts.paymaster_utils import PaymasterFlowEncoder
 from zksync2.manage_contracts.erc20_contract import ERC20Contract
 from zksync2.manage_contracts.gas_provider import StaticGasProvider
@@ -11,7 +13,7 @@ from zksync2.core.types import Token, EthBlockParams, ZkBlockParams, PaymasterPa
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
 from zksync2.signer.eth_signer import PrivateKeyEthSigner
-from tests.contracts.utils import get_hex_binary
+from tests.contracts.utils import get_hex_binary, contract_path
 from zksync2.transaction.transaction712 import TxCreate2Contract, TxFunctionCall
 
 
@@ -41,8 +43,7 @@ class PaymasterTests(TestCase):
         self.chain_id = self.web3.zksync.chain_id
         self.signer = PrivateKeyEthSigner(self.account, self.chain_id)
         self.gas_provider = StaticGasProvider(Web3.toWei(1, "gwei"), 555000)
-
-        self.custom_paymaster_contract_bin = get_hex_binary("custom_paymaster_binary.hex")
+        self.custom_paymaster = ContractEncoder.from_json(self.web3, contract_path("CustomPaymaster.json"))
 
     def _is_deployed(self):
         return len(self.web3.zksync.get_code(self.paymaster_address)) > 0
@@ -65,7 +66,7 @@ class PaymasterTests(TestCase):
                                                 from_=self.account.address,
                                                 gas_limit=0,
                                                 gas_price=gas_price,
-                                                bytecode=self.custom_paymaster_contract_bin,
+                                                bytecode=self.custom_paymaster.bytecode,
                                                 call_data=constructor,
                                                 salt=self.SALT)
 
@@ -129,7 +130,7 @@ class PaymasterTests(TestCase):
         self.assertEqual(1, tx_receipt["status"])
 
     def build_paymaster(self, trans: TxFunctionCall, fee: int) -> TxFunctionCall:
-        paymaster_encoder = PaymasterFlowEncoder(self.web3.zksync)
+        paymaster_encoder = PaymasterFlowEncoder(self.web3)
         encoded_approval_base = paymaster_encoder.encode_approval_based(self.SERC20_TOKEN.l2_address,
                                                                         fee,
                                                                         b'')

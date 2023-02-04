@@ -1,13 +1,13 @@
 import os
 from decimal import Decimal
 from unittest import TestCase, skip
-
 from eth_typing import HexStr
 from web3 import Web3
 from web3.types import TxParams
 from web3.middleware import geth_poa_middleware
 from zksync2.manage_contracts.contract_deployer import ContractDeployer
-from zksync2.manage_contracts.erc20_contract import ERC20FunctionEncoder
+from zksync2.manage_contracts.contract_encoder_base import ContractEncoder, BaseContractEncoder
+from zksync2.manage_contracts.erc20_contract import ERC20Encoder
 from zksync2.manage_contracts.gas_provider import StaticGasProvider
 from zksync2.manage_contracts.nonce_holder import NonceHolder
 from zksync2.module.module_builder import ZkSyncBuilder
@@ -15,12 +15,11 @@ from zksync2.manage_contracts.l2_bridge import L2BridgeEncoder
 from zksync2.core.types import Token, ZkBlockParams, BridgeAddresses, EthBlockParams
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
-
 from zksync2.signer.eth_signer import PrivateKeyEthSigner
 from zksync2.provider.eth_provider import EthereumProvider
-from tests.contracts.constructor_contract_utils import ConstructorContractEncoder
-from tests.contracts.counter_contract_utils import CounterContractEncoder
-from tests.contracts.utils import get_hex_binary
+# from tests.contracts.constructor_contract_utils import TestContract
+# from tests.contracts.counter_contract_utils import TestCounterContractEncoder
+from tests.contracts.utils import get_hex_binary, contract_path
 from zksync2.transaction.transaction712 import TxFunctionCall, TxCreateContract, TxCreate2Contract
 
 
@@ -63,7 +62,7 @@ class ZkSyncWeb3Tests(TestCase):
         txn_receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
         self.assertEqual(txn_receipt['status'], 1)
 
-    # @skip("Integration test, used for develop purposes only")
+    @skip("Integration test, used for develop purposes only")
     def test_get_l1_balance(self):
         """
         INFO: For minting use: https://goerli-faucet.pk910.de
@@ -196,7 +195,7 @@ class ZkSyncWeb3Tests(TestCase):
         self.assertTrue(bool(not_eth_tokens), "Can't get non eth tokens")
         token_address = not_eth_tokens[0].l2_address
 
-        erc20_encoder = ERC20FunctionEncoder(self.web3)
+        erc20_encoder = ERC20Encoder(self.web3)
         transfer_params = [self.account.address, 0]
         call_data = erc20_encoder.encode_method("transfer", args=transfer_params)
 
@@ -274,7 +273,7 @@ class ZkSyncWeb3Tests(TestCase):
 
     @skip("Integration test, used for develop purposes only")
     def test_estimate_gas_execute(self):
-        erc20func_encoder = ERC20FunctionEncoder(self.web3)
+        erc20func_encoder = ERC20Encoder(self.web3)
         transfer_args = [
             Web3.toChecksumAddress("0xe1fab3efd74a77c23b426c302d96372140ff7d0c"),
             1
@@ -297,7 +296,7 @@ class ZkSyncWeb3Tests(TestCase):
 
     @skip("Integration test, used for develop purposes only")
     def test_estimate_gas_deploy_contract(self):
-        counter_contract_bin = get_hex_binary("counter_contract.hex")
+        counter_contract = ContractEncoder.from_json(self.web3, contract_path("Counter.json"))
         nonce = self.web3.zksync.get_transaction_count(self.account.address, EthBlockParams.PENDING.value)
         gas_price = self.web3.zksync.gas_price
         create2_contract = TxCreate2Contract(web3=self.web3,
@@ -306,7 +305,7 @@ class ZkSyncWeb3Tests(TestCase):
                                              from_=self.account.address,
                                              gas_limit=0,
                                              gas_price=gas_price,
-                                             bytecode=counter_contract_bin)
+                                             bytecode=counter_contract.bytecode)
         estimate_gas = self.web3.zksync.eth_estimate_gas(create2_contract.tx)
         print(f"test_estimate_gas_deploy_contract, estimate_gas: {estimate_gas}")
         self.assertGreater(estimate_gas, 0, "test_estimate_gas_deploy_contract, estimate_gas must be greater 0")
@@ -319,6 +318,7 @@ class ZkSyncWeb3Tests(TestCase):
         deployment_nonce = nonce_holder.get_deployment_nonce(self.account.address)
         deployer = ContractDeployer(self.web3)
         precomputed_address = deployer.compute_l2_create_address(self.account.address, deployment_nonce)
+        counter_contract = ContractEncoder.from_json(self.web3, contract_path("Counter.json"))
 
         print(f"precomputed address: {precomputed_address}")
 
@@ -329,7 +329,7 @@ class ZkSyncWeb3Tests(TestCase):
                                            from_=self.account.address,
                                            gas_limit=0,  # UNKNOWN AT THIS STATE
                                            gas_price=gas_price,
-                                           bytecode=get_hex_binary("counter_contract.hex"),
+                                           bytecode=counter_contract.bytecode,
                                            salt=random_salt)
         estimate_gas = self.web3.zksync.eth_estimate_gas(create_contract.tx)
         print(f"Fee for transaction is: {estimate_gas * gas_price}")
@@ -342,9 +342,7 @@ class ZkSyncWeb3Tests(TestCase):
         contract_address = tx_receipt["contractAddress"]
         print(f"contract address: {contract_address}")
         self.assertEqual(precomputed_address.lower(), contract_address.lower())
-
-        counter_contract_encoder = CounterContractEncoder(self.web3)
-        call_data = counter_contract_encoder.encode_method(fn_name="get", args=[])
+        call_data = counter_contract.encode_method(fn_name="get", args=[])
         eth_tx: TxParams = {
             "from": self.account.address,
             "to": contract_address,
@@ -367,7 +365,7 @@ class ZkSyncWeb3Tests(TestCase):
         deployer = ContractDeployer(self.web3)
         precomputed_address = deployer.compute_l2_create_address(self.account.address, deployment_nonce)
 
-        constructor_encoder = ConstructorContractEncoder(self.web3)
+        constructor_encoder = ContractEncoder.from_json(self.web3, contract_path("Constructor.json"))
         encoded_ctor = constructor_encoder.encode_constructor(a=42, b=43, shouldRevert=False)
 
         create_contract = TxCreateContract(web3=self.web3,
@@ -414,9 +412,10 @@ class ZkSyncWeb3Tests(TestCase):
         nonce = self.web3.zksync.get_transaction_count(self.account.address, EthBlockParams.PENDING.value)
         gas_price = self.web3.zksync.gas_price
         deployer = ContractDeployer(self.web3)
-        counter_contract_bin = get_hex_binary("counter_contract.hex")
+
+        counter_contract_encoder = ContractEncoder.from_json(self.web3, contract_path("Counter.json"))
         precomputed_address = deployer.compute_l2_create2_address(sender=self.account.address,
-                                                                  bytecode=counter_contract_bin,
+                                                                  bytecode=counter_contract_encoder.bytecode,
                                                                   constructor=b'',
                                                                   salt=random_salt)
         create2_contract = TxCreate2Contract(web3=self.web3,
@@ -425,7 +424,7 @@ class ZkSyncWeb3Tests(TestCase):
                                              from_=self.account.address,
                                              gas_limit=0,
                                              gas_price=gas_price,
-                                             bytecode=counter_contract_bin,
+                                             bytecode=counter_contract_encoder.bytecode,
                                              salt=random_salt)
         estimate_gas = self.web3.zksync.eth_estimate_gas(create2_contract.tx)
         print(f"Fee for transaction is: {estimate_gas * gas_price}")
@@ -441,8 +440,6 @@ class ZkSyncWeb3Tests(TestCase):
         contract_address = tx_receipt["contractAddress"]
         print(f"contract address: {contract_address}")
         self.assertEqual(precomputed_address.lower(), contract_address.lower())
-
-        counter_contract_encoder = CounterContractEncoder(self.web3)
         call_data = counter_contract_encoder.encode_method(fn_name="get", args=[])
         eth_tx: TxParams = {
             "from": self.account.address,
@@ -456,8 +453,8 @@ class ZkSyncWeb3Tests(TestCase):
     @skip("Integration test, used for develop purposes only")
     def test_deploy_contract_with_deps_create(self):
         random_salt = generate_random_salt()
-        foo = get_hex_binary("foo.hex")
-        foo_deps = get_hex_binary("foo_deps.hex")
+        import_contract = ContractEncoder.from_json(self.web3, contract_path("Import.json"))
+        import_dependency_contract = ContractEncoder.from_json(self.web3, contract_path("Foo.json"))
         nonce = self.web3.zksync.get_transaction_count(self.account.address, EthBlockParams.PENDING.value)
         gas_price = self.web3.zksync.gas_price
         nonce_holder = NonceHolder(self.web3, self.account)
@@ -472,8 +469,8 @@ class ZkSyncWeb3Tests(TestCase):
                                            from_=self.account.address,
                                            gas_limit=0,
                                            gas_price=gas_price,
-                                           bytecode=foo,
-                                           deps=[foo_deps],
+                                           bytecode=import_contract.bytecode,
+                                           deps=[import_dependency_contract.bytecode],
                                            salt=random_salt)
 
         estimate_gas = self.web3.zksync.eth_estimate_gas(create_contract.tx)
@@ -533,7 +530,7 @@ class ZkSyncWeb3Tests(TestCase):
         self.CONTRACT_ADDRESS = HexStr("0xfc2037739c537CCAf5F184eb105B69cA612a208F")
 
         nonce = self.web3.zksync.get_transaction_count(self.account.address, ZkBlockParams.COMMITTED.value)
-        counter_contract_encoder = CounterContractEncoder(self.web3)
+        counter_contract_encoder = TestCounterContractEncoder(self.web3)
         encoded_get = counter_contract_encoder.encode_method(fn_name="get", args=[])
         eth_tx: TxParams = {
             "from": self.account.address,

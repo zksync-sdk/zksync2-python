@@ -5,10 +5,9 @@ from eth_typing import HexStr
 from web3 import Web3
 from web3.module import Module
 from eth_account.signers.base import BaseAccount
-from web3.types import TxReceipt
 
+from zksync2.manage_contracts.contract_encoder_base import BaseContractEncoder
 from zksync2.manage_contracts.gas_provider import GasProvider
-
 from zksync2.manage_contracts import contract_abi
 
 erc_20_abi_cache = None
@@ -72,12 +71,9 @@ class ERC20Contract:
             })
 
 
-class ERC20FunctionEncoder:
+class ERC20Encoder(BaseContractEncoder):
 
-    def __init__(self, web3_eth: Web3, abi: Optional[dict] = None):
+    def __init__(self, web3: Web3, abi: Optional[dict] = None):
         if abi is None:
             abi = _erc_20_abi_default()
-        self.contract = web3_eth.eth.contract(address=None, abi=abi)
-
-    def encode_method(self, fn_name, args) -> HexStr:
-        return self.contract.encodeABI(fn_name=fn_name, args=args)
+        super(ERC20Encoder, self).__init__(web3, abi)

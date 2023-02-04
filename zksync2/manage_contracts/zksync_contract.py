@@ -3,8 +3,6 @@ from eth_typing import HexStr
 from web3 import Web3
 from pathlib import Path
 from eth_account.signers.base import BaseAccount
-from zksync2.manage_contracts.contract_base import ContractBase
-
 
 zksync_abi_cache = None
 zksync_abi_default_path = Path('contract_abi/IZkSync.json')
@@ -20,10 +18,30 @@ def _zksync_abi_default():
     return zksync_abi_cache
 
 
-class ZkSyncContract(ContractBase):
+class ZkSyncContract:
 
     def __init__(self, zksync_main_contract: HexStr, web3: Web3, account: BaseAccount):
-        super().__init__(zksync_main_contract, web3, account, _zksync_abi_default())
+        check_sum_address = Web3.toChecksumAddress(zksync_main_contract)
+        self.contract_address = check_sum_address
+        self.web3 = web3
+        self.contract = self.web3.eth.contract(self.contract_address, abi=_zksync_abi_default())
+        self.account = account
+
+    def _call_method(self, method_name, *args, amount=None, **kwargs):
+        params = {}
+        if amount is not None:
+            params['value'] = amount
+        params['from'] = self.account.address
+        transaction = getattr(self.contract.functions, method_name)(
+            *args,
+            **kwargs
+        ).buildTransaction(params)
+
+        transaction.update({'nonce': self.web3.eth.get_transaction_count(self.account.address)})
+        signed_tx = self.account.sign_transaction(transaction)
+        txn_hash = self.web3.eth.send_raw_transaction(signed_tx.rawTransaction)
+        txn_receipt = self.web3.eth.waitForTransactionReceipt(txn_hash)
+        return txn_receipt
 
     def activate_priority_mode(self, eth_expiration_block: int):
         return self._call_method('activatePriorityMode', eth_expiration_block)

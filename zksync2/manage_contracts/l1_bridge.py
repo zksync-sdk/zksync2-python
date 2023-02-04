@@ -6,6 +6,7 @@ from eth_typing import HexStr
 from typing import List, Optional
 import json
 
+from zksync2.manage_contracts.contract_encoder_base import BaseContractEncoder
 from zksync2.manage_contracts.gas_provider import GasProvider
 from zksync2.manage_contracts import contract_abi
 
@@ -114,12 +115,9 @@ class L1Bridge:
         return self.contract.address
 
 
-class L1BridgeEncoder:
+class L1BridgeEncoder(BaseContractEncoder):
 
     def __init__(self, web3: Web3, abi: Optional[dict] = None):
         if abi is None:
             abi = _l1_bridge_abi_default()
-        self.contract = web3.eth.contract(address=None, abi=abi)
-
-    def encode_function(self, fn_name: str, args: list) -> bytes:
-        return self.contract.encodeABI(fn_name=fn_name, args=args)
+        super(L1BridgeEncoder, self).__init__(web3, abi)
