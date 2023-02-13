@@ -53,7 +53,7 @@ zks_get_testnet_paymaster_address = RPCEndpoint("zks_getTestnetPaymaster")
 
 def meta_formatter(eip712: EIP712Meta) -> dict:
     ret = {
-        "ergsPerPubdata": integer_to_hex(eip712.ergs_per_pub_data)
+        "gasPerPubdata": integer_to_hex(eip712.gas_per_pub_data)
     }
     if eip712.custom_signature is not None:
         ret["customSignature"] = eip712.custom_signature.hex()
@@ -116,15 +116,14 @@ def to_zks_account_balances(t: dict) -> ZksAccountBalances:
 
 
 def to_fee(v: dict) -> Fee:
-
-    ergs_limit = int(remove_0x_prefix(v['ergs_limit']), 16)
-    max_fee_per_erg  = int(remove_0x_prefix(v['max_fee_per_erg']), 16)
-    max_priority_fee_per_erg = int(remove_0x_prefix(v['max_priority_fee_per_erg']), 16)
-    ergs_per_pubdata_limit = int(remove_0x_prefix(v['ergs_per_pubdata_limit']), 16)
-    return Fee(ergs_limit=ergs_limit,
-               max_fee_per_erg=max_fee_per_erg,
-               max_priority_fee_per_erg=max_priority_fee_per_erg,
-               ergs_per_pub_data_limit=ergs_per_pubdata_limit)
+    gas_limit = int(remove_0x_prefix(v['gas_limit']), 16)
+    max_fee_per_gas = int(remove_0x_prefix(v['max_fee_per_gas']), 16)
+    max_priority_fee_per_gas = int(remove_0x_prefix(v['max_priority_fee_per_gas']), 16)
+    gas_per_pubdata_limit = int(remove_0x_prefix(v['gas_per_pubdata_limit']), 16)
+    return Fee(gas_limit=gas_limit,
+               max_fee_per_gas=max_fee_per_gas,
+               max_priority_fee_per_gas=max_priority_fee_per_gas,
+               gas_per_pubdata_limit=gas_per_pubdata_limit)
 
 
 ZKSYNC_RESULT_FORMATTERS: Dict[RPCEndpoint, Callable[..., Any]] = {
@@ -248,12 +247,16 @@ class ZkSync(Eth, ABC):
 
     def __init__(self, web3: "Web3"):
         super(ZkSync, self).__init__(web3)
+        self.main_contract_address = None
+        self.bridge_addresses = None
 
     def zks_estimate_fee(self, transaction: Transaction) -> Fee:
         return self._zks_estimate_fee(transaction)
 
     def zks_main_contract(self) -> HexStr:
-        return self._zks_main_contract()
+        if self.main_contract_address is None:
+            self.main_contract_address = self._zks_main_contract()
+        return self.main_contract_address
 
     def zks_get_confirmed_tokens(self, offset: From, limit: Limit) -> List[Token]:
         return self._zks_get_confirmed_tokens(offset, limit)
@@ -268,7 +271,9 @@ class ZkSync(Eth, ABC):
         return self._zks_get_all_account_balances(addr)
 
     def zks_get_bridge_contracts(self) -> BridgeAddresses:
-        return self._zks_get_bridge_contracts()
+        if self.bridge_addresses is None:
+            self.bridge_addresses = self._zks_get_bridge_contracts()
+        return self.bridge_addresses
 
     def zks_get_l2_to_l1_msg_proof(self,
                                    block: int,

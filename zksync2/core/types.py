@@ -52,18 +52,23 @@ class Token:
 
 @dataclass
 class Fee:
-    ergs_limit: int = 0
-    max_fee_per_erg: int = 0
-    max_priority_fee_per_erg : int = 0
-    ergs_per_pub_data_limit: int = 0
+    gas_limit: int = 0
+    max_fee_per_gas: int = 0
+    max_priority_fee_per_gas: int = 0
+    gas_per_pubdata_limit: int = 0
 
+
+# @dataclass
+# class BridgeAddresses:
+#     l1_eth_default_bridge: HexStr
+#     l2_eth_default_bridge: HexStr
+#     l1_erc20_default_bridge: HexStr
+#     l2_erc20_default_bridge: HexStr
 
 @dataclass
 class BridgeAddresses:
-    l1_eth_default_bridge: HexStr
-    l2_eth_default_bridge: HexStr
-    l1_erc20_default_bridge: HexStr
-    l2_erc20_default_bridge: HexStr
+    erc20_l1_default_bridge: HexStr
+    erc20_l2_default_bridge: HexStr
 
 
 VmExecutionSteps = NewType("VmExecutionSteps", Any)

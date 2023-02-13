@@ -6,7 +6,7 @@ from web3 import Web3
 from web3.types import TxParams
 from web3.middleware import geth_poa_middleware
 from zksync2.manage_contracts.contract_deployer import ContractDeployer
-from zksync2.manage_contracts.contract_encoder_base import ContractEncoder, BaseContractEncoder
+from zksync2.manage_contracts.contract_encoder_base import ContractEncoder
 from zksync2.manage_contracts.erc20_contract import ERC20Encoder
 from zksync2.manage_contracts.gas_provider import StaticGasProvider
 from zksync2.manage_contracts.nonce_holder import NonceHolder
@@ -17,8 +17,6 @@ from eth_account import Account
 from eth_account.signers.local import LocalAccount
 from zksync2.signer.eth_signer import PrivateKeyEthSigner
 from zksync2.provider.eth_provider import EthereumProvider
-# from tests.contracts.constructor_contract_utils import TestContract
-# from tests.contracts.counter_contract_utils import TestCounterContractEncoder
 from tests.contracts.utils import get_hex_binary, contract_path
 from zksync2.transaction.transaction712 import TxFunctionCall, TxCreateContract, TxCreate2Contract
 

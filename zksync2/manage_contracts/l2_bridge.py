@@ -1,13 +1,11 @@
+import json
 import importlib.resources as pkg_resources
 from eth_account.signers.base import BaseAccount
 from web3 import Web3
 from web3.contract import Contract
 from eth_typing import HexStr
 from typing import Optional
-import json
-
 from web3.types import TxReceipt
-
 from zksync2.manage_contracts.contract_encoder_base import BaseContractEncoder
 from zksync2.manage_contracts.gas_provider import GasProvider
 from zksync2.manage_contracts import contract_abi

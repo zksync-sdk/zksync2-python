@@ -16,7 +16,7 @@ def _icontract_deployer_abi_default():
     global icontract_deployer_abi_cache
 
     if icontract_deployer_abi_cache is None:
-        with pkg_resources.path(contract_abi, "IContractDeployer.json") as p:
+        with pkg_resources.path(contract_abi, "ContractDeployer.json") as p:
             with p.open(mode='r') as json_file:
                 data = json.load(json_file)
                 icontract_deployer_abi_cache = data

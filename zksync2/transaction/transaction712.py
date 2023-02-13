@@ -70,7 +70,7 @@ class Transaction712:
                 ('unknown2', binary),
                 ('chain_id2', big_endian_int),
                 ('from', binary),
-                ('ergsPerPubdata', big_endian_int),
+                ('gasPerPubdata', big_endian_int),
                 ('factoryDeps', rlpList(elements=factory_deps_elements, strict=False)),
                 ('signature', binary),
                 ('paymaster_params', rlpList(elements=paymaster_params_elements, strict=False))
@@ -97,7 +97,7 @@ class Transaction712:
             "unknown2": b'',
             "chain_id2": self.chain_id,
             "from": encode_address(self.from_),
-            "ergsPerPubdata": self.meta.ergs_per_pub_data,
+            "gasPerPubdata": self.meta.gas_per_pub_data,
             "factoryDeps": factory_deps_data,
             "signature": rlp_signature,
             "paymaster_params": paymaster_params_data
@@ -125,10 +125,10 @@ class Transaction712:
         setattr(Transaction, 'txType',                   Uint(256))
         setattr(Transaction, 'from',                     Uint(256))
         setattr(Transaction, 'to',                       Uint(256))
-        setattr(Transaction, 'ergsLimit',                Uint(256))
-        setattr(Transaction, 'ergsPerPubdataByteLimit',  Uint(256))
-        setattr(Transaction, 'maxFeePerErg',             Uint(256))
-        setattr(Transaction, 'maxPriorityFeePerErg',     Uint(256))
+        setattr(Transaction, 'gasLimit',                Uint(256))
+        setattr(Transaction, 'gasPerPubdataByteLimit',   Uint(256))
+        setattr(Transaction, 'maxFeePerGas',             Uint(256))
+        setattr(Transaction, 'maxPriorityFeePerGas',     Uint(256))
         setattr(Transaction, 'paymaster',                Uint(256))
         setattr(Transaction, 'nonce',                    Uint(256))
         setattr(Transaction, 'value',                    Uint(256))
@@ -145,10 +145,10 @@ class Transaction712:
             'txType': self.EIP_712_TX_TYPE,
             'from': int(self.from_, 16),
             'to': int(self.to, 16),
-            'ergsLimit': self.gas_limit,
-            'ergsPerPubdataByteLimit': self.meta.ergs_per_pub_data,
-            'maxFeePerErg': self.maxFeePerGas,
-            'maxPriorityFeePerErg': self.maxPriorityFeePerGas,
+            'gasLimit': self.gas_limit,
+            'gasPricePerPubdata': self.meta.gas_per_pub_data,
+            'maxFeePerGas': self.maxFeePerGas,
+            'maxPriorityFeePerGas': self.maxPriorityFeePerGas,
             'paymaster': paymaster,
             'nonce': self.nonce,
             'value': self.value,
@@ -235,7 +235,7 @@ class TxCreateContract(TxBase, ABC):
             for dep in deps:
                 factory_deps.append(dep)
         factory_deps.append(bytecode)
-        eip712_meta = EIP712Meta(ergs_per_pub_data=EIP712Meta.ERGS_PER_PUB_DATA_DEFAULT,
+        eip712_meta = EIP712Meta(gas_per_pub_data=EIP712Meta.GAS_PER_PUB_DATA_DEFAULT,
                                  custom_signature=None,
                                  factory_deps=factory_deps,
                                  paymaster_params=None)
@@ -281,7 +281,7 @@ class TxCreate2Contract(TxBase, ABC):
                 factory_deps.append(dep)
         factory_deps.append(bytecode)
 
-        eip712_meta = EIP712Meta(ergs_per_pub_data=EIP712Meta.ERGS_PER_PUB_DATA_DEFAULT,
+        eip712_meta = EIP712Meta(gas_per_pub_data=EIP712Meta.GAS_PER_PUB_DATA_DEFAULT,
                                  custom_signature=None,
                                  factory_deps=factory_deps,
                                  paymaster_params=None)

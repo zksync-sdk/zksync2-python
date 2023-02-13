@@ -1,7 +1,4 @@
 {
-  "_format": "hh-zksolc-artifact-1",
-  "contractName": "IPaymasterFlow",
-  "sourceName": "cache-zk/solpp-generated-contracts/interfaces/IPaymasterFlow.sol",
   "abi": [
     {
       "inputs": [
@@ -39,10 +36,5 @@
       "stateMutability": "nonpayable",
       "type": "function"
     }
-  ],
-  "bytecode": "0x",
-  "deployedBytecode": "0x",
-  "linkReferences": {},
-  "deployedLinkReferences": {},
-  "factoryDeps": {}
+  ]
 }
