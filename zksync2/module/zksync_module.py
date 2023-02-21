@@ -27,6 +27,7 @@ from web3.types import RPCEndpoint, _Hash32, TxReceipt
 
 from zksync2.core.types import TransactionHash, Limit, L2WithdrawTxHash, From, ContractSourceDebugInfo, \
     BridgeAddresses, TokenAddress
+from zksync2.manage_contracts.zksync_contract import ZkSyncContract
 from zksync2.module.request_types import *
 from zksync2.module.response_types import *
 from eth_typing import Address
@@ -102,10 +103,10 @@ def to_token(t: dict) -> Token:
 
 
 def to_bridge_address(t: dict) -> BridgeAddresses:
-    return BridgeAddresses(l1_eth_default_bridge=HexStr(to_checksum_address(t["l1EthDefaultBridge"])),
-                           l2_eth_default_bridge=HexStr(to_checksum_address(t["l2EthDefaultBridge"])),
-                           l1_erc20_default_bridge=HexStr(to_checksum_address(t["l1Erc20DefaultBridge"])),
-                           l2_erc20_default_bridge=HexStr(to_checksum_address(t["l2Erc20DefaultBridge"])))
+    return BridgeAddresses(
+        erc20_l1_default_bridge=HexStr(to_checksum_address(t["l1Erc20DefaultBridge"])),
+        erc20_l2_default_bridge=HexStr(to_checksum_address(t["l2Erc20DefaultBridge"]))
+    )
 
 
 def to_zks_account_balances(t: dict) -> ZksAccountBalances:
@@ -287,6 +288,28 @@ class ZkSync(Eth, ABC):
 
     def eth_estimate_gas(self, tx: Transaction) -> int:
         return self._eth_estimate_gas(tx)
+
+    @staticmethod
+    def get_l2_hash_from_priority_op(tx_receipt: TxReceipt, main_contract: ZkSyncContract):
+        # TODO: wrong tx hash log extraction, wait transaction on ZkSync side provides timeout error
+        tx_hash = None
+        for log in tx_receipt["logs"]:
+            if log.address.lower() == main_contract.address.lower():
+                tx_hash = log.transactionHash
+                break
+        if tx_hash is None:
+            raise RuntimeError("Failed to parse tx logs")
+        return tx_hash
+
+    def get_l2_transaction_from_priority_op(self, tx_receipt, main_contract: ZkSyncContract):
+        l2_hash = self.get_l2_hash_from_priority_op(tx_receipt, main_contract)
+        # INFO: loop to get the transaction in chain
+        self.wait_for_transaction_receipt(l2_hash)
+        return self.get_transaction(l2_hash)
+
+    def get_priority_op_response(self, tx_receipt, main_contract: ZkSyncContract):
+        tx = self.get_l2_transaction_from_priority_op(tx_receipt, main_contract)
+        return tx
 
     def wait_for_transaction_receipt(self,
                                      transaction_hash: _Hash32,

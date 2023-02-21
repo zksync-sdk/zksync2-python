@@ -5,6 +5,7 @@ from eth_typing import HexStr
 from web3 import Web3
 from web3.module import Module
 from eth_account.signers.base import BaseAccount
+from web3.types import TxReceipt
 
 from zksync2.manage_contracts.contract_encoder_base import BaseContractEncoder
 from zksync2.manage_contracts.gas_provider import GasProvider
@@ -31,23 +32,37 @@ class ERC20Contract:
     def __init__(self, web3: Module,
                  contract_address: HexStr,
                  account: BaseAccount,
-                 gas_provider: GasProvider):
+                 # gas_provider: GasProvider
+                 ):
         check_sum_address = Web3.toChecksumAddress(contract_address)
         self.contract_address = check_sum_address
         self.module = web3
         self.contract = self.module.contract(self.contract_address, abi=_erc_20_abi_default())
         self.account = account
-        self.gas_provider = gas_provider
+        # self.gas_provider = gas_provider
 
     def _nonce(self) -> int:
         return self.module.get_transaction_count(self.account.address)
 
-    def approve_deposit(self, zksync_address: HexStr, max_erc20_approve_amount=MAX_ERC20_APPROVE_AMOUNT) -> bool:
-        return self.contract.functions.approve(zksync_address, max_erc20_approve_amount).call(
+    def approve(self,
+                zksync_address: HexStr,
+                amount,
+                gas_limit: int) -> TxReceipt:
+        nonce = self._nonce()
+        gas_price = self.module.gas_price
+        tx = self.contract.functions.approve(zksync_address,
+                                             amount).build_transaction(
             {
                 "chainId": self.module.chain_id,
                 "from": self.account.address,
+                "gasPrice": gas_price,
+                "gas": gas_limit,
+                "nonce": nonce
             })
+        signed_tx = self.account.sign_transaction(tx)
+        txn_hash = self.module.send_raw_transaction(signed_tx.rawTransaction)
+        txn_receipt = self.module.wait_for_transaction_receipt(txn_hash)
+        return txn_receipt
 
     def allowance(self, owner: HexStr, sender: HexStr) -> int:
         return self.contract.functions.allowance(owner, sender).call(

@@ -1,6 +1,9 @@
 import os
 from unittest import TestCase
 from web3 import Web3
+
+from tests.test_config import ZKSYNC_TEST_URL, ETH_TEST_URL, PRIVATE_KEY2
+from zksync2.core.utils import RecommendedGasLimit
 from zksync2.manage_contracts.zksync_contract import ZkSyncContract
 
 from zksync2.manage_contracts.gas_provider import StaticGasProvider
@@ -15,15 +18,16 @@ def generate_random_salt() -> bytes:
 
 
 class ZkSyncWeb3Tests(TestCase):
-    ZKSYNC_TEST_URL = "https://zksync2-testnet.zksync.dev"
-    ETH_TEST_URL = "https://rpc.ankr.com/eth_goerli"
-    # ZKSYNC_TEST_URL = "http://127.0.0.1:3050"
-    PRIVATE_KEY = bytes.fromhex("1f0245d47b3a84299aeb121ac33c2dbd1cdb3d3c2079b3240e63796e75ee8b70")
+    # ZKSYNC_TEST_URL = "https://zksync2-testnet.zksync.dev"
+    # ETH_TEST_URL = "https://rpc.ankr.com/eth_goerli"
+    # # ZKSYNC_TEST_URL = "http://127.0.0.1:3050"
+    # PRIVATE_KEY = bytes.fromhex("1f0245d47b3a84299aeb121ac33c2dbd1cdb3d3c2079b3240e63796e75ee8b70")
+    # PRIVATE_KEY2 = bytes.fromhex("fd1f96220fa3a40c46d65f81d61dd90af600746fd47e5c82673da937a48b38ef")
 
     def setUp(self) -> None:
-        self.zksync = ZkSyncBuilder.build(self.ZKSYNC_TEST_URL)
-        self.eth_web3 = Web3(Web3.HTTPProvider(self.ETH_TEST_URL))
-        self.account: LocalAccount = Account.from_key(self.PRIVATE_KEY)
+        self.zksync = ZkSyncBuilder.build(ZKSYNC_TEST_URL)
+        self.eth_web3 = Web3(Web3.HTTPProvider(ETH_TEST_URL))
+        self.account: LocalAccount = Account.from_key(PRIVATE_KEY2)
         self.chain_id = self.zksync.zksync.chain_id
         self.signer = PrivateKeyEthSigner(self.account, self.chain_id)
         # TODO: use Eth Web3
@@ -103,6 +107,8 @@ class ZkSyncWeb3Tests(TestCase):
     def test_request_l2_transaction(self):
         RECOMMENDED_DEPOSIT_L2_GAS_LIMIT = 10000000
         DEPOSIT_GAS_PER_PUBDATA_LIMIT = 50000
+        gas_price = self.eth_web3.eth.gas_price
+        gas_limit = RecommendedGasLimit.EXECUTE.value
         l2_value = 0
         tx_receipt = self.zksync_contract.request_l2_transaction(self.zksync_contract.address,
                                                                  l2_value,
@@ -110,5 +116,8 @@ class ZkSyncWeb3Tests(TestCase):
                                                                  RECOMMENDED_DEPOSIT_L2_GAS_LIMIT,
                                                                  DEPOSIT_GAS_PER_PUBDATA_LIMIT,
                                                                  [],
-                                                                 self.zksync_contract.address)
+                                                                 self.zksync_contract.address,
+                                                                 gas_price,
+                                                                 gas_limit,
+                                                                 0)
         print(f"receipt: {tx_receipt}")

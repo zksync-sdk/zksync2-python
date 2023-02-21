@@ -1,95 +1,210 @@
 from decimal import Decimal
-from typing import Optional
-
+from typing import Optional, Union, List
 from eth_account.signers.base import BaseAccount
 from eth_typing import HexStr
 from web3 import Web3
 from web3.types import TxReceipt
 
+from zksync2.core.utils import RecommendedGasLimit, to_bytes
 from zksync2.manage_contracts.erc20_contract import ERC20Contract
 from zksync2.manage_contracts.gas_provider import GasProvider
 from zksync2.manage_contracts.l1_bridge import L1Bridge
 from zksync2.manage_contracts.priority_op_tree import PriorityOpTree
 from zksync2.manage_contracts.priority_queue_type import PriorityQueueType
 from zksync2.manage_contracts.zksync_contract import ZkSyncContract
-from zksync2.core.types import Token, ADDRESS_DEFAULT, BridgeAddresses
+from zksync2.core.types import Token, ADDRESS_DEFAULT, BridgeAddresses, EthBlockParams
+
+
+def check_base_cost(base_cost: int, value: int):
+    if base_cost > value:
+        raise RuntimeError(f"The base cost of performing the priority operation is higher than"
+                           f" the provided value parameter"
+                           f" for the transaction: base_cost: ${base_cost},"
+                           f" provided value: ${value}`")
 
 
 class EthereumProvider:
-    GAS_LIMIT = 21000
-    DEFAULT_THRESHOLD = 2 ** 255
+    # GAS_LIMIT = 21000
+    # DEFAULT_THRESHOLD = 2 ** 255
+    DEPOSIT_GAS_PER_PUBDATA_LIMIT = 50000
+    RECOMMENDED_DEPOSIT_L2_GAS_LIMIT = 10000000
 
     def __init__(self,
-                 web3: Web3,
-                 erc20_bridge: L1Bridge,
-                 eth_bridge: L1Bridge,
-                 account: BaseAccount,
-                 zksync: Optional[ZkSyncContract] = None):
-        self.web3 = web3
-        self.account = account
-        self.l1_erc20_bridge = erc20_bridge
-        self.l1_eth_bridge = eth_bridge
-        self.zksync_contract = zksync
+                 zksync_web3: Web3,
+                 eth_web3: Web3,
+                 l1_account: BaseAccount):
+        self._eth_web3 = eth_web3
+        self._zksync_web3 = zksync_web3
+        self._main_contract_address = self._zksync_web3.zksync.zks_main_contract()
+        self._l1_account = l1_account
+        self._main_contract = ZkSyncContract(zksync_main_contract=self._main_contract_address,
+                                             eth=self._eth_web3,
+                                             account=l1_account)
+        bridge_addresses: BridgeAddresses = self._zksync_web3.zksync.zks_get_bridge_contracts()
+        self._l1_bridge = L1Bridge(bridge_addresses.erc20_l1_default_bridge,
+                                   self._eth_web3, l1_account)
 
-    @classmethod
-    def build_ethereum_provider(cls, zksync: Web3, eth: Web3, account: BaseAccount, gas_provider: GasProvider):
-        bridge_contracts: BridgeAddresses = zksync.zksync.zks_get_bridge_contracts()
-        erc20_bridge = L1Bridge(bridge_contracts.l1_erc20_default_bridge, eth, account, gas_provider)
-        eth_bridge = L1Bridge(bridge_contracts.l1_eth_default_bridge, eth, account, gas_provider)
-        provider = cls(web3=eth,
-                       erc20_bridge=erc20_bridge,
-                       eth_bridge=eth_bridge,
-                       account=account)
-        return provider
+    @property
+    def main_contract(self):
+        return self._main_contract
 
-    def approve_deposits(self, token: Token, limit: Optional[int]) -> bool:
-        token_contract = ERC20Contract(self.web3.eth,
-                                       token.l1_address,
-                                       self.account,
-                                       self.l1_erc20_bridge.gas_provider)
-        if limit is None:
-            return token_contract.approve_deposit(self.l1_erc20_bridge.contract.address)
-        return token_contract.approve_deposit(self.l1_erc20_bridge.contract.address, limit)
+    @property
+    def l1_bridge(self):
+        return self._l1_bridge
 
-    def transfer(self, token: Token, amount: Decimal, to: HexStr):
+    @property
+    def address(self):
+        return self._l1_account.address
+
+    def get_l1_balance(self, token: Token, block: EthBlockParams):
         if token.is_eth():
-            tx = {
-                'nonce': self.web3.eth.get_transaction_count() + 1,
-                'to': to,
-                'value': Web3.toWei(amount, 'ether'),
-                'gas': self.GAS_LIMIT,
-                'gasPrice': self.web3.eth.gas_price
-            }
-            signed_tx = self.web3.eth.account.sign_transaction(tx, self.account)
-            txn_hash = self.web3.eth.send_raw_transaction(signed_tx.rawTransaction)
-            txn_receipt = self.web3.eth.wait_for_transaction_receipt(txn_hash)
-            return txn_receipt
+            return self._eth_web3.eth.get_balance(self.address, block.value)
         else:
-            token_contract = ERC20Contract(web3=self.web3.eth,
-                                           contract_address=token.l1_address,
-                                           account=self.account,
-                                           gas_provider=self.l1_erc20_bridge.gas_provider)
-            return token_contract.transfer(to, token.to_int(amount))
+            token_contract = ERC20Contract(self._eth_web3.eth,
+                                           token.l1_address,
+                                           self._l1_account)
+            return token_contract.balance_of(self.address)
 
-    def get_deposit_base_cost(self, gas_price: int = None):
-        if gas_price is None:
-            return self.web3.eth.gas_price
-        return self.zksync_contract.deposit_base_cost(gas_price,
-                                                      PriorityQueueType.DEQUE.value,
-                                                      PriorityOpTree.FULL.value)
-
-    def deposit(self, token: Token, amount: int, user_address: HexStr):
+    def l2_token_address(self, token: Token):
         if token.is_eth():
-            return self.l1_eth_bridge.deposit(user_address, ADDRESS_DEFAULT, amount)
-        return self.l1_erc20_bridge.deposit(user_address, token.l1_address, amount)
+            return token.l1_address
+        else:
+            return self.l1_bridge.l2_token_address(token.l1_address)
 
-    def withdraw(self, token: Token, amount: int, user_address: str):
-        raise NotImplementedError("Unsupported operation")
+    def get_base_cost(self,
+                      gas_limit: int,
+                      gas_per_pubdata_byte: int = DEPOSIT_GAS_PER_PUBDATA_LIMIT,
+                      gas_price: int = None):
+        if gas_price is None:
+            gas_price = self._eth_web3.eth.gas_price
+        return self.main_contract.l2_tx_base_cost(gas_price, gas_limit, gas_per_pubdata_byte)
 
-    def is_deposit_approved(self, token: Token, to: HexStr, threshold: int = DEFAULT_THRESHOLD):
-        token_contract = ERC20Contract(self.web3.eth,
-                                       token.l1_address,
-                                       self.account,
-                                       self.l1_erc20_bridge.gas_provider)
-        ret = token_contract.allowance(to, self.l1_erc20_bridge.address)
-        return ret >= threshold
+    def approve_erc20(self,
+                      token: Token,
+                      amount: int,
+                      bridge_address: HexStr = None,
+                      gas_limit: int = None) -> TxReceipt:
+        if token.is_eth():
+            raise RuntimeError("ETH token can't be approved. The address of the token does not exist on L1")
+
+        erc20 = ERC20Contract(self._eth_web3.eth, token.l1_address, self._l1_account)
+        if bridge_address is None:
+            bridge_address = self._l1_bridge.address
+
+        if gas_limit is None:
+            # TODO: get the approve(bridgeAddress, amount) estimateGas transaction to put correct gas_limit
+            gas_limit = RecommendedGasLimit.ERC20_APPROVE
+
+        return erc20.approve(bridge_address, amount, gas_limit)
+
+    def deposit(self,
+                token: Token,
+                amount: int,
+                to: HexStr = None,
+                operator_tip: int = 0,
+                bridge_address: HexStr = None,
+                approve_erc20: bool = False,
+                l2_gas_limit: int = RECOMMENDED_DEPOSIT_L2_GAS_LIMIT,
+                gas_per_pubdata_byte: int = DEPOSIT_GAS_PER_PUBDATA_LIMIT,
+                gas_price: int = None,
+                gas_limit: int = None
+                ):
+        bridge_contract = self.l1_bridge
+        if bridge_address is not None:
+            bridge_contract = L1Bridge(bridge_address,
+                                       self._eth_web3,
+                                       self._l1_account)
+
+        if to is None:
+            to = self.address
+
+        if gas_price is None:
+            gas_price = self._eth_web3.eth.gas_price
+        if gas_limit is None:
+            gas_limit = RecommendedGasLimit.DEPOSIT.value
+
+        base_cost = 0
+
+        if token.is_eth():
+            value = base_cost + operator_tip + amount
+            return self.request_execute(
+                contract_address=to,
+                call_data=HexStr("0x"),
+                l2_gas_limit=l2_gas_limit,
+                l2_value=amount,
+                gas_per_pubdata_byte=gas_per_pubdata_byte,
+                gas_price=gas_price,
+                gas_limit=gas_limit,
+                l1_value=value)
+        else:
+            value = base_cost + operator_tip
+            check_base_cost(base_cost, value)
+
+            if approve_erc20:
+                approve_tx = self.approve_erc20(token,
+                                                amount,
+                                                bridge_address,
+                                                gas_limit)
+            tx_receipt = bridge_contract.deposit(l2_receiver=to,
+                                                 l1_token=token.l1_address,
+                                                 amount=amount,
+                                                 l2_tx_gas_limit=l2_gas_limit,
+                                                 l2_tx_gas_per_pubdata_byte=gas_per_pubdata_byte)
+            # TODO: resolve issue with getting L2 tx_hash from logs
+            # return self._zksync_web3.zksync.get_priority_op_response(tx_receipt, self.main_contract)
+            return tx_receipt
+
+    def request_execute(self,
+                        contract_address: HexStr,
+                        call_data: Union[bytes, HexStr],
+                        l2_gas_limit: int,
+                        l1_value: int,
+                        l2_value: int = 0,
+                        factory_deps: List[bytes] = None,
+                        operator_tip: int = 0,
+                        gas_per_pubdata_byte: int = DEPOSIT_GAS_PER_PUBDATA_LIMIT,
+                        refund_recipient: HexStr = None,
+                        gas_price: int = None,
+                        gas_limit: int = RecommendedGasLimit.EXECUTE.value):
+
+        if factory_deps is None:
+            factory_deps = list()
+        if refund_recipient is None:
+            refund_recipient = self.address
+        if gas_price is None:
+            gas_price = self._eth_web3.eth.gas_price
+
+        base_cost = self.get_base_cost(gas_price=gas_price,
+                                       gas_per_pubdata_byte=gas_per_pubdata_byte,
+                                       gas_limit=gas_limit)
+        value = base_cost + operator_tip + l2_value
+        check_base_cost(base_cost, value)
+
+        call_data = to_bytes(call_data)
+
+        tx_receipt = self.main_contract.request_l2_transaction(contract_l2=contract_address,
+                                                               l2_value=l2_value,
+                                                               call_data=call_data,
+                                                               l2_gas_limit=l2_gas_limit,
+                                                               l2_gas_per_pubdata_byte_limit=gas_per_pubdata_byte,
+                                                               factory_deps=factory_deps,
+                                                               refund_recipient=refund_recipient,
+                                                               gas_price=gas_price,
+                                                               gas_limit=gas_limit,
+                                                               l1_value=l1_value)
+        # TODO: resolve issue with getting L2 tx_hash from logs
+        # return self._zksync_web3.zksync.get_priority_op_response(tx_receipt, self.main_contract)
+        return tx_receipt
+
+    def _get_withdraw_log(self, withdraw_hash, index: int = 0):
+        raise NotImplementedError
+
+    def _get_withdraw_l2_to_l1_log(self, withdraw_hash, index: int = 0):
+        raise NotImplementedError
+
+    def finalize_withdrawal(self, withdraw_hash, index: int = 0):
+        raise NotImplementedError
+
+    def is_withdrawal_finalized(self, withdraw_hash, index: int = 0):
+        raise NotImplementedError
+

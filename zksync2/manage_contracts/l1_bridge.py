@@ -5,6 +5,9 @@ from web3 import Web3
 from web3.contract import Contract
 from eth_typing import HexStr
 from typing import List, Optional
+
+from web3.types import TxReceipt
+
 from zksync2.manage_contracts.contract_encoder_base import BaseContractEncoder
 from zksync2.manage_contracts.gas_provider import GasProvider
 from zksync2.manage_contracts import contract_abi
@@ -28,12 +31,13 @@ class L1Bridge:
                  contract_address: HexStr,
                  web3: Web3,
                  eth_account: BaseAccount,
-                 gas_provider: GasProvider, abi=None):
+                 # gas_provider: GasProvider,
+                 abi=None):
         check_sum_address = Web3.toChecksumAddress(contract_address)
         self.web3 = web3
         self.addr = check_sum_address
         self.account = eth_account
-        self.gas_provider = gas_provider
+        # self.gas_provider = gas_provider
         if abi is None:
             abi = _l1_bridge_abi_default()
         self.contract: Contract = self.web3.eth.contract(self.addr, abi=abi)
@@ -67,7 +71,7 @@ class L1Bridge:
                 l1_token: HexStr,
                 amount: int,
                 l2_tx_gas_limit: int,
-                l2_tx_gas_per_pubdata_byte: int):
+                l2_tx_gas_per_pubdata_byte: int) -> TxReceipt:
         tx = self.contract.functions.deposit(l2_receiver,
                                              l1_token,
                                              amount,
@@ -78,8 +82,8 @@ class L1Bridge:
                 "chainId": self.web3.eth.chain_id,
                 "from": self.account.address,
                 "nonce": self._get_nonce(),
-                "gas": self.gas_provider.gas_limit(),
-                "gasPrice": self.gas_provider.gas_price(),
+                # "gas": self.gas_provider.gas_limit(),
+                # "gasPrice": self.gas_provider.gas_price(),
                 "value": amount
             })
         signed_tx = self.account.sign_transaction(tx)
@@ -100,8 +104,8 @@ class L1Bridge:
                 "chainId": self.web3.eth.chain_id,
                 "from": self.account.address,
                 "nonce": self._get_nonce(),
-                "gas": self.gas_provider.gas_limit(),
-                "gasPrice": self.gas_provider.gas_price()
+                # "gas": self.gas_provider.gas_limit(),
+                # "gasPrice": self.gas_provider.gas_price()
             })
         signed_tx = self.account.sign_transaction(tx)
         txn_hash = self.web3.eth.send_raw_transaction(signed_tx.rawTransaction)

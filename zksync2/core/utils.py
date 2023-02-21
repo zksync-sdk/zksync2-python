@@ -1,4 +1,5 @@
 import sys
+from enum import IntEnum
 from hashlib import sha256
 from typing import Union
 
@@ -40,3 +41,9 @@ def hash_byte_code(bytecode: bytes) -> bytes:
 def pad_front_bytes(bs: bytes, needed_length: int):
     padded = b'\0' * (needed_length - len(bs)) + bs
     return padded
+
+
+class RecommendedGasLimit(IntEnum):
+    DEPOSIT = 600000
+    EXECUTE = 620000
+    ERC20_APPROVE = 50000

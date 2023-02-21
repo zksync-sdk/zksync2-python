@@ -2,6 +2,9 @@ import json
 import importlib.resources as pkg_resources
 from dataclasses import dataclass
 from typing import List
+
+from web3.types import TxReceipt
+
 from zksync2.manage_contracts import contract_abi
 from eth_typing import HexStr
 from eth_utils import remove_0x_prefix
@@ -80,18 +83,13 @@ class VerifierParams:
 
 class ZkSyncContract:
 
-    # @classmethod
-    # def build(cls, zksync_web3: Web3, account: BaseAccount):
-    #     main_contract_address = zksync_web3.zksync.zks_main_contract()
-    #     return cls(main_contract_address, zksync_web3, account)
-
     def __init__(self,
                  zksync_main_contract: HexStr,
-                 zksync_web3: Web3,
+                 eth: Web3,
                  account: BaseAccount):
         check_sum_address = Web3.toChecksumAddress(zksync_main_contract)
         self.contract_address = check_sum_address
-        self.web3 = zksync_web3
+        self.web3 = eth
         self.contract = self.web3.eth.contract(self.contract_address, abi=_zksync_abi_default())
         self.account = account
         self.chain_id = self.web3.eth.chain_id
@@ -398,7 +396,10 @@ class ZkSyncContract:
                                l2_gas_limit: int,
                                l2_gas_per_pubdata_byte_limit: int,
                                factory_deps: List[bytes],
-                               refund_recipient: HexStr):
+                               refund_recipient: HexStr,
+                               gas_price: int,
+                               gas_limit: int,
+                               l1_value: int) -> TxReceipt:
         nonce = self._nonce()
         tx = self._method_("requestL2Transaction")(contract_l2,
                                                    l2_value,
@@ -409,9 +410,25 @@ class ZkSyncContract:
                                                    refund_recipient).build_transaction(
             {
                 "nonce": nonce,
-                'from': self.account.address
+                'from': self.account.address,
+                "gasPrice": gas_price,
+                "gas": gas_limit,
+                "value": l1_value
             })
         signed_tx = self.account.sign_transaction(tx)
-        txn_hash = self.web3.eth.send_raw_transaction(signed_tx.rawTransaction)
-        txn_receipt = self.web3.eth.waitForTransactionReceipt(txn_hash)
-        return txn_receipt
+        tx_hash = self.web3.eth.send_raw_transaction(signed_tx.rawTransaction)
+        tx_receipt = self.web3.eth.wait_for_transaction_receipt(tx_hash)
+        return tx_receipt
+
+    def l2_tx_base_cost(self,
+                        gas_price: int,
+                        l2_gas_limit: int,
+                        l2_gas_per_pubdata_byte_limit: int) -> int:
+        return self._method_("l2TransactionBaseCost")(gas_price,
+                                                      l2_gas_limit,
+                                                      l2_gas_per_pubdata_byte_limit).call(
+            {
+                "chainId": self.chain_id,
+                "from": self.account.address,
+                'nonce': self._nonce(),
+            })
