@@ -1,14 +1,17 @@
 from unittest import TestCase
-from eth_utils.crypto import keccak_256
+from eth_account import Account
+from eth_account.signers.local import LocalAccount
+from eth_utils.crypto import keccak
 from eip712_structs import make_domain
 from eth_tester import PyEVMBackend
 from eth_typing import HexStr
 from web3 import Web3, EthereumTesterProvider
 from web3.types import Nonce
 from tests.contracts.utils import contract_path
+from tests.test_config import PRIVATE_KEY2
 from zksync2.manage_contracts.contract_encoder_base import ContractEncoder
 from zksync2.module.request_types import EIP712Meta
-from zksync2.transaction.transaction712 import Transaction712
+from zksync2.transaction.transaction712 import Transaction712, TxCreateContract
 
 
 class TestTransaction712(TestCase):
@@ -23,23 +26,37 @@ class TestTransaction712(TestCase):
                             "uint256 paymaster,uint256 nonce,uint256 value,bytes data,bytes32[] factoryDeps," \
                             "bytes paymasterInput)"
 
-    # EXPECTED_ENCODED_VALUE = "0x2360af215549f2e44413f5a6eb25ecf40590c231e24a70b23a942f995814dc77"
     EXPECTED_ENCODED_VALUE = '0x1e40bcee418db11047ffefb27b304f8ec1b5d644c35c56878f5cc12988b3162d'
-    EXPECTED_ENCODED_BYTES = "0x2506074540188226a81a8dc006ab311c06b680232d39699d348e8ec83c81388b"
+    EXPECTED_ENCODED_BYTES = "0x7519adb6e67031ee048d921120687e4fbdf83961bcf43756f349d689eed2b80c"
 
     def setUp(self) -> None:
         self.web3 = Web3(EthereumTesterProvider(PyEVMBackend()))
-        counter_contract_encoder = ContractEncoder.from_json(self.web3, contract_path("Counter.json"))
+        self.account: LocalAccount = Account.from_key(PRIVATE_KEY2)
+        self.counter_contract_encoder = ContractEncoder.from_json(self.web3, contract_path("Counter.json"))
         self.tx712 = Transaction712(chain_id=self.CHAIN_ID,
                                     nonce=self.NONCE,
                                     gas_limit=self.GAS_LIMIT,
                                     to=self.RECEIVER,
                                     value=0,
-                                    data=counter_contract_encoder.encode_method(fn_name="increment", args=[42]),
+                                    data=self.counter_contract_encoder.encode_method(fn_name="increment", args=[42]),
                                     maxPriorityFeePerGas=0,
                                     maxFeePerGas=0,
                                     from_=self.SENDER,
                                     meta=EIP712Meta(0))
+
+    def test_deploy_contract_tx712(self):
+        tx = TxCreateContract(web3=self.web3,
+                              chain_id=280,
+                              nonce=2,
+                              from_=self.account.address,
+                              gas_limit=0,  # UNKNOWN AT THIS STATE
+                              gas_price=250000000,
+                              bytecode=self.counter_contract_encoder.bytecode,
+                              salt=bytes.fromhex("a0f3383618bba35869e4b4f51b5fc1c8139ac6689a680c5340e78b3d2476257e"))
+        tx_712 = tx.tx712(1235049)
+        struct_hash = tx_712.to_eip712_struct().hash_struct()
+        self.assertEqual("a16b67cdf0e3369e99677a38ff1ba069696ca186afc2c2b83211c7aba40d6380",
+                         struct_hash.hex())
 
     def test_encode_to_eip712_type_string(self):
         eip712_struct = self.tx712.to_eip712_struct()
@@ -57,6 +74,6 @@ class TestTransaction712(TestCase):
         eip712_struct = self.tx712.to_eip712_struct()
 
         result_bytes = eip712_struct.signable_bytes(domain)
-        msg = keccak_256(result_bytes)
+        msg = keccak(result_bytes)
         result = "0x" + msg.hex()
         self.assertEqual(self.EXPECTED_ENCODED_BYTES, result)

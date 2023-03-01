@@ -1,19 +1,14 @@
 import os
-from unittest import TestCase
+from unittest import TestCase, skip
 from web3 import Web3
-from web3.types import TxParams
-
+from web3.middleware import geth_poa_middleware
 from tests.test_config import ZKSYNC_TEST_URL, ETH_TEST_URL, PRIVATE_KEY2
 from zksync2.core.types import Token, EthBlockParams
 from zksync2.manage_contracts.zksync_contract import ZkSyncContract
-
-from zksync2.manage_contracts.gas_provider import StaticGasProvider
 from zksync2.module.module_builder import ZkSyncBuilder
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
-
 from zksync2.provider.eth_provider import EthereumProvider
-from zksync2.signer.eth_signer import PrivateKeyEthSigner
 
 
 def generate_random_salt() -> bytes:
@@ -26,9 +21,6 @@ class ZkSyncWeb3Tests(TestCase):
         self.zksync = ZkSyncBuilder.build(ZKSYNC_TEST_URL)
         self.eth_web3 = Web3(Web3.HTTPProvider(ETH_TEST_URL))
         self.account: LocalAccount = Account.from_key(PRIVATE_KEY2)
-        # self.chain_id = self.zksync.zksync.chain_id
-        # self.signer = PrivateKeyEthSigner(self.account, self.chain_id)
-        # TODO: use Eth Web3
         self.zksync_contract = ZkSyncContract(self.zksync.zksync.zks_main_contract(),
                                               self.eth_web3,
                                               self.account)
@@ -40,9 +32,31 @@ class ZkSyncWeb3Tests(TestCase):
         gas_price = self.eth_web3.eth.gas_price
         before_deposit = self.eth_provider.get_l1_balance(eth_token, EthBlockParams.LATEST)
         print(f"Before: {before_deposit}")
-        op = self.eth_provider.deposit(token=Token.create_eth(),
-                                       amount=amount,
-                                       gas_price=gas_price)
-        print(f"Op: {op}")
+        l1_tx_receipt = self.eth_provider.deposit(token=Token.create_eth(),
+                                                  amount=amount,
+                                                  gas_price=gas_price)
+        # TODO: when L2 tx
+        # print(f"Op: {op}")
         after = self.eth_provider.get_l1_balance(eth_token, EthBlockParams.LATEST)
         print(f"After : {after}")
+
+        self.assertEqual(1, l1_tx_receipt["status"])
+
+    @skip("Integration test, used for develop purposes only")
+    def test_deposit_usdc(self):
+        USDC_TOKEN = Token(
+            Web3.toChecksumAddress("0xd35cceead182dcee0f148ebac9447da2c4d449c4"),
+            Web3.toChecksumAddress("0x852a4599217e76aa725f0ada8bf832a1f57a8a91"),
+            "USDC",
+            6)
+
+        amount_usdc = 100000
+        eth_provider = EthereumProvider(zksync_web3=self.zksync,
+                                        eth_web3=self.eth_web3,
+                                        l1_account=self.account)
+        is_approved = eth_provider.approve_erc20(USDC_TOKEN, amount_usdc)
+        self.assertTrue(is_approved)
+        tx_receipt = eth_provider.deposit(USDC_TOKEN,
+                                          amount_usdc,
+                                          self.account.address)
+        self.assertEqual(1, tx_receipt["status"])

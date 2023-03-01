@@ -1,12 +1,9 @@
 import os
 from unittest import TestCase
 from web3 import Web3
-
 from tests.test_config import ZKSYNC_TEST_URL, ETH_TEST_URL, PRIVATE_KEY2
 from zksync2.core.utils import RecommendedGasLimit
 from zksync2.manage_contracts.zksync_contract import ZkSyncContract
-
-from zksync2.manage_contracts.gas_provider import StaticGasProvider
 from zksync2.module.module_builder import ZkSyncBuilder
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
@@ -18,11 +15,6 @@ def generate_random_salt() -> bytes:
 
 
 class ZkSyncWeb3Tests(TestCase):
-    # ZKSYNC_TEST_URL = "https://zksync2-testnet.zksync.dev"
-    # ETH_TEST_URL = "https://rpc.ankr.com/eth_goerli"
-    # # ZKSYNC_TEST_URL = "http://127.0.0.1:3050"
-    # PRIVATE_KEY = bytes.fromhex("1f0245d47b3a84299aeb121ac33c2dbd1cdb3d3c2079b3240e63796e75ee8b70")
-    # PRIVATE_KEY2 = bytes.fromhex("fd1f96220fa3a40c46d65f81d61dd90af600746fd47e5c82673da937a48b38ef")
 
     def setUp(self) -> None:
         self.zksync = ZkSyncBuilder.build(ZKSYNC_TEST_URL)
@@ -30,7 +22,6 @@ class ZkSyncWeb3Tests(TestCase):
         self.account: LocalAccount = Account.from_key(PRIVATE_KEY2)
         self.chain_id = self.zksync.zksync.chain_id
         self.signer = PrivateKeyEthSigner(self.account, self.chain_id)
-        # TODO: use Eth Web3
         self.zksync_contract = ZkSyncContract(self.zksync.zksync.zks_main_contract(),
                                               self.eth_web3,
                                               self.account)

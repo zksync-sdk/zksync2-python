@@ -12,7 +12,8 @@ from zksync2.core.types import PaymasterParams
 
 @dataclass
 class EIP712Meta:
-    GAS_PER_PUB_DATA_DEFAULT = 16 * 10000
+    # GAS_PER_PUB_DATA_DEFAULT = 16 * 10000
+    GAS_PER_PUB_DATA_DEFAULT = 20 * 10000
 
     gas_per_pub_data: int = GAS_PER_PUB_DATA_DEFAULT
     custom_signature: Optional[bytes] = None

@@ -19,7 +19,7 @@ def _icontract_deployer_abi_default():
         with pkg_resources.path(contract_abi, "ContractDeployer.json") as p:
             with p.open(mode='r') as json_file:
                 data = json.load(json_file)
-                icontract_deployer_abi_cache = data
+                icontract_deployer_abi_cache = data["abi"]
     return icontract_deployer_abi_cache
 
 
