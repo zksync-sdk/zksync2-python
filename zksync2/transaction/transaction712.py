@@ -240,7 +240,6 @@ class TxCreateContract(TxBase, ABC):
                                  factory_deps=factory_deps,
                                  paymaster_params=None)
 
-        # byte_data = to_bytes(generated_call_data)
         super(TxCreateContract, self).__init__(trans={
             "chain_id": chain_id,
             "nonce": nonce,
@@ -251,7 +250,6 @@ class TxCreateContract(TxBase, ABC):
             "maxPriorityFeePerGas": max_priority_fee_per_gas,
             "value": value,
             "data": HexStr(generated_call_data),
-            # "data": byte_data,
             "transactionType": TransactionType.EIP_712_TX_TYPE.value,
             "eip712Meta": eip712_meta
         })

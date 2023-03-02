@@ -47,16 +47,16 @@ class TestTransaction712(TestCase):
     def test_deploy_contract_tx712(self):
         tx = TxCreateContract(web3=self.web3,
                               chain_id=280,
-                              nonce=2,
-                              from_=self.account.address,
+                              nonce=0,
+                              from_=self.account.address.lower(),
                               gas_limit=0,  # UNKNOWN AT THIS STATE
                               gas_price=250000000,
                               bytecode=self.counter_contract_encoder.bytecode,
                               salt=bytes.fromhex("a0f3383618bba35869e4b4f51b5fc1c8139ac6689a680c5340e78b3d2476257e"))
-        tx_712 = tx.tx712(1235049)
-        struct_hash = tx_712.to_eip712_struct().hash_struct()
-        self.assertEqual("a16b67cdf0e3369e99677a38ff1ba069696ca186afc2c2b83211c7aba40d6380",
-                         struct_hash.hex())
+        tx_712 = tx.tx712(9910372)
+        msg = tx_712.to_eip712_struct().hash_struct()
+        self.assertEqual("6eb714d6c37f6122d46f7a179af11d743f4149070974ef987b3edf74c83698a3",
+                         msg.hex())
 
     def test_encode_to_eip712_type_string(self):
         eip712_struct = self.tx712.to_eip712_struct()
