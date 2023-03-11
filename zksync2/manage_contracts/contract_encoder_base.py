@@ -53,7 +53,11 @@ class ContractEncoder(BaseContractEncoder):
             if not kwargs:
                 kwargs = {}
             arguments = merge_args_and_kwargs(constructor_abi, args, kwargs)
-            data = encode_abi(self.web3, constructor_abi, arguments, data=self.instance_contract.bytecode)
+            # INFO: it takes affect on the eth_estimate_gas,
+            #       it does not need the bytecode in the front of encoded arguments, see implementation of encode_abi
+            #  uncomment if it's fixed on ZkSync side
+            # data = encode_abi(self.web3, constructor_abi, arguments, data=self.instance_contract.bytecode)
+            data = encode_abi(self.web3, constructor_abi, arguments)
             data = bytes.fromhex(remove_0x_prefix(data))
         else:
             data = self.instance_contract.bytecode

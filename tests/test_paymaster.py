@@ -4,6 +4,7 @@ from eth_typing import HexStr
 from eth_utils import keccak, remove_0x_prefix
 from web3 import Web3
 
+from tests.test_config import ZKSYNC_TEST_URL, PRIVATE_KEY2
 from zksync2.manage_contracts.contract_encoder_base import ContractEncoder
 from zksync2.manage_contracts.paymaster_utils import PaymasterFlowEncoder
 from zksync2.manage_contracts.erc20_contract import ERC20Contract
@@ -21,8 +22,6 @@ from zksync2.transaction.transaction712 import TxCreate2Contract, TxFunctionCall
 # https://goerli.explorer.zksync.io/address/0xFC174650BDEbE4D94736442307D4D7fdBe799EeC#contract
 
 class PaymasterTests(TestCase):
-    ETH_TEST_URL = "https://rpc.ankr.com/eth_goerli"
-    ZKSYNC_TEST_URL = "https://zksync2-testnet.zksync.dev"
 
     ETH_TOKEN = Token.create_eth()
     PRIVATE_KEY = bytes.fromhex("1f0245d47b3a84299aeb121ac33c2dbd1cdb3d3c2079b3240e63796e75ee8b70")
@@ -38,8 +37,8 @@ class PaymasterTests(TestCase):
     SALT = keccak(text="TestPaymaster")
 
     def setUp(self) -> None:
-        self.web3 = ZkSyncBuilder.build(self.ZKSYNC_TEST_URL)
-        self.account: LocalAccount = Account.from_key(self.PRIVATE_KEY)
+        self.web3 = ZkSyncBuilder.build(ZKSYNC_TEST_URL)
+        self.account: LocalAccount = Account.from_key(PRIVATE_KEY2)
         self.chain_id = self.web3.zksync.chain_id
         self.signer = PrivateKeyEthSigner(self.account, self.chain_id)
         self.gas_provider = StaticGasProvider(Web3.toWei(1, "gwei"), 555000)
@@ -93,8 +92,7 @@ class PaymasterTests(TestCase):
         else:
             erc20 = ERC20Contract(self.web3.zksync,
                                   contract_address=token.l2_address,
-                                  account=self.account,
-                                  gas_provider=self.gas_provider)
+                                  account=self.account)
             return erc20.balance_of(addr)
 
     @skip("Integration test, paymaster params test not implemented yet")
@@ -160,12 +158,13 @@ class PaymasterTests(TestCase):
         print(f"Paymaster fee: {preprocessed_fee}")
 
         erc20 = ERC20Contract(self.web3.zksync, contract_address=self.SERC20_TOKEN.l2_address,
-                              account=self.account,
-                              gas_provider=self.gas_provider)
+                              account=self.account)
 
         allowance = erc20.allowance(self.account.address, paymaster_address)
         if allowance < preprocessed_fee:
-            is_approved = erc20.approve_deposit(paymaster_address, preprocessed_fee)
+            is_approved = erc20.approve(paymaster_address,
+                                        preprocessed_fee,
+                                        gas_limit=paymaster_est_gas)
             self.assertTrue(is_approved)
 
         # INFO: encode paymaster params with real fee

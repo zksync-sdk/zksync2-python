@@ -51,11 +51,10 @@ class TestTransaction712(TestCase):
                               from_=self.account.address.lower(),
                               gas_limit=0,  # UNKNOWN AT THIS STATE
                               gas_price=250000000,
-                              bytecode=self.counter_contract_encoder.bytecode,
-                              salt=bytes.fromhex("a0f3383618bba35869e4b4f51b5fc1c8139ac6689a680c5340e78b3d2476257e"))
+                              bytecode=self.counter_contract_encoder.bytecode)
         tx_712 = tx.tx712(9910372)
         msg = tx_712.to_eip712_struct().hash_struct()
-        self.assertEqual("6eb714d6c37f6122d46f7a179af11d743f4149070974ef987b3edf74c83698a3",
+        self.assertEqual("1b7c07696aa681d4ba697388e10493722b31ca9451daaf2ff4c5d086f7ebd28c",
                          msg.hex())
 
     def test_encode_to_eip712_type_string(self):

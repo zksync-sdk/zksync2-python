@@ -1,12 +1,16 @@
 import os
+from copy import deepcopy
 from decimal import Decimal
 from unittest import TestCase, skip
 from eth_typing import HexStr
 from web3 import Web3
 from web3.types import TxParams
 from web3.middleware import geth_poa_middleware
+
+from zksync2.core.utils import to_bytes, pad_front_bytes
 from zksync2.manage_contracts.contract_deployer import ContractDeployer
 from zksync2.manage_contracts.contract_encoder_base import ContractEncoder
+from zksync2.manage_contracts.deploy_addresses import ZkSyncAddresses
 from zksync2.manage_contracts.erc20_contract import ERC20Encoder
 from zksync2.manage_contracts.nonce_holder import NonceHolder
 from zksync2.module.module_builder import ZkSyncBuilder
@@ -15,7 +19,7 @@ from zksync2.core.types import Token, ZkBlockParams, BridgeAddresses, EthBlockPa
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
 
-from zksync2.module.request_types import Transaction
+from zksync2.module.request_types import Transaction, EIP712Meta, TransactionType
 from zksync2.signer.eth_signer import PrivateKeyEthSigner
 from tests.contracts.utils import get_hex_binary, contract_path
 from zksync2.transaction.transaction712 import TxFunctionCall, TxCreateContract, TxCreate2Contract
@@ -35,11 +39,9 @@ class ZkSyncWeb3Tests(TestCase):
         self.account: LocalAccount = Account.from_key(PRIVATE_KEY2)
         self.chain_id = self.web3.zksync.chain_id
         self.signer = PrivateKeyEthSigner(self.account, self.chain_id)
+        self.counter_address = None
 
-        # self.gas_provider = StaticGasProvider(Web3.toWei(1, "gwei"), 555000)
-        self.CONTRACT_ADDRESS = Web3.toChecksumAddress("0xca9e8bfcd17df56ae90c2a5608e8824dfd021067")
-
-    @skip("Integration test, used for develop purposes only")
+    # @skip("Integration test, used for develop purposes only")
     def test_send_money(self):
         gas_limit = 21000
         web3 = Web3(Web3.HTTPProvider(ETH_TEST_URL))
@@ -71,17 +73,17 @@ class ZkSyncWeb3Tests(TestCase):
         zk_balance = self.web3.zksync.get_balance(self.account.address, EthBlockParams.LATEST.value)
         print(f"ZkSync balance: {zk_balance}")
 
-    @skip("Integration test, used for develop purposes only")
+    # @skip("Integration test, used for develop purposes only")
     def test_get_nonce(self):
         nonce = self.web3.zksync.get_transaction_count(self.account.address, EthBlockParams.LATEST.value)
         print(f"Nonce: {nonce}")
 
-    @skip("Integration test, used for develop purposes only")
+    # @skip("Integration test, used for develop purposes only")
     def test_get_deployment_nonce(self):
         nonce_holder = NonceHolder(self.web3, self.account)
         print(f"Deployment nonce: {nonce_holder.get_deployment_nonce(self.account.address)}")
 
-    @skip("Integration test, used for develop purposes only")
+    # @skip("Integration test, used for develop purposes only")
     def test_get_transaction_receipt(self):
         tx_hash = '0xa645ee8ab4e827a6695f205d8e75afdf97f28d2822b449f9803b986b81e877bc'
         receipt = self.web3.zksync.get_transaction_receipt(tx_hash)
@@ -176,58 +178,58 @@ class ZkSyncWeb3Tests(TestCase):
         tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
         self.assertEqual(1, tx_receipt["status"])
 
-    @skip("Integration test, used for develop purposes only")
-    def test_estimate_gas_withdraw(self):
-        bridges = self.web3.zksync.zks_get_bridge_contracts()
-        l2_func_encoder = L2BridgeEncoder(self.web3)
-        call_data = l2_func_encoder.encode_function(fn_name="withdraw", args=[
-            self.account.address,
-            self.ETH_TOKEN.l2_address,
-            self.ETH_TOKEN.to_int(Decimal("0.001"))
-        ])
-        nonce = self.web3.zksync.get_transaction_count(self.account.address, ZkBlockParams.COMMITTED.value)
+    # @skip("Integration test, used for develop purposes only")
+    # def test_estimate_gas_withdraw(self):
+    #     bridges = self.web3.zksync.zks_get_bridge_contracts()
+    #     l2_func_encoder = L2BridgeEncoder(self.web3)
+    #     call_data = l2_func_encoder.encode_function(fn_name="withdraw", args=[
+    #         self.account.address,
+    #         self.ETH_TOKEN.l2_address,
+    #         self.ETH_TOKEN.to_int(Decimal("0.001"))
+    #     ])
+    #     nonce = self.web3.zksync.get_transaction_count(self.account.address, ZkBlockParams.COMMITTED.value)
+    #
+    #     gas_price = self.web3.zksync.gas_price
+    #     func_call = TxFunctionCall(chain_id=self.chain_id,
+    #                                nonce=nonce,
+    #                                from_=self.account.address,
+    #                                to=bridges.l2_eth_default_bridge,
+    #                                data=call_data,
+    #                                gas_limit=0,
+    #                                gas_price=gas_price)
+    #     estimate_gas = self.web3.zksync.eth_estimate_gas(func_call.tx)
+    #     print(f"test_estimate_gas_withdraw, estimate_gas: {estimate_gas}")
+    #     self.assertGreater(estimate_gas, 0, "test_estimate_gas_withdraw, estimate_gas must be greater 0")
 
-        gas_price = self.web3.zksync.gas_price
-        func_call = TxFunctionCall(chain_id=self.chain_id,
-                                   nonce=nonce,
-                                   from_=self.account.address,
-                                   to=bridges.l2_eth_default_bridge,
-                                   data=call_data,
-                                   gas_limit=0,
-                                   gas_price=gas_price)
-        estimate_gas = self.web3.zksync.eth_estimate_gas(func_call.tx)
-        print(f"test_estimate_gas_withdraw, estimate_gas: {estimate_gas}")
-        self.assertGreater(estimate_gas, 0, "test_estimate_gas_withdraw, estimate_gas must be greater 0")
-
-    @skip("Integration test, used for develop purposes only")
-    def test_withdraw(self):
-        nonce = self.web3.zksync.get_transaction_count(self.account.address, ZkBlockParams.COMMITTED.value)
-        bridges: BridgeAddresses = self.web3.zksync.zks_get_bridge_contracts()
-
-        l2_func_encoder = L2BridgeEncoder(self.web3)
-        call_data = l2_func_encoder.encode_function(fn_name="withdraw", args=[
-            self.account.address,
-            self.ETH_TOKEN.l2_address,
-            self.ETH_TOKEN.to_int(Decimal("0.001"))
-        ])
-
-        gas_price = self.web3.zksync.gas_price
-        func_call = TxFunctionCall(chain_id=self.chain_id,
-                                   nonce=nonce,
-                                   from_=self.account.address,
-                                   to=bridges.l2_eth_default_bridge,
-                                   data=HexStr(call_data),
-                                   gas_limit=0,
-                                   gas_price=gas_price,
-                                   max_priority_fee_per_gas=100000000)
-        estimate_gas = self.web3.zksync.eth_estimate_gas(func_call.tx)
-        print(f"Fee for transaction is: {estimate_gas * gas_price}")
-        tx_712 = func_call.tx712(estimate_gas)
-        singed_message = self.signer.sign_typed_data(tx_712.to_eip712_struct())
-        msg = tx_712.encode(singed_message)
-        tx_hash = self.web3.zksync.send_raw_transaction(msg)
-        tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
-        self.assertEqual(1, tx_receipt["status"])
+    # @skip("Integration test, used for develop purposes only")
+    # def test_withdraw(self):
+    #     nonce = self.web3.zksync.get_transaction_count(self.account.address, ZkBlockParams.COMMITTED.value)
+    #     bridges: BridgeAddresses = self.web3.zksync.zks_get_bridge_contracts()
+    #
+    #     l2_func_encoder = L2BridgeEncoder(self.web3)
+    #     call_data = l2_func_encoder.encode_function(fn_name="withdraw", args=[
+    #         self.account.address,
+    #         self.ETH_TOKEN.l2_address,
+    #         self.ETH_TOKEN.to_int(Decimal("0.001"))
+    #     ])
+    #
+    #     gas_price = self.web3.zksync.gas_price
+    #     func_call = TxFunctionCall(chain_id=self.chain_id,
+    #                                nonce=nonce,
+    #                                from_=self.account.address,
+    #                                to=bridges.l2_eth_default_bridge,
+    #                                data=HexStr(call_data),
+    #                                gas_limit=0,
+    #                                gas_price=gas_price,
+    #                                max_priority_fee_per_gas=100000000)
+    #     estimate_gas = self.web3.zksync.eth_estimate_gas(func_call.tx)
+    #     print(f"Fee for transaction is: {estimate_gas * gas_price}")
+    #     tx_712 = func_call.tx712(estimate_gas)
+    #     singed_message = self.signer.sign_typed_data(tx_712.to_eip712_struct())
+    #     msg = tx_712.encode(singed_message)
+    #     tx_hash = self.web3.zksync.send_raw_transaction(msg)
+    #     tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
+    #     self.assertEqual(1, tx_receipt["status"])
 
     # @skip("Integration test, used for develop purposes only")
     def test_estimate_gas_execute(self):
@@ -239,6 +241,9 @@ class ZkSyncWeb3Tests(TestCase):
         call_data = erc20func_encoder.encode_method(fn_name="transfer", args=transfer_args)
         nonce = self.web3.zksync.get_transaction_count(self.account.address, ZkBlockParams.COMMITTED.value)
         gas_price = self.web3.zksync.gas_price
+
+        call_data_bytes = to_bytes(call_data)
+        print(f"Call data length: {len(call_data_bytes)}")
 
         to_addr = Web3.toChecksumAddress("0x79f73588fa338e685e9bbd7181b410f60895d2a3")
         func_call = TxFunctionCall(chain_id=self.chain_id,
@@ -272,7 +277,7 @@ class ZkSyncWeb3Tests(TestCase):
     def test_deploy_contract_create(self):
         random_salt = generate_random_salt()
         nonce = self.web3.zksync.get_transaction_count(self.account.address, EthBlockParams.PENDING.value)
-        nonce_holder = NonceHolder(self.web3, self.account)
+        nonce_holder = NonceHolder(self.web3.zksync, self.account)
         deployment_nonce = nonce_holder.get_deployment_nonce(self.account.address)
         deployer = ContractDeployer(self.web3)
         precomputed_address = deployer.compute_l2_create_address(self.account.address, deployment_nonce)
@@ -298,37 +303,29 @@ class ZkSyncWeb3Tests(TestCase):
         tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
         self.assertEqual(1, tx_receipt["status"])
         contract_address = tx_receipt["contractAddress"]
+        self.counter_address = contract_address
+
         print(f"contract address: {contract_address}")
         self.assertEqual(precomputed_address.lower(), contract_address.lower())
-        # call_data = counter_contract.encode_method(fn_name="get", args=[])
-        # eth_tx: TxParams = {
-        #     "from": self.account.address,
-        #     "to": contract_address,
-        #     "data": call_data
-        # }
-        # eth_ret = self.web3.zksync.call(eth_tx, ZkBlockParams.COMMITTED.value)
-        # # INFO: type dependent cast, signature of calling function must be known
-        # result = int.from_bytes(eth_ret, "big", signed=True)
-        # print(f"Call method for deployed contract, address: {contract_address}, value: {result}")
 
-    def test_call_contract_method(self):
-        nonce = self.web3.zksync.get_transaction_count(self.account.address, ZkBlockParams.COMMITTED.value)
-        contract_address = Web3.toChecksumAddress('0x80FE18aCD50896fd61ab91B94BE0E5b8b9a1F532')
-        counter_contract = ContractEncoder.from_json(self.web3, contract_path("Counter.json"))
-        gas_price = self.web3.zksync.gas_price
-        call_data = counter_contract.encode_method(fn_name="get", args=[])
-        func_call = TxFunctionCall(chain_id=self.chain_id,
-                                   nonce=nonce,
-                                   from_=self.account.address,
-                                   to=HexStr(contract_address),
-                                   data=HexStr(call_data),
-                                   gas_price=gas_price,
-                                   gas_limit=0)
-        estimate_gas = self.web3.zksync.eth_estimate_gas(func_call.tx)
-        print(f"estimate_gas: {estimate_gas}")
+        value = counter_contract.contract.functions.get().call(
+            {
+                "from": self.account.address,
+                "to": contract_address
+            })
+        self.assertEqual(0, value)
+        print(f"Call method for deployed contract, address: {contract_address}, value: {value}")
+
+    def test_protocol_version(self):
+        version = self.web3.zksync.protocol_version
+        print(f"Protocol version: {version}")
+        self.assertEqual(version, "zks/1")
 
     # @skip("Integration test, used for develop purposes only")
     def test_deploy_contract_with_constructor_create(self):
+        version = self.web3.zksync.protocol_version
+        print(f"Protocol version: {version}")
+
         random_salt = generate_random_salt()
         nonce = self.web3.zksync.get_transaction_count(self.account.address, EthBlockParams.PENDING.value)
         gas_price = self.web3.zksync.gas_price
@@ -339,8 +336,10 @@ class ZkSyncWeb3Tests(TestCase):
         deployer = ContractDeployer(self.web3)
         precomputed_address = deployer.compute_l2_create_address(self.account.address, deployment_nonce)
 
-        constructor_encoder = ContractEncoder.from_json(self.web3, contract_path("Constructor.json"))
-        encoded_ctor = constructor_encoder.encode_constructor(a=42, b=43, shouldRevert=False)
+        constructor_encoder = ContractEncoder.from_json(self.web3, contract_path("SimpleConstructor.json"))
+        a = 2
+        b = 3
+        encoded_ctor = constructor_encoder.encode_constructor(a=a, b=b, shouldRevert=False)
 
         create_contract = TxCreateContract(web3=self.web3,
                                            chain_id=self.chain_id,
@@ -349,10 +348,10 @@ class ZkSyncWeb3Tests(TestCase):
                                            gas_limit=0,  # UNKNOWN AT THIS STATE,
                                            gas_price=gas_price,
                                            bytecode=constructor_encoder.bytecode,
-                                           call_data=encoded_ctor,
-                                           salt=random_salt)
+                                           call_data=encoded_ctor
+                                           , salt=random_salt)
 
-        estimate_gas = self.web3.zksync.zks_estimate_fee(create_contract.tx)
+        estimate_gas = self.web3.zksync.eth_estimate_gas(create_contract.tx)
 
         print(f"Fee for transaction is: {estimate_gas * gas_price}")
 
@@ -368,17 +367,14 @@ class ZkSyncWeb3Tests(TestCase):
         print(f"contract address: {contract_address}")
         # INFO: does not work, contract_address is None
         self.assertEqual(precomputed_address.lower(), contract_address.lower())
-        #
-        # call_data = constructor_encoder.encode_method(fn_name="get", args=[])
-        # eth_tx: TxParams = {
-        #     "from": self.account.address,
-        #     "to": contract_address,
-        #     "data": call_data
-        # }
-        # eth_ret = self.web3.zksync.call(eth_tx, ZkBlockParams.COMMITTED.value)
-        # # INFO: type dependent cast, signature of calling function must be known
-        # result = int.from_bytes(eth_ret, "big", signed=True)
-        # print(f"Call method for deployed contract, address: {contract_address}, value: {result}")
+
+        value = constructor_encoder.contract.functions.get().call(
+            {
+                "from": self.account.address,
+                "to": contract_address
+            })
+        self.assertEqual(a * b, value)
+        print(f"Call method for deployed contract, address: {contract_address}, value: {value}")
 
     # @skip("Integration test, used for develop purposes only")
     def test_deploy_contract_create2(self):
@@ -412,17 +408,18 @@ class ZkSyncWeb3Tests(TestCase):
         self.assertEqual(1, tx_receipt["status"])
 
         contract_address = tx_receipt["contractAddress"]
+        self.counter_address = contract_address
+
         print(f"contract address: {contract_address}")
         self.assertEqual(precomputed_address.lower(), contract_address.lower())
-        # call_data = counter_contract_encoder.encode_method(fn_name="get", args=[])
-        # eth_tx: TxParams = {
-        #     "from": self.account.address,
-        #     "to": contract_address,
-        #     "data": call_data
-        # }
-        # eth_ret = self.web3.zksync.call(eth_tx, ZkBlockParams.COMMITTED.value)
-        # result = int.from_bytes(eth_ret, "big", signed=True)
-        # print(f"Call method for deployed contract, address: {contract_address}, value: {result}")
+
+        value = counter_contract_encoder.contract.functions.get().call(
+            {
+                "from": self.account.address,
+                "to": contract_address
+            })
+        self.assertEqual(0, value)
+        print(f"Call method for deployed contract, address: {contract_address}, value: {value}")
 
     # @skip("Integration test, used for develop purposes only")
     def test_deploy_contract_with_deps_create(self):
@@ -465,8 +462,6 @@ class ZkSyncWeb3Tests(TestCase):
     # @skip("Integration test, used for develop purposes only")
     def test_deploy_contract_with_deps_create2(self):
         random_salt = generate_random_salt()
-        # foo = get_hex_binary("foo.hex")
-        # foo_deps = get_hex_binary("foo_deps.hex")
         import_contract = ContractEncoder.from_json(self.web3, contract_path("Import.json"))
         import_dependency_contract = ContractEncoder.from_json(self.web3, contract_path("Foo.json"))
         nonce = self.web3.zksync.get_transaction_count(self.account.address, EthBlockParams.PENDING.value)
@@ -500,20 +495,40 @@ class ZkSyncWeb3Tests(TestCase):
         print(f"contract address: {contract_address}")
         self.assertEqual(precomputed_address.lower(), contract_address.lower())
 
-    @skip("Integration test, used for develop purposes only")
+    # @skip("Integration test, used for develop purposes only")
     def test_execute_contract(self):
-        # TODO: link to another test for getting right contract address
-        self.CONTRACT_ADDRESS = HexStr("0xfc2037739c537CCAf5F184eb105B69cA612a208F")
+        counter_contract = ContractEncoder.from_json(self.web3, contract_path("Counter.json"))
+        if self.counter_address is None:
+            random_salt = generate_random_salt()
+            nonce = self.web3.zksync.get_transaction_count(self.account.address, EthBlockParams.PENDING.value)
+            gas_price = self.web3.zksync.gas_price
+            create_contract = TxCreateContract(web3=self.web3,
+                                               chain_id=self.chain_id,
+                                               nonce=nonce,
+                                               from_=self.account.address,
+                                               gas_limit=0,  # UNKNOWN AT THIS STATE
+                                               gas_price=gas_price,
+                                               bytecode=counter_contract.bytecode,
+                                               salt=random_salt)
+            estimate_gas = self.web3.zksync.eth_estimate_gas(create_contract.tx)
+            print(f"Fee for transaction is: {estimate_gas * gas_price}")
+            tx_712 = create_contract.tx712(estimate_gas)
+            singed_message = self.signer.sign_typed_data(tx_712.to_eip712_struct())
+            msg = tx_712.encode(singed_message)
+            tx_hash = self.web3.zksync.send_raw_transaction(msg)
+            tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
+            self.assertEqual(1, tx_receipt["status"])
+            contract_address = tx_receipt["contractAddress"]
+            self.counter_address = contract_address
 
         nonce = self.web3.zksync.get_transaction_count(self.account.address, ZkBlockParams.COMMITTED.value)
-        counter_contract = ContractEncoder.from_json(self.web3, contract_path("Counter.json"))
         encoded_get = counter_contract.encode_method(fn_name="get", args=[])
         eth_tx: TxParams = {
             "from": self.account.address,
-            "to": self.CONTRACT_ADDRESS,
+            "to": self.counter_address,
             "data": encoded_get,
         }
-        eth_ret = self.web3.zksync.call(eth_tx, ZkBlockParams.COMMITTED.value)
+        eth_ret = self.web3.zksync.call(eth_tx, EthBlockParams.LATEST.value)
         result = int.from_bytes(eth_ret, "big", signed=True)
         gas_price = self.web3.zksync.gas_price
 
@@ -521,7 +536,7 @@ class ZkSyncWeb3Tests(TestCase):
         func_call = TxFunctionCall(chain_id=self.chain_id,
                                    nonce=nonce,
                                    from_=self.account.address,
-                                   to=self.CONTRACT_ADDRESS,
+                                   to=self.counter_address,
                                    data=call_data,
                                    gas_limit=0,  # UNKNOWN AT THIS STATE,
                                    gas_price=gas_price)
@@ -536,7 +551,7 @@ class ZkSyncWeb3Tests(TestCase):
         tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
         self.assertEqual(1, tx_receipt["status"])
 
-        eth_ret2 = self.web3.zksync.call(eth_tx, ZkBlockParams.COMMITTED.value)
+        eth_ret2 = self.web3.zksync.call(eth_tx, EthBlockParams.LATEST.value)
         updated_result = int.from_bytes(eth_ret2, "big", signed=True)
         self.assertEqual(result + 1, updated_result)
 

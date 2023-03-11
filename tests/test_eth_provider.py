@@ -36,7 +36,7 @@ class ZkSyncWeb3Tests(TestCase):
                                                   amount=amount,
                                                   gas_price=gas_price)
         # TODO: when L2 tx
-        # print(f"Op: {op}")
+
         after = self.eth_provider.get_l1_balance(eth_token, EthBlockParams.LATEST)
         print(f"After : {after}")
 

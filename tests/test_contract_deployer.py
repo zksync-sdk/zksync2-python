@@ -1,32 +1,29 @@
 from unittest import TestCase
-
 from eth_typing import HexStr
 from eth_utils import add_0x_prefix
 from web3 import Web3
 from web3.types import Nonce
-
+from tests.test_config import ZKSYNC_TEST_URL
 from zksync2.core.utils import hash_byte_code
-from tests.contracts.utils import get_hex_binary, contract_path
+from tests.contracts.utils import contract_path
 from zksync2.manage_contracts.contract_deployer import ContractDeployer
 from zksync2.manage_contracts.contract_encoder_base import ContractEncoder
 from zksync2.module.module_builder import ZkSyncBuilder
 
 
 class ContractDeployerTests(TestCase):
-    ZKSYNC_TEST_URL = "https://zksync2-testnet.zksync.dev"
 
     def setUp(self) -> None:
-        self.web3 = ZkSyncBuilder.build(self.ZKSYNC_TEST_URL)
+        self.web3 = ZkSyncBuilder.build(ZKSYNC_TEST_URL)
         self.contract_deployer = ContractDeployer(self.web3)
         counter_contract = ContractEncoder.from_json(self.web3, contract_path("Counter.json"))
         self.counter_contract_bin = counter_contract.bytecode
 
     def test_compute_l2_create2(self):
-        expected = Web3.toChecksumAddress("0x0790aff699b38f40929840469a72fb40e9763716")
+        expected = Web3.toChecksumAddress("0xf7671F9178dF17CF2F94a51d5a97bF54f6dff25a")
         sender = HexStr("0xa909312acfc0ed4370b8bd20dfe41c8ff6595194")
         salt = b'\0' * 32
-        counter_contract_bin = get_hex_binary("counter_contract.hex")
-        addr = self.contract_deployer.compute_l2_create2_address(sender, counter_contract_bin, b'', salt)
+        addr = self.contract_deployer.compute_l2_create2_address(sender, self.counter_contract_bin, b'', salt)
         self.assertEqual(expected, addr)
 
     def test_compute_l2_create(self):
@@ -36,7 +33,7 @@ class ContractDeployerTests(TestCase):
         self.assertEqual(expected, addr)
 
     def test_hash_byte_code(self):
-        expected = "0x010000517112c421df08d7b49e4dc1312f4ee62268ee4f5683b11d9e2d33525a"
+        expected = "0x0100003fcee62dec356138ff4ab621cb9ed313c17e98a4ec349b3e8e1642d588"
         hash_bytes = hash_byte_code(self.counter_contract_bin)
         result = add_0x_prefix(HexStr(hash_bytes.hex()))
         self.assertEqual(result, expected)
