@@ -1,17 +1,14 @@
 import os
-from copy import deepcopy
 from decimal import Decimal
 from unittest import TestCase, skip
 from eth_typing import HexStr
 from web3 import Web3
 from web3.types import TxParams
 from web3.middleware import geth_poa_middleware
-
-from zksync2.core.utils import to_bytes, pad_front_bytes
+from zksync2.core.utils import to_bytes
 from zksync2.manage_contracts.contract_deployer import ContractDeployer
 from zksync2.manage_contracts.contract_encoder_base import ContractEncoder
 from zksync2.manage_contracts.contract_factory import LegacyContractFactory
-from zksync2.manage_contracts.deploy_addresses import ZkSyncAddresses
 from zksync2.manage_contracts.erc20_contract import ERC20Encoder
 from zksync2.manage_contracts.nonce_holder import NonceHolder
 from zksync2.module.module_builder import ZkSyncBuilder
@@ -19,10 +16,8 @@ from zksync2.manage_contracts.l2_bridge import L2BridgeEncoder
 from zksync2.core.types import Token, ZkBlockParams, BridgeAddresses, EthBlockParams
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
-
-from zksync2.module.request_types import Transaction, EIP712Meta, TransactionType
 from zksync2.signer.eth_signer import PrivateKeyEthSigner
-from tests.contracts.utils import get_hex_binary, contract_path
+from tests.contracts.utils import contract_path
 from zksync2.transaction.transaction712 import TxFunctionCall, TxCreateContract, TxCreate2Contract
 from test_config import ZKSYNC_TEST_URL, ETH_TEST_URL, PRIVATE_KEY2
 
@@ -317,7 +312,7 @@ class ZkSyncWeb3Tests(TestCase):
     def test_deploy_contract_create(self):
         random_salt = generate_random_salt()
         nonce = self.web3.zksync.get_transaction_count(self.account.address, EthBlockParams.PENDING.value)
-        nonce_holder = NonceHolder(self.web3.zksync, self.account)
+        nonce_holder = NonceHolder(self.web3, self.account)
         deployment_nonce = nonce_holder.get_deployment_nonce(self.account.address)
         deployer = ContractDeployer(self.web3)
         precomputed_address = deployer.compute_l2_create_address(self.account.address, deployment_nonce)
@@ -635,22 +630,22 @@ class ZkSyncWeb3Tests(TestCase):
         balances = self.web3.zksync.zks_get_all_account_balances(self.account.address)
         print(f"balances : {balances}")
 
-    @skip("Integration test, used for develop purposes only")
+    # @skip("Integration test, used for develop purposes only")
     def test_get_confirmed_tokens(self):
         confirmed = self.web3.zksync.zks_get_confirmed_tokens(0, 10)
         print(f"confirmed tokens: {confirmed}")
 
-    @skip("Integration test, used for develop purposes only")
+    # @skip("Integration test, used for develop purposes only")
     def test_get_token_price(self):
         price = self.web3.zksync.zks_get_token_price(self.ETH_TOKEN.l2_address)
         print(f"price: {price}")
 
-    @skip("Integration test, used for develop purposes only")
+    # @skip("Integration test, used for develop purposes only")
     def test_get_l1_chain_id(self):
         l1_chain_id = self.web3.zksync.zks_l1_chain_id()
         print(f"L1 chain ID: {l1_chain_id} ")
 
-    @skip("Integration test, used for develop purposes only")
+    # @skip("Integration test, used for develop purposes only")
     def test_get_bridge_addresses(self):
         addresses = self.web3.zksync.zks_get_bridge_contracts()
         print(f"Bridge addresses: {addresses}")

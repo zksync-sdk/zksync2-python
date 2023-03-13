@@ -1,7 +1,6 @@
 import os
 from unittest import TestCase, skip
 from web3 import Web3
-from web3.middleware import geth_poa_middleware
 from tests.test_config import ZKSYNC_TEST_URL, ETH_TEST_URL, PRIVATE_KEY2
 from zksync2.core.types import Token, EthBlockParams
 from zksync2.manage_contracts.zksync_contract import ZkSyncContract

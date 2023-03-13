@@ -14,7 +14,7 @@ from zksync2.core.types import Token, EthBlockParams, ZkBlockParams, PaymasterPa
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
 from zksync2.signer.eth_signer import PrivateKeyEthSigner
-from tests.contracts.utils import get_hex_binary, contract_path
+from tests.contracts.utils import contract_path
 from zksync2.transaction.transaction712 import TxCreate2Contract, TxFunctionCall
 
 
