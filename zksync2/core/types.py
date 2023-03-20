@@ -6,6 +6,7 @@ from hexbytes import HexBytes
 from enum import Enum
 
 ADDRESS_DEFAULT = HexStr("0x" + "0" * 40)
+L2_ETH_TOKEN_ADDRESS = HexStr('0x000000000000000000000000000000000000800a')
 
 TokenAddress = NewType('token_address', HexStr)
 TransactionHash = Union[Hash32, HexBytes, HexStr]
@@ -35,7 +36,8 @@ class Token:
         return str(Decimal(amount) / Decimal(10) ** self.decimals)
 
     def is_eth(self) -> bool:
-        return self.l1_address == ADDRESS_DEFAULT and self.symbol == "ETH"
+        return self.l1_address.lower() == ADDRESS_DEFAULT or \
+               self.l2_address.lower() == L2_ETH_TOKEN_ADDRESS
 
     def into_decimal(self, amount: int) -> Decimal:
         return Decimal(amount).scaleb(self.decimals) // Decimal(10) ** self.decimals
@@ -45,9 +47,9 @@ class Token:
             amount = Decimal(amount)
         return int(amount * (Decimal(10) ** self.decimals))
 
-    @staticmethod
-    def create_eth() -> 'Token':
-        return Token(ADDRESS_DEFAULT, ADDRESS_DEFAULT, "ETH", 18)
+    @classmethod
+    def create_eth(cls) -> 'Token':
+        return Token(ADDRESS_DEFAULT, L2_ETH_TOKEN_ADDRESS, "ETH", 18)
 
 
 @dataclass
@@ -58,17 +60,17 @@ class Fee:
     gas_per_pubdata_limit: int = 0
 
 
-# @dataclass
-# class BridgeAddresses:
-#     l1_eth_default_bridge: HexStr
-#     l2_eth_default_bridge: HexStr
-#     l1_erc20_default_bridge: HexStr
-#     l2_erc20_default_bridge: HexStr
-
 @dataclass
 class BridgeAddresses:
     erc20_l1_default_bridge: HexStr
     erc20_l2_default_bridge: HexStr
+
+
+@dataclass
+class ZksMessageProof:
+    id: int
+    proof: List[str]
+    root: str
 
 
 VmExecutionSteps = NewType("VmExecutionSteps", Any)

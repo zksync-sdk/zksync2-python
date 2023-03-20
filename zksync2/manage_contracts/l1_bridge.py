@@ -5,11 +5,8 @@ from web3 import Web3
 from web3.contract import Contract
 from eth_typing import HexStr
 from typing import List, Optional
-
 from web3.types import TxReceipt
-
 from zksync2.manage_contracts.contract_encoder_base import BaseContractEncoder
-from zksync2.manage_contracts.gas_provider import GasProvider
 from zksync2.manage_contracts import contract_abi
 
 l1_bridge_abi_cache = None
@@ -33,7 +30,7 @@ class L1Bridge:
                  eth_account: BaseAccount,
                  # gas_provider: GasProvider,
                  abi=None):
-        check_sum_address = Web3.toChecksumAddress(contract_address)
+        check_sum_address = Web3.to_checksum_address(contract_address)
         self.web3 = web3
         self.addr = check_sum_address
         self.account = eth_account
@@ -95,7 +92,7 @@ class L1Bridge:
                             l2_block_number: int,
                             l2_msg_index: int,
                             msg: bytes,
-                            merkle_proof: List[bytes]):
+                            merkle_proof: List[bytes]) -> TxReceipt:
         tx = self.contract.functions.finalizeWithdrawal(l2_block_number,
                                                         l2_msg_index,
                                                         msg,

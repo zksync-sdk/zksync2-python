@@ -3,7 +3,6 @@ import importlib.resources as pkg_resources
 from eth_account.signers.base import BaseAccount
 from web3 import Web3
 from eth_typing import HexStr
-from web3.module import Module
 from web3.types import Nonce
 from .deploy_addresses import ZkSyncAddresses
 from zksync2.manage_contracts import contract_abi

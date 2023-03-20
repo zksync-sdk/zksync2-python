@@ -2,9 +2,10 @@ import sys
 from enum import IntEnum
 from hashlib import sha256
 from typing import Union
-
 from eth_typing import HexStr, Address, ChecksumAddress
 from eth_utils import remove_0x_prefix
+
+from zksync2.core.types import ADDRESS_DEFAULT, L2_ETH_TOKEN_ADDRESS
 
 
 def int_to_bytes(x: int) -> bytes:
@@ -15,6 +16,10 @@ def to_bytes(data: Union[bytes, HexStr]) -> bytes:
     if isinstance(data, bytes):
         return data
     return bytes.fromhex(remove_0x_prefix(data))
+
+
+def is_eth(address: HexStr) -> bool:
+    return address.lower() == ADDRESS_DEFAULT or address.lower() == L2_ETH_TOKEN_ADDRESS
 
 
 def encode_address(addr: Union[Address, ChecksumAddress, str]) -> bytes:

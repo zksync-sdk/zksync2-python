@@ -29,8 +29,8 @@ class PaymasterTests(TestCase):
     ETH_TEST_NET_AMOUNT_BALANCE = Decimal(1)
 
     SERC20_TOKEN = Token(
-        Web3.toChecksumAddress("0x" + "0" * 40),
-        Web3.toChecksumAddress("0xFC174650BDEbE4D94736442307D4D7fdBe799EeC"),
+        Web3.to_checksum_address("0x" + "0" * 40),
+        Web3.to_checksum_address("0xFC174650BDEbE4D94736442307D4D7fdBe799EeC"),
         "SERC20",
         18)
 

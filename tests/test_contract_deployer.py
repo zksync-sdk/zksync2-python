@@ -20,14 +20,14 @@ class ContractDeployerTests(TestCase):
         self.counter_contract_bin = counter_contract.bytecode
 
     def test_compute_l2_create2(self):
-        expected = Web3.toChecksumAddress("0xf7671F9178dF17CF2F94a51d5a97bF54f6dff25a")
+        expected = Web3.to_checksum_address("0xf7671F9178dF17CF2F94a51d5a97bF54f6dff25a")
         sender = HexStr("0xa909312acfc0ed4370b8bd20dfe41c8ff6595194")
         salt = b'\0' * 32
         addr = self.contract_deployer.compute_l2_create2_address(sender, self.counter_contract_bin, b'', salt)
         self.assertEqual(expected, addr)
 
     def test_compute_l2_create(self):
-        expected = Web3.toChecksumAddress("0x5107b7154dfc1d3b7f1c4e19b5087e1d3393bcf4")
+        expected = Web3.to_checksum_address("0x5107b7154dfc1d3b7f1c4e19b5087e1d3393bcf4")
         sender = HexStr("0x7e5f4552091a69125d5dfcb7b8c2659029395bdf")
         addr = self.contract_deployer.compute_l2_create_address(sender, Nonce(3))
         self.assertEqual(expected, addr)

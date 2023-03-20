@@ -53,5 +53,5 @@ class PrivateKeyEthSigner(EthSignerBase, ABC):
     def verify_typed_data(self, sig: HexStr, typed_data: EIP712Struct, domain=None) -> bool:
         singable_message = self.typed_data_to_signed_bytes(typed_data, domain)
         msg_hash = keccak(singable_message.body)
-        address = web3.Account.recoverHash(message_hash=msg_hash, signature=sig)
+        address = web3.Account._recover_hash(message_hash=msg_hash, signature=sig)
         return address.lower() == self.address.lower()

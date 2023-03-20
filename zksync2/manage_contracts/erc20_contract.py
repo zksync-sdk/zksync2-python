@@ -6,9 +6,7 @@ from web3 import Web3
 from web3.module import Module
 from eth_account.signers.base import BaseAccount
 from web3.types import TxReceipt
-
 from zksync2.manage_contracts.contract_encoder_base import BaseContractEncoder
-from zksync2.manage_contracts.gas_provider import GasProvider
 from zksync2.manage_contracts import contract_abi
 
 erc_20_abi_cache = None
@@ -31,15 +29,12 @@ class ERC20Contract:
 
     def __init__(self, web3: Module,
                  contract_address: HexStr,
-                 account: BaseAccount,
-                 # gas_provider: GasProvider
-                 ):
-        check_sum_address = Web3.toChecksumAddress(contract_address)
+                 account: BaseAccount):
+        check_sum_address = Web3.to_checksum_address(contract_address)
         self.contract_address = check_sum_address
         self.module = web3
         self.contract = self.module.contract(self.contract_address, abi=_erc_20_abi_default())
         self.account = account
-        # self.gas_provider = gas_provider
 
     def _nonce(self) -> int:
         return self.module.get_transaction_count(self.account.address)

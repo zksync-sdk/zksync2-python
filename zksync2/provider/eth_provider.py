@@ -1,18 +1,19 @@
-from decimal import Decimal
-from typing import Optional, Union, List
+from typing import Union, List
+
 from eth_account.signers.base import BaseAccount
 from eth_typing import HexStr
+from eth_utils import event_signature_to_log_topic, add_0x_prefix
+from eth_abi.codec import *
+
 from web3 import Web3
 from web3.types import TxReceipt
 
-from zksync2.core.utils import RecommendedGasLimit, to_bytes
+from zksync2.core.utils import RecommendedGasLimit, to_bytes, is_eth
 from zksync2.manage_contracts.erc20_contract import ERC20Contract
-from zksync2.manage_contracts.gas_provider import GasProvider
 from zksync2.manage_contracts.l1_bridge import L1Bridge
-from zksync2.manage_contracts.priority_op_tree import PriorityOpTree
-from zksync2.manage_contracts.priority_queue_type import PriorityQueueType
+from zksync2.manage_contracts.l2_bridge import L2Bridge
 from zksync2.manage_contracts.zksync_contract import ZkSyncContract
-from zksync2.core.types import Token, ADDRESS_DEFAULT, BridgeAddresses, EthBlockParams
+from zksync2.core.types import Token, BridgeAddresses, EthBlockParams, ZksMessageProof
 
 
 def check_base_cost(base_cost: int, value: int):
@@ -28,6 +29,7 @@ class EthereumProvider:
     # DEFAULT_THRESHOLD = 2 ** 255
     DEPOSIT_GAS_PER_PUBDATA_LIMIT = 50000
     RECOMMENDED_DEPOSIT_L2_GAS_LIMIT = 10000000
+    L1_MESSENGER_ADDRESS = '0x0000000000000000000000000000000000008008'
 
     def __init__(self,
                  zksync_web3: Web3,
@@ -196,15 +198,90 @@ class EthereumProvider:
         # return self._zksync_web3.zksync.get_priority_op_response(tx_receipt, self.main_contract)
         return tx_receipt
 
-    def _get_withdraw_log(self, withdraw_hash, index: int = 0):
-        raise NotImplementedError
+    def _get_withdraw_log(self, tx_receipt: TxReceipt, index: int = 0):
+        topic = event_signature_to_log_topic("L1MessageSent(address,bytes32,bytes)")
 
-    def _get_withdraw_l2_to_l1_log(self, withdraw_hash, index: int = 0):
-        raise NotImplementedError
+        def impl_filter(log):
+            return log['address'] == self.L1_MESSENGER_ADDRESS and \
+                   log['topics'][0] == topic
+
+        filtered_logs = list(filter(impl_filter, tx_receipt['logs']))
+        return filtered_logs[index], int(tx_receipt['l1BatchTxIndex'], 16)
+
+    def _get_withdraw_l2_to_l1_log(self, tx_receipt: TxReceipt, index: int = 0):
+        msgs = []
+        for i, e in enumerate(tx_receipt['l2ToL1Logs']):
+            if e["sender"].lower() == self.L1_MESSENGER_ADDRESS.lower():
+                msgs.append((i, e))
+        l2_to_l1_log_index, log = msgs[index]
+        return l2_to_l1_log_index, log
+
+    def _finalize_withdrawal_params(self, withdraw_hash, index: int) -> dict:
+        tx_receipt = self._zksync_web3.zksync.get_transaction_receipt(withdraw_hash)
+        log, l1_batch_tx_id = self._get_withdraw_log(tx_receipt, index)
+        l2_to_l1_log_index, _ = self._get_withdraw_l2_to_l1_log(tx_receipt, index)
+        sender = add_0x_prefix(HexStr(log['topics'][1][12:].hex()))
+        hex_hash = withdraw_hash.hex()
+        proof: ZksMessageProof = self._zksync_web3.zksync.zks_get_log_proof(hex_hash, l2_to_l1_log_index)
+        bytes_data = to_bytes(log['data'])
+        msg = self._zksync_web3.codec.decode(["bytes"], bytes_data)[0]
+        l1_batch_number = int(log['l1BatchNumber'], 16)
+
+        return {
+            "l1_batch_number": l1_batch_number,
+            "l2_message_index": proof.id,
+            "l2_tx_number_in_block": l1_batch_tx_id,
+            "message": msg,
+            "sender": sender,
+            "proof": proof.proof
+        }
 
     def finalize_withdrawal(self, withdraw_hash, index: int = 0):
-        raise NotImplementedError
+        params = self._finalize_withdrawal_params(withdraw_hash, index)
+        merkle_proof = []
+        for proof in params["proof"]:
+            merkle_proof.append(to_bytes(proof))
+
+        if is_eth(params["sender"]):
+            return self.main_contract.finalize_eth_withdrawal(
+                l2_block_number=params["l1_batch_number"],
+                l2_message_index=params["l2_message_index"],
+                l2_tx_number_in_block=params["l2_tx_number_in_block"],
+                message=params["message"],
+                merkle_proof=merkle_proof)
+        else:
+            # TODO: check should it be different account for L1/L2
+            l2bridge = L2Bridge(contract_address=params["sender"],
+                                web3_zks=self._zksync_web3,
+                                zksync_account=self._l1_account)
+            l1bridge = L1Bridge(contract_address=l2bridge.l1_bridge(),
+                                web3=self._eth_web3,
+                                eth_account=self._l1_account)
+            return l1bridge.finalize_withdrawal(l2_block_number=params["l1_batch_number"],
+                                                l2_msg_index=params["l2_message_index"],
+                                                msg=params["message"],
+                                                merkle_proof=merkle_proof)
 
     def is_withdrawal_finalized(self, withdraw_hash, index: int = 0):
-        raise NotImplementedError
+        tx_receipt = self._zksync_web3.zksync.get_transaction_receipt(withdraw_hash)
+        log, _ = self._get_withdraw_log(tx_receipt, index)
+        l2_to_l1_log_index = self._get_withdraw_l2_to_l1_log(tx_receipt, index)
+        sender = add_0x_prefix(HexStr(log.topics[1][12:].hex()))
+        hex_hash = withdraw_hash.hex()
+        proof: ZksMessageProof = self._zksync_web3.zksync.zks_get_log_proof(hex_hash, l2_to_l1_log_index)
 
+        l2_block_number = log["l1BatchNumber"]
+        if is_eth(sender):
+            return self.main_contract.is_eth_withdrawal_finalized(
+                l2_block_number=l2_block_number,
+                l2_message_index=proof.id)
+        else:
+            # TODO: check should it be different account for L1/L2
+            l2bridge = L2Bridge(contract_address=sender,
+                                web3_zks=self._zksync_web3,
+                                zksync_account=self._l1_account)
+            l1bridge = L1Bridge(contract_address=l2bridge.l1_bridge(),
+                                web3=self._eth_web3,
+                                eth_account=self._l1_account)
+            return l1bridge.is_withdrawal_finalized(l2_block_number=l2_block_number,
+                                                    l2_msg_index=proof.id)

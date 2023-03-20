@@ -2,15 +2,13 @@ import json
 import importlib.resources as pkg_resources
 from dataclasses import dataclass
 from typing import List
-
+from web3.contract.contract import ContractFunction
 from web3.types import TxReceipt
-
 from zksync2.manage_contracts import contract_abi
 from eth_typing import HexStr
 from eth_utils import remove_0x_prefix
 from web3 import Web3
 from eth_account.signers.base import BaseAccount
-from web3.contract import ContractFunction
 
 zksync_abi_cache = None
 
@@ -87,7 +85,7 @@ class ZkSyncContract:
                  zksync_main_contract: HexStr,
                  eth: Web3,
                  account: BaseAccount):
-        check_sum_address = Web3.toChecksumAddress(zksync_main_contract)
+        check_sum_address = Web3.to_checksum_address(zksync_main_contract)
         self.contract_address = check_sum_address
         self.web3 = eth
         self.contract = self.web3.eth.contract(self.contract_address, abi=_zksync_abi_default())
@@ -173,22 +171,35 @@ class ZkSyncContract:
         return result
 
     def finalize_eth_withdrawal(self,
-                                _l2BlockNumber: int,
-                                _l2MessageIndex: int,
-                                _l2TxNumberInBlock: int,
-                                _message: bytes,
-                                _merkleProof: List[bytes]
+                                l2_block_number: int,
+                                l2_message_index: int,
+                                l2_tx_number_in_block: int,
+                                message: bytes,
+                                merkle_proof: List[bytes]
                                 ):
-        self._method_("finalizeEthWithdrawal")(_l2BlockNumber,
-                                               _l2MessageIndex,
-                                               _l2TxNumberInBlock,
-                                               _message,
-                                               _merkleProof).call(
+        tx = self._method_("finalizeEthWithdrawal")(l2_block_number,
+                                                    l2_message_index,
+                                                    l2_tx_number_in_block,
+                                                    message,
+                                                    merkle_proof).build_transaction(
             {
                 "chainId": self.chain_id,
                 "from": self.account.address,
                 'nonce': self._nonce(),
             })
+        signed = self.account.sign_transaction(tx)
+        tx_hash = self.web3.eth.send_raw_transaction(signed.rawTransaction)
+        return self.web3.eth.wait_for_transaction_receipt(tx_hash)
+        # tx = self._method_("finalizeEthWithdrawal")(l2_block_number,
+        #                                             l2_message_index,
+        #                                             l2_tx_number_in_block,
+        #                                             message,
+        #                                             merkle_proof).call(
+        #     {
+        #         "chainId": self.chain_id,
+        #         "from": self.account.address,
+        #         'nonce': self._nonce(),
+        #     })
 
     def freeze_diamond(self):
         self._method_("freezeDiamond")().call(

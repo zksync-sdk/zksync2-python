@@ -26,17 +26,8 @@ ZksEstimateFee = NewType("ZksEstimateFee", Fee)
 ZksIsTokenLiquid = NewType('ZksIsTokenLiquid', bool)
 ZksL1ChainId = NewType("ZksL1ChainId", int)
 ZksMainContract = HexStr
-ZksMessageProof = TypedDict(
-    "ZksMessageProof",
-    {
-        "proof": List[str],
-        "id": int,
-        "root": str
-    })
-
 ZksSetContractDebugInfoResult = NewType("ZksSetContractDebugInfoResult", bool)
 ZksTokenPrice = NewType("ZksTokenPrice", Decimal)
-
 ZksTokens = NewType("ZksTokens", List[Token])
 ZksTransactions = NewType("ZksTransactions", List[TxData])
 ZksTransactionTrace = NewType("ZksTransactionTrace", VmDebugTrace)

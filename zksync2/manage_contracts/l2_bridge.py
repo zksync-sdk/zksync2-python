@@ -4,10 +4,7 @@ from eth_account.signers.base import BaseAccount
 from web3 import Web3
 from web3.contract import Contract
 from eth_typing import HexStr
-from typing import Optional
-from web3.types import TxReceipt
-from zksync2.manage_contracts.contract_encoder_base import BaseContractEncoder
-from zksync2.manage_contracts.gas_provider import GasProvider
+from web3.types import TxReceipt, TxParams
 from zksync2.manage_contracts import contract_abi
 
 l2_bridge_abi_cache = None
@@ -29,12 +26,13 @@ class L2Bridge:
                  contract_address: HexStr,
                  web3_zks: Web3,
                  zksync_account: BaseAccount,
-                 gas_provider: GasProvider, abi=None):
-        check_sum_address = Web3.toChecksumAddress(contract_address)
+                 # gas_provider: GasProvider,
+                 abi=None):
+        check_sum_address = Web3.to_checksum_address(contract_address)
         self.web3 = web3_zks
         self.addr = check_sum_address
         self.zksync_account = zksync_account
-        self.gas_provider = gas_provider
+        # self.gas_provider = gas_provider
         if abi is None:
             abi = _l2_bridge_abi_default()
         self.contract: Contract = self.web3.eth.contract(self.addr, abi=abi)
@@ -56,8 +54,8 @@ class L2Bridge:
             {
                 "from": self.zksync_account.address,
                 "nonce": self._get_nonce(),
-                "gas": self.gas_provider.gas_limit(),
-                "gasPrice": self.gas_provider.gas_price()
+                # "gas": self.gas_provider.gas_limit(),
+                # "gasPrice": self.gas_provider.gas_price()
             })
         signed_tx = self.zksync_account.sign_transaction(tx)
         txn_hash = self.web3.zksync.send_raw_transaction(signed_tx.rawTransaction)
@@ -73,28 +71,49 @@ class L2Bridge:
     def l2_token_address(self, l1_token: HexStr):
         return self.contract.functions.l2TokenAddress(l1_token).call()
 
-    def withdraw(self,
-                 l1_receiver: HexStr,
-                 l2_token: HexStr,
-                 amount: int):
+    def withdraw_tx(self,
+                    l1_receiver: HexStr,
+                    l2_token: HexStr,
+                    amount: int,
+                    gas: int,
+                    gas_price: int = None) -> TxParams:
+        if gas_price is None:
+            gas_price = self.web3.zksync.gas_price
+
         tx = self.contract.functions.withdraw(l1_receiver,
                                               l2_token,
                                               amount).build_transaction(
             {
+                "chain_id": self.web3.zksync.chain_id,
                 "from": self.zksync_account.address,
                 "nonce": self._get_nonce(),
-                "gas": self.gas_provider.gas_limit(),
-                "gasPrice": self.gas_provider.gas_price()
+                "gas": gas,
+                "gas_price": gas_price
             })
-        signed_tx = self.zksync_account.sign_transaction(tx)
-        txn_hash = self.web3.zksync.send_raw_transaction(signed_tx.rawTransaction)
-        txn_receipt = self.web3.zksync.wait_for_transaction_receipt(txn_hash)
-        return txn_receipt
+        return tx
 
+    # def withdraw(self,
+    #              l1_receiver: HexStr,
+    #              l2_token: HexStr,
+    #              amount: int):
+    #     tx = self.contract.functions.withdraw(l1_receiver,
+    #                                           l2_token,
+    #                                           amount).build_transaction(
+    #         {
+    #             "from": self.zksync_account.address,
+    #             "nonce": self._get_nonce(),
+    #             # "gas": self.gas_provider.gas_limit(),
+    #             # "gasPrice": self.gas_provider.gas_price()
+    #         })
+    #     signed_tx = self.zksync_account.sign_transaction(tx)
+    #     txn_hash = self.web3.zksync.send_raw_transaction(signed_tx.rawTransaction)
+    #     txn_receipt = self.web3.zksync.wait_for_transaction_receipt(txn_hash)
+    #     return txn_receipt
 
-class L2BridgeEncoder(BaseContractEncoder):
-
-    def __init__(self, web3: Web3, abi: Optional[dict] = None):
-        if abi is None:
-            abi = _l2_bridge_abi_default()
-        super(L2BridgeEncoder, self).__init__(web3, abi)
+#
+# class L2BridgeEncoder(BaseContractEncoder):
+#
+#     def __init__(self, web3: Web3, abi: Optional[dict] = None):
+#         if abi is None:
+#             abi = _l2_bridge_abi_default()
+#         super(L2BridgeEncoder, self).__init__(web3, abi)

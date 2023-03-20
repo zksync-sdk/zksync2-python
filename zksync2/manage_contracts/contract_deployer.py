@@ -85,7 +85,7 @@ class ContractDeployer:
         sha_result = keccak(result)
         address = sha_result[12:]
         address = "0x" + address.hex()
-        return HexStr(Web3.toChecksumAddress(address))
+        return HexStr(Web3.to_checksum_address(address))
 
     def compute_l2_create2_address(self,
                                    sender: HexStr,
@@ -103,7 +103,7 @@ class ContractDeployer:
         sha_result = keccak(result)
         address = sha_result[12:]
         address = "0x" + address.hex()
-        return HexStr(Web3.toChecksumAddress(address))
+        return HexStr(Web3.to_checksum_address(address))
 
     def extract_contract_address(self, receipt: TxReceipt) -> HexStr:
         result = self.contract_encoder.contract.events.ContractDeployed().processReceipt(receipt)

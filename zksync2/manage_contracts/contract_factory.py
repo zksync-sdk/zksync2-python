@@ -9,9 +9,8 @@ from web3.contract import Contract
 from zksync2.core.types import EthBlockParams
 from zksync2.manage_contracts.contract_deployer import ContractDeployer
 from zksync2.manage_contracts.contract_encoder_base import ContractEncoder
-from zksync2.manage_contracts.nonce_holder import NonceHolder
 from zksync2.signer.eth_signer import EthSignerBase
-from zksync2.transaction.transaction712 import TxCreateContract, TxCreate2Contract
+from zksync2.transaction.transaction_builders import TxCreateContract, TxCreate2Contract
 
 
 class DeploymentType(Enum):

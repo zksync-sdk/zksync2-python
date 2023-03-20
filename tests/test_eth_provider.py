@@ -3,7 +3,6 @@ from unittest import TestCase, skip
 from web3 import Web3
 from tests.test_config import ZKSYNC_TEST_URL, ETH_TEST_URL, PRIVATE_KEY2
 from zksync2.core.types import Token, EthBlockParams
-from zksync2.manage_contracts.zksync_contract import ZkSyncContract
 from zksync2.module.module_builder import ZkSyncBuilder
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
@@ -20,9 +19,6 @@ class ZkSyncWeb3Tests(TestCase):
         self.zksync = ZkSyncBuilder.build(ZKSYNC_TEST_URL)
         self.eth_web3 = Web3(Web3.HTTPProvider(ETH_TEST_URL))
         self.account: LocalAccount = Account.from_key(PRIVATE_KEY2)
-        self.zksync_contract = ZkSyncContract(self.zksync.zksync.zks_main_contract(),
-                                              self.eth_web3,
-                                              self.account)
         self.eth_provider = EthereumProvider(self.zksync, self.eth_web3, self.account)
 
     def test_deposit(self):
@@ -44,8 +40,8 @@ class ZkSyncWeb3Tests(TestCase):
     @skip("Integration test, used for develop purposes only")
     def test_deposit_usdc(self):
         USDC_TOKEN = Token(
-            Web3.toChecksumAddress("0xd35cceead182dcee0f148ebac9447da2c4d449c4"),
-            Web3.toChecksumAddress("0x852a4599217e76aa725f0ada8bf832a1f57a8a91"),
+            Web3.to_checksum_address("0xd35cceead182dcee0f148ebac9447da2c4d449c4"),
+            Web3.to_checksum_address("0x852a4599217e76aa725f0ada8bf832a1f57a8a91"),
             "USDC",
             6)
 

@@ -1,13 +1,12 @@
 from abc import ABC
-
-from eth_utils import to_checksum_address, is_dict
+from eth_utils import to_checksum_address, apply_formatter_to_array, is_address
 from eth_utils.curried import apply_formatter_at_index
 from hexbytes import HexBytes
 from web3 import Web3
 from web3._utils.threads import Timeout
 from web3.exceptions import TransactionNotFound, TimeExhausted
 from web3.module import Module
-from web3._utils.formatters import integer_to_hex, apply_formatter_to_array
+from web3._utils.formatters import integer_to_hex
 from web3._utils.method_formatters import (
     ABI_REQUEST_FORMATTERS,
     METHOD_NORMALIZERS,
@@ -17,16 +16,13 @@ from web3._utils.method_formatters import (
     apply_formatters_to_dict,
     apply_list_to_array_formatter,
     to_hex_if_integer, to_ascii_if_bytes, PYTHONIC_RESULT_FORMATTERS, FILTER_RESULT_FORMATTERS,
-    apply_module_to_formatters, not_attrdict
+    apply_module_to_formatters, is_not_null
 )
-
-from web3.datastructures import AttributeDict
 
 from web3.eth import Eth
 from web3.types import RPCEndpoint, _Hash32, TxReceipt
-
-from zksync2.core.types import TransactionHash, Limit, L2WithdrawTxHash, From, ContractSourceDebugInfo, \
-    BridgeAddresses, TokenAddress
+from zksync2.core.types import Limit, From, ContractSourceDebugInfo, \
+    BridgeAddresses, TokenAddress, ZksMessageProof
 from zksync2.manage_contracts.zksync_contract import ZkSyncContract
 from zksync2.module.request_types import *
 from zksync2.module.response_types import *
@@ -44,6 +40,7 @@ zks_l1_chain_id_rpc = RPCEndpoint("zks_L1ChainId")
 zks_get_all_account_balances_rpc = RPCEndpoint("zks_getAllAccountBalances")
 zks_get_bridge_contracts_rpc = RPCEndpoint("zks_getBridgeContracts")
 zks_get_l2_to_l1_msg_proof_prc = RPCEndpoint("zks_getL2ToL1MsgProof")
+zks_get_l2_to_l1_log_proof_prc = RPCEndpoint("zks_getL2ToL1LogProof")
 eth_estimate_gas_rpc = RPCEndpoint("eth_estimateGas")
 
 zks_set_contract_debug_info_rpc = RPCEndpoint("zks_setContractDebugInfo")
@@ -75,12 +72,12 @@ def meta_formatter(eip712: EIP712Meta) -> dict:
 
 ZKS_TRANSACTION_PARAMS_FORMATTERS = {
     'data': to_ascii_if_bytes,
-    'from': to_checksum_address,
+    'from': apply_formatter_if(is_address, to_checksum_address),
     'gas': to_hex_if_integer,
     'gasPrice': to_hex_if_integer,
     'maxPriorityFeePerGas': to_hex_if_integer,
     'nonce': to_hex_if_integer,
-    'to': to_checksum_address,
+    'to': apply_formatter_if(is_not_null, to_checksum_address),
     'value': to_hex_if_integer,
     'chainId': to_hex_if_integer,
     'transactionType': to_hex_if_integer,
@@ -91,7 +88,7 @@ zks_transaction_request_formatter = apply_formatters_to_dict(ZKS_TRANSACTION_PAR
 
 ZKSYNC_REQUEST_FORMATTERS: [RPCEndpoint, Callable[..., Any]] = {
     eth_estimate_gas_rpc: apply_formatter_at_index(zks_transaction_request_formatter, 0),
-    zks_estimate_fee_rpc: apply_formatter_at_index(zks_transaction_request_formatter, 0)
+    zks_estimate_fee_rpc: apply_formatter_at_index(zks_transaction_request_formatter, 0),
 }
 
 
@@ -127,11 +124,19 @@ def to_fee(v: dict) -> Fee:
                gas_per_pubdata_limit=gas_per_pubdata_limit)
 
 
+def to_msg_proof(v: dict) -> ZksMessageProof:
+    return ZksMessageProof(id=v['id'],
+                           proof=v['proof'],
+                           root=v['root'])
+
+
 ZKSYNC_RESULT_FORMATTERS: Dict[RPCEndpoint, Callable[..., Any]] = {
     zks_get_confirmed_tokens_rpc: apply_list_to_array_formatter(to_token),
     zks_get_bridge_contracts_rpc: to_bridge_address,
     zks_get_all_account_balances_rpc: to_zks_account_balances,
     zks_estimate_fee_rpc: to_fee,
+    zks_get_l2_to_l1_log_proof_prc: to_msg_proof,
+    zks_get_l2_to_l1_msg_proof_prc: to_msg_proof
 }
 
 
@@ -152,6 +157,16 @@ def zksync_get_result_formatters(
         method_name: Union[RPCEndpoint, Callable[..., RPCEndpoint]],
         module: "Module",
 ) -> Dict[str, Callable[..., Any]]:
+
+    # formatters = combine_formatters((PYTHONIC_RESULT_FORMATTERS,), method_name)
+    # formatters_requiring_module = combine_formatters(
+    #     (FILTER_RESULT_FORMATTERS,), method_name
+    # )
+    # partial_formatters = apply_module_to_formatters(
+    #     formatters_requiring_module, module, method_name
+    # )
+    # return compose(*partial_formatters, *formatters)
+
     formatters = combine_formatters(
         (ZKSYNC_RESULT_FORMATTERS,
          PYTHONIC_RESULT_FORMATTERS),
@@ -167,8 +182,7 @@ def zksync_get_result_formatters(
         module,
         method_name
     )
-    attrdict_formatter = apply_formatter_if(is_dict and not_attrdict, AttributeDict.recursive)
-    return compose(*partial_formatters, attrdict_formatter, *formatters)
+    return compose(*partial_formatters, *formatters)
 
 
 class ZkSync(Eth, ABC):
@@ -212,10 +226,18 @@ class ZkSync(Eth, ABC):
         result_formatters=zksync_get_result_formatters
     )
 
-    _zks_get_l2_to_l1_msg_proof: Method[Callable[[int, HexStr, str, Optional[int]], ZksMessageProof]] = Method(
+    _zks_get_l2_to_l1_msg_proof: Method[Callable[[int, Address, str, Optional[int]], ZksMessageProof]] = Method(
         zks_get_l2_to_l1_msg_proof_prc,
         mungers=[default_root_munger],
-        request_formatters=zksync_get_request_formatters
+        request_formatters=zksync_get_request_formatters,
+        result_formatters=zksync_get_result_formatters
+    )
+
+    _zks_get_l2_to_l1_log_proof: Method[Callable[[Address, Optional[int]], ZksMessageProof]] = Method(
+        zks_get_l2_to_l1_log_proof_prc,
+        mungers=[default_root_munger],
+        request_formatters=zksync_get_request_formatters,
+        result_formatters=zksync_get_result_formatters
     )
 
     _eth_estimate_gas: Method[Callable[[Transaction], int]] = Method(
@@ -283,8 +305,11 @@ class ZkSync(Eth, ABC):
                                    l2log_pos: Optional[int]) -> ZksMessageProof:
         return self._zks_get_l2_to_l1_msg_proof(block, sender, message, l2log_pos)
 
+    def zks_get_log_proof(self, tx_hash: HexStr, index: int = None) -> ZksMessageProof:
+        return self._zks_get_l2_to_l1_log_proof(tx_hash, index)
+
     def zks_get_testnet_paymaster_address(self) -> HexStr:
-        return Web3.toChecksumAddress(self._zks_get_testnet_paymaster_address())
+        return Web3.to_checksum_address(self._zks_get_testnet_paymaster_address())
 
     def eth_estimate_gas(self, tx: Transaction) -> int:
         return self._eth_estimate_gas(tx)
@@ -319,11 +344,36 @@ class ZkSync(Eth, ABC):
             with Timeout(timeout) as _timeout:
                 while True:
                     try:
-                        tx_receipt = self._get_transaction_receipt(transaction_hash)
+                        tx_receipt = self.get_transaction_receipt(transaction_hash)
                     except TransactionNotFound:
                         tx_receipt = None
                     if tx_receipt is not None and \
                             tx_receipt["blockHash"] is not None:
+                        break
+                    _timeout.sleep(poll_latency)
+            return tx_receipt
+
+        except Timeout:
+            raise TimeExhausted(
+                f"Transaction {HexBytes(transaction_hash) !r} is not in the chain "
+                f"after {timeout} seconds"
+            )
+
+    def wait_finalized(self,
+                       transaction_hash: _Hash32,
+                       timeout: float = 120,
+                       poll_latency: float = 0.1) -> TxReceipt:
+        try:
+            with Timeout(timeout) as _timeout:
+                while True:
+                    try:
+                        block = self.get_block('finalized')
+                        tx_receipt = self.get_transaction_receipt(transaction_hash)
+                    except TransactionNotFound:
+                        tx_receipt = None
+                    if tx_receipt is not None and \
+                            tx_receipt["blockHash"] is not None and \
+                            block['number'] >= tx_receipt['blockNumber']:
                         break
                     _timeout.sleep(poll_latency)
             return tx_receipt
