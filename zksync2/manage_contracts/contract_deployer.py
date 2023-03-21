@@ -106,7 +106,7 @@ class ContractDeployer:
         return HexStr(Web3.to_checksum_address(address))
 
     def extract_contract_address(self, receipt: TxReceipt) -> HexStr:
-        result = self.contract_encoder.contract.events.ContractDeployed().processReceipt(receipt)
+        result = self.contract_encoder.contract.events.ContractDeployed().process_receipt(receipt)
         entry = result[1]["args"]
         addr = entry["contractAddress"]
         return addr

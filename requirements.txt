@@ -1,2 +1,3 @@
 eip712_structs == 1.1.0
 web3==6.0.0
+eth-tester

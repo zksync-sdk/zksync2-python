@@ -38,7 +38,7 @@ class ZkSyncWeb3Tests(TestCase):
         self.counter_address = None
         self.test_tx_hash = None
 
-    # @skip("Integration test, used for develop purposes only")
+    @skip("Integration test, used for develop purposes only")
     def test_send_money(self):
         gas_limit = 21000
         web3 = Web3(Web3.HTTPProvider(ETH_TEST_URL))
@@ -49,7 +49,7 @@ class ZkSyncWeb3Tests(TestCase):
             "gasPrice": Web3.to_wei(1, "gwei"),
             "gas": gas_limit,
             "to": self.account.address,
-            "value": web3.toWei(1000000, 'ether')
+            "value": web3.to_wei(1000000, 'ether')
         }
         tx_hash = web3.eth.send_transaction(transaction)
         txn_receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
@@ -69,6 +69,7 @@ class ZkSyncWeb3Tests(TestCase):
     def test_get_l2_balance(self):
         zk_balance = self.web3.zksync.get_balance(self.account.address, EthBlockParams.LATEST.value)
         print(f"ZkSync balance: {zk_balance}")
+        print(f"In Ether: {Web3.from_wei(zk_balance, 'ether')}")
 
     # @skip("Integration test, used for develop purposes only")
     def test_get_nonce(self):
@@ -349,6 +350,7 @@ class ZkSyncWeb3Tests(TestCase):
         self.assertEqual(0, value)
         print(f"Call method for deployed contract, address: {contract_address}, value: {value}")
 
+    @skip("web3py 6.0.0 does not provide protocol version")
     def test_protocol_version(self):
         version = self.web3.zksync.protocol_version
         print(f"Protocol version: {version}")
@@ -356,9 +358,6 @@ class ZkSyncWeb3Tests(TestCase):
 
     # @skip("Integration test, used for develop purposes only")
     def test_deploy_contract_with_constructor_create(self):
-        version = self.web3.zksync.protocol_version
-        print(f"Protocol version: {version}")
-
         random_salt = generate_random_salt()
         nonce = self.web3.zksync.get_transaction_count(self.account.address, EthBlockParams.PENDING.value)
         gas_price = self.web3.zksync.gas_price

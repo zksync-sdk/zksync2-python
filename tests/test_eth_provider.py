@@ -22,7 +22,7 @@ class ZkSyncWeb3Tests(TestCase):
         self.eth_provider = EthereumProvider(self.zksync, self.eth_web3, self.account)
 
     def test_deposit(self):
-        amount = Web3.toWei(0.01, "ether")
+        amount = Web3.to_wei(1, "ether")
         eth_token = Token.create_eth()
         gas_price = self.eth_web3.eth.gas_price
         before_deposit = self.eth_provider.get_l1_balance(eth_token, EthBlockParams.LATEST)

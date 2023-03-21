@@ -1,5 +1,7 @@
 from abc import ABC
-from eth_utils import to_checksum_address, apply_formatter_to_array, is_address
+from eth_utils import to_checksum_address, is_address
+from eth_utils.curried import apply_formatter_to_array
+
 from eth_utils.curried import apply_formatter_at_index
 from hexbytes import HexBytes
 from web3 import Web3
@@ -15,8 +17,8 @@ from web3._utils.method_formatters import (
     apply_formatter_if,
     apply_formatters_to_dict,
     apply_list_to_array_formatter,
-    to_hex_if_integer, to_ascii_if_bytes, PYTHONIC_RESULT_FORMATTERS, FILTER_RESULT_FORMATTERS,
-    apply_module_to_formatters, is_not_null
+    to_hex_if_integer, PYTHONIC_RESULT_FORMATTERS, FILTER_RESULT_FORMATTERS,
+    apply_module_to_formatters, is_not_null, to_ascii_if_bytes
 )
 
 from web3.eth import Eth
@@ -49,6 +51,10 @@ zks_get_transaction_trace_rpc = RPCEndpoint("zks_getTransactionTrace")
 zks_get_testnet_paymaster_address = RPCEndpoint("zks_getTestnetPaymaster")
 
 
+def bytes_to_list(v: bytes) -> List[int]:
+    return [int(e) for e in v]
+
+
 def meta_formatter(eip712: EIP712Meta) -> dict:
     ret = {
         "gasPerPubdata": integer_to_hex(eip712.gas_per_pub_data)
@@ -56,13 +62,13 @@ def meta_formatter(eip712: EIP712Meta) -> dict:
     if eip712.custom_signature is not None:
         ret["customSignature"] = eip712.custom_signature.hex()
 
-    factory_formatter = apply_formatter_to_array(to_ascii_if_bytes)
+    factory_formatter = apply_formatter_to_array(bytes_to_list)
     if eip712.factory_deps is not None:
-        ret["factoryDeps"] = [factory_formatter(dep)
-                              for dep in eip712.factory_deps]
+        ret["factoryDeps"] = factory_formatter(eip712.factory_deps)
+
     pp_params = eip712.paymaster_params
     if pp_params is not None:
-        paymaster_input = factory_formatter(pp_params.paymaster_input)
+        paymaster_input = bytes_to_list(pp_params.paymaster_input)
         ret["paymasterParams"] = {
             "paymaster": pp_params.paymaster,
             "paymasterInput": paymaster_input
@@ -157,7 +163,6 @@ def zksync_get_result_formatters(
         method_name: Union[RPCEndpoint, Callable[..., RPCEndpoint]],
         module: "Module",
 ) -> Dict[str, Callable[..., Any]]:
-
     # formatters = combine_formatters((PYTHONIC_RESULT_FORMATTERS,), method_name)
     # formatters_requiring_module = combine_formatters(
     #     (FILTER_RESULT_FORMATTERS,), method_name

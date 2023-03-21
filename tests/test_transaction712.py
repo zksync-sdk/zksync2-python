@@ -11,7 +11,8 @@ from tests.contracts.utils import contract_path
 from tests.test_config import PRIVATE_KEY2
 from zksync2.manage_contracts.contract_encoder_base import ContractEncoder
 from zksync2.module.request_types import EIP712Meta
-from zksync2.transaction.transaction712 import Transaction712, TxCreateContract
+from zksync2.transaction.transaction_builders import TxCreateContract
+from zksync2.transaction.transaction712 import Transaction712
 
 
 class TestTransaction712(TestCase):
@@ -54,7 +55,7 @@ class TestTransaction712(TestCase):
                               bytecode=self.counter_contract_encoder.bytecode)
         tx_712 = tx.tx712(9910372)
         msg = tx_712.to_eip712_struct().hash_struct()
-        self.assertEqual("1b7c07696aa681d4ba697388e10493722b31ca9451daaf2ff4c5d086f7ebd28c",
+        self.assertEqual("b65d7e33b4d31aa931d044aff74ad6780374acd5bcbd192b1b0210c40664ccb2",
                          msg.hex())
 
     def test_encode_to_eip712_type_string(self):

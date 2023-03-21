@@ -8,14 +8,14 @@ from tests.test_config import ZKSYNC_TEST_URL, PRIVATE_KEY2
 from zksync2.manage_contracts.contract_encoder_base import ContractEncoder
 from zksync2.manage_contracts.paymaster_utils import PaymasterFlowEncoder
 from zksync2.manage_contracts.erc20_contract import ERC20Contract
-from zksync2.manage_contracts.gas_provider import StaticGasProvider
+# from zksync2.manage_contracts.gas_provider import StaticGasProvider
 from zksync2.module.module_builder import ZkSyncBuilder
 from zksync2.core.types import Token, EthBlockParams, ZkBlockParams, PaymasterParams
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
 from zksync2.signer.eth_signer import PrivateKeyEthSigner
 from tests.contracts.utils import contract_path
-from zksync2.transaction.transaction712 import TxCreate2Contract, TxFunctionCall
+from zksync2.transaction.transaction_builders import TxFunctionCall, TxCreate2Contract
 
 
 # mint tx hash of Test coins:
@@ -41,7 +41,6 @@ class PaymasterTests(TestCase):
         self.account: LocalAccount = Account.from_key(PRIVATE_KEY2)
         self.chain_id = self.web3.zksync.chain_id
         self.signer = PrivateKeyEthSigner(self.account, self.chain_id)
-        self.gas_provider = StaticGasProvider(Web3.toWei(1, "gwei"), 555000)
         self.custom_paymaster = ContractEncoder.from_json(self.web3, contract_path("CustomPaymaster.json"))
 
     def _is_deployed(self):
