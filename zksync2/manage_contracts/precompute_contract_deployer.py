@@ -23,7 +23,7 @@ def _icontract_deployer_abi_default():
     return icontract_deployer_abi_cache
 
 
-class ContractDeployer:
+class PrecomputeContractDeployer:
     DEFAULT_SALT = b'\0' * 32
     CREATE_FUNC = "create"
     CREATE2_FUNC = "create2"

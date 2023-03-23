@@ -26,13 +26,11 @@ class L2Bridge:
                  contract_address: HexStr,
                  web3_zks: Web3,
                  zksync_account: BaseAccount,
-                 # gas_provider: GasProvider,
                  abi=None):
         check_sum_address = Web3.to_checksum_address(contract_address)
         self.web3 = web3_zks
         self.addr = check_sum_address
         self.zksync_account = zksync_account
-        # self.gas_provider = gas_provider
         if abi is None:
             abi = _l2_bridge_abi_default()
         self.contract: Contract = self.web3.eth.contract(self.addr, abi=abi)
@@ -54,8 +52,6 @@ class L2Bridge:
             {
                 "from": self.zksync_account.address,
                 "nonce": self._get_nonce(),
-                # "gas": self.gas_provider.gas_limit(),
-                # "gasPrice": self.gas_provider.gas_price()
             })
         signed_tx = self.zksync_account.sign_transaction(tx)
         txn_hash = self.web3.zksync.send_raw_transaction(signed_tx.rawTransaction)
@@ -91,29 +87,3 @@ class L2Bridge:
                 "gas_price": gas_price
             })
         return tx
-
-    # def withdraw(self,
-    #              l1_receiver: HexStr,
-    #              l2_token: HexStr,
-    #              amount: int):
-    #     tx = self.contract.functions.withdraw(l1_receiver,
-    #                                           l2_token,
-    #                                           amount).build_transaction(
-    #         {
-    #             "from": self.zksync_account.address,
-    #             "nonce": self._get_nonce(),
-    #             # "gas": self.gas_provider.gas_limit(),
-    #             # "gasPrice": self.gas_provider.gas_price()
-    #         })
-    #     signed_tx = self.zksync_account.sign_transaction(tx)
-    #     txn_hash = self.web3.zksync.send_raw_transaction(signed_tx.rawTransaction)
-    #     txn_receipt = self.web3.zksync.wait_for_transaction_receipt(txn_hash)
-    #     return txn_receipt
-
-#
-# class L2BridgeEncoder(BaseContractEncoder):
-#
-#     def __init__(self, web3: Web3, abi: Optional[dict] = None):
-#         if abi is None:
-#             abi = _l2_bridge_abi_default()
-#         super(L2BridgeEncoder, self).__init__(web3, abi)

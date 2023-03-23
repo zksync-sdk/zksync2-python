@@ -5,7 +5,7 @@ from eth_typing import HexStr
 from web3 import Web3
 from web3.types import Nonce
 from zksync2.core.types import Token, BridgeAddresses, L2_ETH_TOKEN_ADDRESS
-from zksync2.manage_contracts.contract_deployer import ContractDeployer
+from zksync2.manage_contracts.precompute_contract_deployer import PrecomputeContractDeployer
 from zksync2.manage_contracts.deploy_addresses import ZkSyncAddresses
 from zksync2.manage_contracts.eth_token import EthToken
 from zksync2.manage_contracts.l2_bridge import L2Bridge
@@ -80,7 +80,7 @@ class TxCreateContract(TxBase, ABC):
                  max_priority_fee_per_gas=100000000,
                  salt: Optional[bytes] = None):
 
-        contract_deployer = ContractDeployer(web3)
+        contract_deployer = PrecomputeContractDeployer(web3)
         generated_call_data = contract_deployer.encode_create(bytecode=bytecode,
                                                               call_data=call_data,
                                                               salt_data=salt)
@@ -125,7 +125,7 @@ class TxCreate2Contract(TxBase, ABC):
                  max_priority_fee_per_gas=100000000,
                  salt: Optional[bytes] = None
                  ):
-        contract_deployer = ContractDeployer(web3)
+        contract_deployer = PrecomputeContractDeployer(web3)
         generated_call_data = contract_deployer.encode_create2(bytecode=bytecode,
                                                                call_data=call_data,
                                                                salt=salt)

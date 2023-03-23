@@ -6,7 +6,7 @@ from web3 import Web3
 from web3.types import TxParams
 from web3.middleware import geth_poa_middleware
 from zksync2.core.utils import to_bytes
-from zksync2.manage_contracts.contract_deployer import ContractDeployer
+from zksync2.manage_contracts.precompute_contract_deployer import PrecomputeContractDeployer
 from zksync2.manage_contracts.contract_encoder_base import ContractEncoder
 from zksync2.manage_contracts.contract_factory import LegacyContractFactory
 from zksync2.manage_contracts.erc20_contract import ERC20Encoder
@@ -37,6 +37,8 @@ class ZkSyncWeb3Tests(TestCase):
         self.signer = PrivateKeyEthSigner(self.account, self.chain_id)
         self.counter_address = None
         self.test_tx_hash = None
+        # INFO: use deploy_erc20_token_builder to get new address
+        self.some_erc20_address = Web3.to_checksum_address("0x37b96512962FC7773E06237116BE693Eb2b3cD51")
 
     @skip("Integration test, used for develop purposes only")
     def test_send_money(self):
@@ -183,6 +185,58 @@ class ZkSyncWeb3Tests(TestCase):
         tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
         self.assertEqual(1, tx_receipt["status"])
 
+    def deploy_erc20_token_builder(self):
+        nonce = self.web3.zksync.get_transaction_count(self.account.address, ZkBlockParams.COMMITTED.value)
+        counter_contract = ContractEncoder.from_json(self.web3, contract_path("SomeERC20.json"))
+        random_salt = generate_random_salt()
+        gas_price = self.web3.zksync.gas_price
+        create_contract = TxCreateContract(web3=self.web3,
+                                           chain_id=self.chain_id,
+                                           nonce=nonce,
+                                           from_=self.account.address,
+                                           gas_limit=0,  # UNKNOWN AT THIS STATE
+                                           gas_price=gas_price,
+                                           bytecode=counter_contract.bytecode,
+                                           salt=random_salt)
+        estimate_gas = self.web3.zksync.eth_estimate_gas(create_contract.tx)
+        print(f"Fee for transaction is: {estimate_gas * gas_price}")
+        tx_712 = create_contract.tx712(estimate_gas)
+        singed_message = self.signer.sign_typed_data(tx_712.to_eip712_struct())
+        msg = tx_712.encode(singed_message)
+        tx_hash = self.web3.zksync.send_raw_transaction(msg)
+        tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
+        self.assertEqual(1, tx_receipt['status'])
+        contract_address = tx_receipt["contractAddress"]
+        if self.some_erc20_address is None:
+            self.some_erc20_address = contract_address
+        print(f"Contract: {contract_address}")
+
+    def mint_some_erc20(self, amount: int):
+        some_erc20_encoder = ContractEncoder.from_json(self.web3, contract_path("SomeERC20.json"))
+        nonce = self.web3.zksync.get_transaction_count(self.account.address, EthBlockParams.LATEST.value)
+        gas_price = self.web3.zksync.gas_price
+
+        args = (self.account.address, amount)
+        call_data = some_erc20_encoder.encode_method(fn_name='mint', args=args)
+        func_call = TxFunctionCall(chain_id=self.chain_id,
+                                   nonce=nonce,
+                                   from_=self.account.address,
+                                   to=self.some_erc20_address,
+                                   data=call_data,
+                                   gas_limit=0,  # UNKNOWN AT THIS STATE,
+                                   gas_price=gas_price)
+        estimate_gas = self.web3.zksync.eth_estimate_gas(func_call.tx)
+        print(f"Fee for transaction is: {estimate_gas * gas_price}")
+
+        tx_712 = func_call.tx712(estimate_gas)
+
+        singed_message = self.signer.sign_typed_data(tx_712.to_eip712_struct())
+        msg = tx_712.encode(singed_message)
+        tx_hash = self.web3.zksync.send_raw_transaction(msg)
+        tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
+        self.assertEqual(1, tx_receipt['status'])
+        print(f"Mint tx status: {tx_receipt['status']}")
+
     @skip("Integration test, used for develop purposes only")
     def test_transfer_token_to_self(self):
         nonce = self.web3.zksync.get_transaction_count(self.account.address, ZkBlockParams.COMMITTED.value)
@@ -191,8 +245,9 @@ class ZkSyncWeb3Tests(TestCase):
         self.assertTrue(bool(not_eth_tokens), "Can't get non eth tokens")
         token_address = not_eth_tokens[0].l2_address
 
+        tokens_amount = 10
         erc20_encoder = ERC20Encoder(self.web3)
-        transfer_params = [self.account.address, 0]
+        transfer_params = (self.account.address, tokens_amount)
         call_data = erc20_encoder.encode_method("transfer", args=transfer_params)
 
         gas_price = self.web3.zksync.gas_price
@@ -247,7 +302,6 @@ class ZkSyncWeb3Tests(TestCase):
         tx = withdraw.estimated_gas(estimated_gas)
         signed = self.account.sign_transaction(tx)
         tx_hash = self.web3.zksync.send_raw_transaction(signed.rawTransaction)
-        # TODO: should it be different method with check for finalized block state
         zks_receipt = self.web3.zksync.wait_finalized(tx_hash, timeout=240, poll_latency=0.5)
         self.assertEqual(1, zks_receipt['status'])
 
@@ -313,7 +367,7 @@ class ZkSyncWeb3Tests(TestCase):
         nonce = self.web3.zksync.get_transaction_count(self.account.address, EthBlockParams.PENDING.value)
         nonce_holder = NonceHolder(self.web3, self.account)
         deployment_nonce = nonce_holder.get_deployment_nonce(self.account.address)
-        deployer = ContractDeployer(self.web3)
+        deployer = PrecomputeContractDeployer(self.web3)
         precomputed_address = deployer.compute_l2_create_address(self.account.address, deployment_nonce)
         counter_contract = ContractEncoder.from_json(self.web3, contract_path("Counter.json"))
 
@@ -365,7 +419,7 @@ class ZkSyncWeb3Tests(TestCase):
         nonce_holder = NonceHolder(self.web3, self.account)
         deployment_nonce = nonce_holder.get_deployment_nonce(self.account.address)
 
-        deployer = ContractDeployer(self.web3)
+        deployer = PrecomputeContractDeployer(self.web3)
         precomputed_address = deployer.compute_l2_create_address(self.account.address, deployment_nonce)
 
         constructor_encoder = ContractEncoder.from_json(self.web3, contract_path("SimpleConstructor.json"))
@@ -413,7 +467,7 @@ class ZkSyncWeb3Tests(TestCase):
         random_salt = generate_random_salt()
         nonce = self.web3.zksync.get_transaction_count(self.account.address, EthBlockParams.PENDING.value)
         gas_price = self.web3.zksync.gas_price
-        deployer = ContractDeployer(self.web3)
+        deployer = PrecomputeContractDeployer(self.web3)
 
         counter_contract_encoder = ContractEncoder.from_json(self.web3, contract_path("Counter.json"))
         precomputed_address = deployer.compute_l2_create2_address(sender=self.account.address,
@@ -462,7 +516,7 @@ class ZkSyncWeb3Tests(TestCase):
         gas_price = self.web3.zksync.gas_price
         nonce_holder = NonceHolder(self.web3, self.account)
         deployment_nonce = nonce_holder.get_deployment_nonce(self.account.address)
-        contract_deployer = ContractDeployer(self.web3)
+        contract_deployer = PrecomputeContractDeployer(self.web3)
         precomputed_address = contract_deployer.compute_l2_create_address(self.account.address,
                                                                           deployment_nonce)
 
@@ -499,7 +553,7 @@ class ZkSyncWeb3Tests(TestCase):
         nonce = self.web3.zksync.get_transaction_count(self.account.address, EthBlockParams.PENDING.value)
         gas_price = self.web3.zksync.gas_price
 
-        contract_deployer = ContractDeployer(self.web3)
+        contract_deployer = PrecomputeContractDeployer(self.web3)
         precomputed_address = contract_deployer.compute_l2_create2_address(self.account.address,
                                                                            bytecode=import_contract.bytecode,
                                                                            constructor=b'',

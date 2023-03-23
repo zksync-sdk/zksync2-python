@@ -24,7 +24,7 @@ class BaseContractEncoder:
         else:
             self.instance_contract = self.web3.eth.contract(abi=self.abi, bytecode=bytecode)
 
-    def encode_method(self, fn_name, args: list) -> HexStr:
+    def encode_method(self, fn_name, args: tuple) -> HexStr:
         return self.instance_contract.encodeABI(fn_name, args)
 
     @property

@@ -7,7 +7,7 @@ from eth_utils import remove_0x_prefix
 from web3 import Web3
 from web3.contract import Contract
 from zksync2.core.types import EthBlockParams
-from zksync2.manage_contracts.contract_deployer import ContractDeployer
+from zksync2.manage_contracts.precompute_contract_deployer import PrecomputeContractDeployer
 from zksync2.manage_contracts.contract_encoder_base import ContractEncoder
 from zksync2.signer.eth_signer import EthSignerBase
 from zksync2.transaction.transaction_builders import TxCreateContract, TxCreate2Contract
@@ -84,7 +84,7 @@ class LegacyContractFactory:
         tx_hash = self.web3.zksync.send_raw_transaction(msg)
         tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
         if factory_deps is not None:
-            contract_deployer = ContractDeployer(self.web3)
+            contract_deployer = PrecomputeContractDeployer(self.web3)
             contract_address = contract_deployer.extract_contract_address(tx_receipt)
         else:
             contract_address = tx_receipt["contractAddress"]
@@ -125,7 +125,7 @@ class LegacyContractFactory:
         tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
 
         if factory_deps is not None:
-            contract_deployer = ContractDeployer(self.web3)
+            contract_deployer = PrecomputeContractDeployer(self.web3)
             contract_address = contract_deployer.extract_contract_address(tx_receipt)
         else:
             contract_address = tx_receipt["contractAddress"]

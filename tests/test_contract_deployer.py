@@ -6,7 +6,7 @@ from web3.types import Nonce
 from tests.test_config import ZKSYNC_TEST_URL
 from zksync2.core.utils import hash_byte_code
 from tests.contracts.utils import contract_path
-from zksync2.manage_contracts.contract_deployer import ContractDeployer
+from zksync2.manage_contracts.precompute_contract_deployer import PrecomputeContractDeployer
 from zksync2.manage_contracts.contract_encoder_base import ContractEncoder
 from zksync2.module.module_builder import ZkSyncBuilder
 
@@ -15,7 +15,7 @@ class ContractDeployerTests(TestCase):
 
     def setUp(self) -> None:
         self.web3 = ZkSyncBuilder.build(ZKSYNC_TEST_URL)
-        self.contract_deployer = ContractDeployer(self.web3)
+        self.contract_deployer = PrecomputeContractDeployer(self.web3)
         counter_contract = ContractEncoder.from_json(self.web3, contract_path("Counter.json"))
         self.counter_contract_bin = counter_contract.bytecode
 

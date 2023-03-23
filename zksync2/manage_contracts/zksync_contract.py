@@ -190,16 +190,6 @@ class ZkSyncContract:
         signed = self.account.sign_transaction(tx)
         tx_hash = self.web3.eth.send_raw_transaction(signed.rawTransaction)
         return self.web3.eth.wait_for_transaction_receipt(tx_hash)
-        # tx = self._method_("finalizeEthWithdrawal")(l2_block_number,
-        #                                             l2_message_index,
-        #                                             l2_tx_number_in_block,
-        #                                             message,
-        #                                             merkle_proof).call(
-        #     {
-        #         "chainId": self.chain_id,
-        #         "from": self.account.address,
-        #         'nonce': self._nonce(),
-        #     })
 
     def freeze_diamond(self):
         self._method_("freezeDiamond")().call(

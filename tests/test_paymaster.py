@@ -8,7 +8,6 @@ from tests.test_config import ZKSYNC_TEST_URL, PRIVATE_KEY2
 from zksync2.manage_contracts.contract_encoder_base import ContractEncoder
 from zksync2.manage_contracts.paymaster_utils import PaymasterFlowEncoder
 from zksync2.manage_contracts.erc20_contract import ERC20Contract
-# from zksync2.manage_contracts.gas_provider import StaticGasProvider
 from zksync2.module.module_builder import ZkSyncBuilder
 from zksync2.core.types import Token, EthBlockParams, ZkBlockParams, PaymasterParams
 from eth_account import Account
