@@ -9,17 +9,17 @@ from zksync2.core.utils import to_bytes
 from zksync2.manage_contracts.precompute_contract_deployer import PrecomputeContractDeployer
 from zksync2.manage_contracts.contract_encoder_base import ContractEncoder
 from zksync2.manage_contracts.contract_factory import LegacyContractFactory
-from zksync2.manage_contracts.erc20_contract import ERC20Encoder
+from zksync2.manage_contracts.erc20_contract import ERC20Encoder, ERC20Contract
 from zksync2.manage_contracts.nonce_holder import NonceHolder
 from zksync2.module.module_builder import ZkSyncBuilder
-from zksync2.core.types import Token, ZkBlockParams, EthBlockParams
+from zksync2.core.types import Token, ZkBlockParams, EthBlockParams, ADDRESS_DEFAULT
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
 from zksync2.provider.eth_provider import EthereumProvider
 from zksync2.signer.eth_signer import PrivateKeyEthSigner
 from tests.contracts.utils import contract_path
 from zksync2.transaction.transaction_builders import TxFunctionCall, TxCreateContract, TxCreate2Contract, TxWithdraw
-from test_config import ZKSYNC_TEST_URL, ETH_TEST_URL, PRIVATE_KEY2
+from test_config import ZKSYNC_TEST_URL, ETH_TEST_URL, PRIVATE_KEY2, PRIVATE_KEY_BOB
 
 
 def generate_random_salt() -> bytes:
@@ -38,7 +38,17 @@ class ZkSyncWeb3Tests(TestCase):
         self.counter_address = None
         self.test_tx_hash = None
         # INFO: use deploy_erc20_token_builder to get new address
-        self.some_erc20_address = Web3.to_checksum_address("0x37b96512962FC7773E06237116BE693Eb2b3cD51")
+        # self.some_erc20_address = Web3.to_checksum_address("0x37b96512962FC7773E06237116BE693Eb2b3cD51")
+        self.some_erc20_address = Web3.to_checksum_address("0xd782e03F4818A7eDb0bc5f70748F67B4e59CdB33")
+        # https://goerli.explorer.zksync.io/address/0xd782e03F4818A7eDb0bc5f70748F67B4e59CdB33#contract
+        # Mint from site:
+        # https://goerli.explorer.zksync.io/tx/0xad2f582bed2ca5a35db47db21f0dc06eba29273531abc1bc32b8a9112520a3d2
+        # https://goerli.explorer.zksync.io/tx/0x7b34f26f92eb86e5d0e0f5afd19dd279de90d771b38a9e5f7efb26d791b52423
+
+        self.ERC20_Token = Token(l1_address=ADDRESS_DEFAULT,
+                                 l2_address=self.some_erc20_address,
+                                 symbol="SERC20",
+                                 decimals=18)
 
     @skip("Integration test, used for develop purposes only")
     def test_send_money(self):
@@ -237,17 +247,20 @@ class ZkSyncWeb3Tests(TestCase):
         self.assertEqual(1, tx_receipt['status'])
         print(f"Mint tx status: {tx_receipt['status']}")
 
-    @skip("Integration test, used for develop purposes only")
-    def test_transfer_token_to_self(self):
-        nonce = self.web3.zksync.get_transaction_count(self.account.address, ZkBlockParams.COMMITTED.value)
-        tokens = self.web3.zksync.zks_get_confirmed_tokens(0, 100)
-        not_eth_tokens = [x for x in tokens if not x.is_eth()]
-        self.assertTrue(bool(not_eth_tokens), "Can't get non eth tokens")
-        token_address = not_eth_tokens[0].l2_address
+    # @skip("Integration test, used for develop purposes only")
+    def test_transfer_erc20_token_to_self(self):
+        erc20 = ERC20Contract(web3=self.web3.zksync,
+                              contract_address=self.some_erc20_address,
+                              account=self.account)
+        balance_before = erc20.balance_of(self.account.address)
+        print(f"{self.ERC20_Token.symbol} balance before : {self.ERC20_Token.format_token(balance_before)}")
 
-        tokens_amount = 10
+        nonce = self.web3.zksync.get_transaction_count(self.account.address, ZkBlockParams.COMMITTED.value)
+        token_address = self.ERC20_Token.l2_address
+
+        tokens_amount = 1
         erc20_encoder = ERC20Encoder(self.web3)
-        transfer_params = (self.account.address, tokens_amount)
+        transfer_params = (self.account.address, self.ERC20_Token.to_int(tokens_amount))
         call_data = erc20_encoder.encode_method("transfer", args=transfer_params)
 
         gas_price = self.web3.zksync.gas_price
@@ -268,6 +281,58 @@ class ZkSyncWeb3Tests(TestCase):
         tx_hash = self.web3.zksync.send_raw_transaction(msg)
         tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
         self.assertEqual(1, tx_receipt["status"])
+
+        balance_after = erc20.balance_of(self.account.address)
+        print(f"{self.ERC20_Token.symbol} balance before : {self.ERC20_Token.format_token(balance_after)}")
+        self.assertEqual(balance_before, balance_after)
+
+    def test_transfer_erc20_token(self):
+        alice = self.account
+        bob: LocalAccount = Account.from_key(PRIVATE_KEY_BOB)
+
+        erc20 = ERC20Contract(web3=self.web3.zksync,
+                              contract_address=self.some_erc20_address,
+                              account=alice)
+        alice_balance_before = erc20.balance_of(alice.address)
+        bob_balance_before = erc20.balance_of(bob.address)
+        print(f"Alice {self.ERC20_Token.symbol} balance before : {self.ERC20_Token.format_token(alice_balance_before)}")
+        print(f"Bob {self.ERC20_Token.symbol} balance before : {self.ERC20_Token.format_token(bob_balance_before)}")
+
+        nonce = self.web3.zksync.get_transaction_count(alice.address, ZkBlockParams.COMMITTED.value)
+        token_address = self.ERC20_Token.l2_address
+
+        tokens_amount = 1
+        erc20_encoder = ERC20Encoder(self.web3)
+        transfer_params = (bob.address, self.ERC20_Token.to_int(tokens_amount))
+        call_data = erc20_encoder.encode_method("transfer", args=transfer_params)
+
+        gas_price = self.web3.zksync.gas_price
+        func_call = TxFunctionCall(chain_id=self.chain_id,
+                                   nonce=nonce,
+                                   from_=alice.address,
+                                   to=token_address,
+                                   data=call_data,
+                                   gas_limit=0,  # UNKNOWN AT THIS STATE
+                                   gas_price=gas_price,
+                                   max_priority_fee_per_gas=100000000)
+
+        estimate_gas = self.web3.zksync.eth_estimate_gas(func_call.tx)
+        print(f"Fee for transaction is: {estimate_gas * gas_price}")
+        tx_712 = func_call.tx712(estimated_gas=estimate_gas)
+        singed_message = self.signer.sign_typed_data(tx_712.to_eip712_struct())
+        msg = tx_712.encode(singed_message)
+        tx_hash = self.web3.zksync.send_raw_transaction(msg)
+        tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
+        self.assertEqual(1, tx_receipt["status"])
+        print(f"Tx hash: {tx_receipt['transactionHash'].hex()}")
+
+        alice_balance_after = erc20.balance_of(alice.address)
+        bob_balance_after = erc20.balance_of(bob.address)
+        print(f"Alice {self.ERC20_Token.symbol} balance before : {self.ERC20_Token.format_token(alice_balance_after)}")
+        print(f"Bob {self.ERC20_Token.symbol} balance before : {self.ERC20_Token.format_token(bob_balance_after)}")
+
+        self.assertEqual(bob_balance_after, bob_balance_before + self.ERC20_Token.to_int(tokens_amount))
+        self.assertEqual(alice_balance_after, alice_balance_before - self.ERC20_Token.to_int(tokens_amount))
 
     # @skip("Integration test, used for develop purposes only")
     def test_estimate_gas_withdraw(self):
@@ -322,10 +387,10 @@ class ZkSyncWeb3Tests(TestCase):
     # @skip("Integration test, used for develop purposes only")
     def test_estimate_gas_execute(self):
         erc20func_encoder = ERC20Encoder(self.web3)
-        transfer_args = [
+        transfer_args = (
             Web3.to_checksum_address("0xe1fab3efd74a77c23b426c302d96372140ff7d0c"),
             1
-        ]
+        )
         call_data = erc20func_encoder.encode_method(fn_name="transfer", args=transfer_args)
         nonce = self.web3.zksync.get_transaction_count(self.account.address, ZkBlockParams.COMMITTED.value)
         gas_price = self.web3.zksync.gas_price
@@ -683,8 +748,17 @@ class ZkSyncWeb3Tests(TestCase):
 
     # @skip("Integration test, used for develop purposes only")
     def test_get_confirmed_tokens(self):
-        confirmed = self.web3.zksync.zks_get_confirmed_tokens(0, 10)
+        confirmed = self.web3.zksync.zks_get_confirmed_tokens(0, 100)
         print(f"confirmed tokens: {confirmed}")
+        for token in confirmed:
+            if token.is_eth():
+                balance = self.web3.zksync.get_balance(self.account.address)
+            else:
+                erc20 = ERC20Contract(web3=self.web3.zksync,
+                                      contract_address=token.l2_address,
+                                      account=self.account)
+                balance = erc20.balance_of(self.account.address)
+            print(f"Token {token.symbol} : {balance}")
 
     # @skip("Integration test, used for develop purposes only")
     def test_get_token_price(self):
