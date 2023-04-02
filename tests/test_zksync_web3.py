@@ -19,7 +19,7 @@ from zksync2.provider.eth_provider import EthereumProvider
 from zksync2.signer.eth_signer import PrivateKeyEthSigner
 from tests.contracts.utils import contract_path
 from zksync2.transaction.transaction_builders import TxFunctionCall, TxCreateContract, TxCreate2Contract, TxWithdraw
-from test_config import ZKSYNC_TEST_URL, ETH_TEST_URL, PRIVATE_KEY2, PRIVATE_KEY_BOB
+from test_config import LOCAL_ENV, PRIVATE_KEY2, PRIVATE_KEY_BOB, EnvType
 
 
 def generate_random_salt() -> bytes:
@@ -31,20 +31,19 @@ class ZkSyncWeb3Tests(TestCase):
     ETH_TEST_NET_AMOUNT_BALANCE = Decimal(1)
 
     def setUp(self) -> None:
-        self.web3 = ZkSyncBuilder.build(ZKSYNC_TEST_URL)
+        self.env = LOCAL_ENV
+        self.web3 = ZkSyncBuilder.build(self.env.zksync_server)
         self.account: LocalAccount = Account.from_key(PRIVATE_KEY2)
         self.chain_id = self.web3.zksync.chain_id
         self.signer = PrivateKeyEthSigner(self.account, self.chain_id)
         self.counter_address = None
         self.test_tx_hash = None
         # INFO: use deploy_erc20_token_builder to get new address
-        # self.some_erc20_address = Web3.to_checksum_address("0x37b96512962FC7773E06237116BE693Eb2b3cD51")
-        self.some_erc20_address = Web3.to_checksum_address("0xd782e03F4818A7eDb0bc5f70748F67B4e59CdB33")
-        # https://goerli.explorer.zksync.io/address/0xd782e03F4818A7eDb0bc5f70748F67B4e59CdB33#contract
-        # Mint from site:
-        # https://goerli.explorer.zksync.io/tx/0xad2f582bed2ca5a35db47db21f0dc06eba29273531abc1bc32b8a9112520a3d2
-        # https://goerli.explorer.zksync.io/tx/0x7b34f26f92eb86e5d0e0f5afd19dd279de90d771b38a9e5f7efb26d791b52423
-
+        if self.env.type == EnvType.LOCAL_HOST:
+            self.some_erc20_address = Web3.to_checksum_address("0x37b96512962FC7773E06237116BE693Eb2b3cD51")
+        if self.env.type == EnvType.TESTNET:
+            # https://goerli.explorer.zksync.io/address/0xd782e03F4818A7eDb0bc5f70748F67B4e59CdB33#contract
+            self.some_erc20_address = Web3.to_checksum_address("0xd782e03F4818A7eDb0bc5f70748F67B4e59CdB33")
         self.ERC20_Token = Token(l1_address=ADDRESS_DEFAULT,
                                  l2_address=self.some_erc20_address,
                                  symbol="SERC20",
@@ -53,7 +52,7 @@ class ZkSyncWeb3Tests(TestCase):
     @skip("Integration test, used for develop purposes only")
     def test_send_money(self):
         gas_limit = 21000
-        web3 = Web3(Web3.HTTPProvider(ETH_TEST_URL))
+        web3 = Web3(Web3.HTTPProvider(self.env.eth_server))
         web3.middleware_onion.inject(geth_poa_middleware, layer=0)
         account = web3.eth.accounts[0]
         transaction: TxParams = {
@@ -72,7 +71,7 @@ class ZkSyncWeb3Tests(TestCase):
         """
         INFO: For minting use: https://goerli-faucet.pk910.de
         """
-        eth_web3 = Web3(Web3.HTTPProvider(ETH_TEST_URL))
+        eth_web3 = Web3(Web3.HTTPProvider(self.env.eth_server))
         eth_balance = eth_web3.eth.get_balance(self.account.address)
         print(f"Eth: balance: {Web3.from_wei(eth_balance, 'ether')}")
         self.assertNotEqual(eth_balance, 0)
@@ -226,7 +225,7 @@ class ZkSyncWeb3Tests(TestCase):
         nonce = self.web3.zksync.get_transaction_count(self.account.address, EthBlockParams.LATEST.value)
         gas_price = self.web3.zksync.gas_price
 
-        args = (self.account.address, amount)
+        args = (self.account.address, self.ERC20_Token.to_int(amount))
         call_data = some_erc20_encoder.encode_method(fn_name='mint', args=args)
         func_call = TxFunctionCall(chain_id=self.chain_id,
                                    nonce=nonce,
@@ -348,7 +347,7 @@ class ZkSyncWeb3Tests(TestCase):
     # @skip("Integration test, used for develop purposes only")
     def test_withdraw(self):
         amount = 0.1
-        eth_web3 = Web3(Web3.HTTPProvider(ETH_TEST_URL))
+        eth_web3 = Web3(Web3.HTTPProvider(self.env.eth_server))
         eth_web3.middleware_onion.inject(geth_poa_middleware, layer=0)
 
         eth_balance = eth_web3.eth.get_balance(self.account.address)

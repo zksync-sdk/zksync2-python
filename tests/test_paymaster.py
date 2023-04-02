@@ -135,7 +135,7 @@ class PaymasterTests(TestCase):
                                                                   paymaster_input=encoded_approval_bin)
         return trans
 
-    # @skip("Integration test, paymaster params test not implemented yet")
+    @skip("Integration test, paymaster params test not implemented yet")
     def test_send_funds_with_paymaster(self):
         gas_price = self.web3.zksync.gas_price
         paymaster_address = self.paymaster_address
