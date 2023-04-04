@@ -36,7 +36,7 @@ class ContractExecutor:
         env = EnvPrivateKey("ZKSYNC_TEST_KEY")
         self.compiled_contract = compiled_contract
         self.web3 = ZkSyncBuilder.build(ZKSYNC_TEST_URL)
-        self.account: LocalAccount = Account.from_key(env.key())
+        self.account: LocalAccount = Account.from_key(env.key)
         self.chain_id = self.web3.zksync.chain_id
         self.signer = PrivateKeyEthSigner(self.account, self.chain_id)
         self.deployed_address = None

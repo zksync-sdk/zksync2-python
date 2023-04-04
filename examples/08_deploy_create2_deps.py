@@ -35,7 +35,7 @@ def deploy_create2_with_deps(base_contract: Path,
                              dep_contract: Path):
     env = EnvPrivateKey("ZKSYNC_TEST_KEY")
     web3 = ZkSyncBuilder.build(ZKSYNC_TEST_URL)
-    account: LocalAccount = Account.from_key(env.key())
+    account: LocalAccount = Account.from_key(env.key)
     chain_id = web3.zksync.chain_id
     signer = PrivateKeyEthSigner(account, chain_id)
 

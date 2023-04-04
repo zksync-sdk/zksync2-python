@@ -28,7 +28,7 @@ class Colors:
 def example_withdrawal(amount: float):
     env = EnvPrivateKey("ZKSYNC_TEST_KEY")
     web3 = ZkSyncBuilder.build(ZKSYNC_TEST_URL)
-    account: LocalAccount = Account.from_key(env.key())
+    account: LocalAccount = Account.from_key(env.key)
 
     eth_web3 = Web3(Web3.HTTPProvider(ETH_TEST_URL))
     eth_web3.middleware_onion.inject(geth_poa_middleware, layer=0)

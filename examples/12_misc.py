@@ -9,7 +9,7 @@ ZKSYNC_TEST_URL = "http://127.0.0.1:3050"
 
 def check_balance():
     env = EnvPrivateKey("ZKSYNC_TEST_KEY")
-    account: LocalAccount = Account.from_key(env.key())
+    account: LocalAccount = Account.from_key(env.key)
     zksync_web3 = ZkSyncBuilder.build(ZKSYNC_TEST_URL)
     zk_balance = zksync_web3.zksync.get_balance(account.address, EthBlockParams.LATEST.value)
     print(f"ZkSync balance: {zk_balance}")

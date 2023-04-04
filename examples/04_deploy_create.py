@@ -35,7 +35,7 @@ def generate_random_salt() -> bytes:
 def deploy_contract(compiled_contract: Path):
     env = EnvPrivateKey("ZKSYNC_TEST_KEY")
     web3 = ZkSyncBuilder.build(ZKSYNC_TEST_URL)
-    account: LocalAccount = Account.from_key(env.key())
+    account: LocalAccount = Account.from_key(env.key)
     chain_id = web3.zksync.chain_id
     signer = PrivateKeyEthSigner(account, chain_id)
 

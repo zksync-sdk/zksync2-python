@@ -10,10 +10,11 @@ class EnvPrivateKey:
         env = os.getenv(env, None)
         if env is None:
             raise LookupError(f"Can't build key from {env}")
-        self.key = bytes.fromhex(remove_0x_prefix(HexStr(env)))
+        self._key = bytes.fromhex(remove_0x_prefix(HexStr(env)))
 
+    @property
     def key(self) -> bytes:
-        return self.key
+        return self._key
 
 
 class EnvType(IntEnum):

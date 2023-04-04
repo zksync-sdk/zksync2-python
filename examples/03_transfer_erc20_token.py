@@ -30,8 +30,8 @@ def transfer_erc20(amount: float):
     env1 = EnvPrivateKey("ZKSYNC_TEST_KEY")
     env2 = EnvPrivateKey("ZKSYNC_TEST_KEY2")
     web3 = ZkSyncBuilder.build(ZKSYNC_TEST_URL)
-    alice: LocalAccount = Account.from_key(env1.key())
-    bob: LocalAccount = Account.from_key(env2.key())
+    alice: LocalAccount = Account.from_key(env1.key)
+    bob: LocalAccount = Account.from_key(env2.key)
     chain_id = web3.zksync.chain_id
     signer = PrivateKeyEthSigner(alice, chain_id)
 

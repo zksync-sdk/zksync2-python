@@ -17,7 +17,7 @@ def deposit(amount: float):
     env = EnvPrivateKey("ZKSYNC_TEST_KEY")
     zksync = ZkSyncBuilder.build(ZKSYNC_TEST_URL)
     eth_web3 = Web3(Web3.HTTPProvider(ETH_TEST_URL))
-    account: LocalAccount = Account.from_key(env.key())
+    account: LocalAccount = Account.from_key(env.key)
     eth_provider = EthereumProvider(zksync, eth_web3, account)
     wei_amount = Web3.to_wei(amount, "ether")
     eth_token = Token.create_eth()

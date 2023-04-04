@@ -16,7 +16,7 @@ ETH_TEST_URL = "http://127.0.0.1:8545"
 def transfer_native_to_self(amount: float):
     env = EnvPrivateKey("ZKSYNC_TEST_KEY")
     web3 = ZkSyncBuilder.build(ZKSYNC_TEST_URL)
-    account: LocalAccount = Account.from_key(env.key())
+    account: LocalAccount = Account.from_key(env.key)
     chain_id = web3.zksync.chain_id
     signer = PrivateKeyEthSigner(account, chain_id)
 
