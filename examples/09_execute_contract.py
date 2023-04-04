@@ -1,10 +1,9 @@
 import os
 from pathlib import Path
-
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
 from web3.types import TxParams, TxReceipt
-
+from examples.utils import EnvPrivateKey
 from zksync2.core.types import EthBlockParams
 from zksync2.manage_contracts.contract_encoder_base import ContractEncoder
 from zksync2.module.module_builder import ZkSyncBuilder
@@ -13,7 +12,6 @@ from zksync2.transaction.transaction_builders import TxCreateContract, TxFunctio
 
 ZKSYNC_TEST_URL = "http://127.0.0.1:3050"
 ETH_TEST_URL = "http://127.0.0.1:8545"
-PRIVATE_KEY2 = bytes.fromhex("fd1f96220fa3a40c46d65f81d61dd90af600746fd47e5c82673da937a48b38ef")
 
 
 class Colors:
@@ -35,9 +33,10 @@ def generate_random_salt() -> bytes:
 class ContractExecutor:
 
     def __init__(self, compiled_contract: Path):
+        env = EnvPrivateKey("ZKSYNC_TEST_KEY")
         self.compiled_contract = compiled_contract
         self.web3 = ZkSyncBuilder.build(ZKSYNC_TEST_URL)
-        self.account: LocalAccount = Account.from_key(PRIVATE_KEY2)
+        self.account: LocalAccount = Account.from_key(env.key())
         self.chain_id = self.web3.zksync.chain_id
         self.signer = PrivateKeyEthSigner(self.account, self.chain_id)
         self.deployed_address = None

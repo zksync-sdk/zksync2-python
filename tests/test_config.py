@@ -1,8 +1,19 @@
+import os
 from dataclasses import dataclass
 from enum import IntEnum, auto
+from eth_typing import HexStr
+from eth_utils import remove_0x_prefix
 
-PRIVATE_KEY2 = bytes.fromhex("fd1f96220fa3a40c46d65f81d61dd90af600746fd47e5c82673da937a48b38ef")
-PRIVATE_KEY_BOB = bytes.fromhex("ba6852a8a14cd3c72f6cab8c08f70d033d5d1a56646ab04b4cf54c01cb7204dc")
+
+class EnvPrivateKey:
+    def __init__(self, env: str):
+        env = os.getenv(env, None)
+        if env is None:
+            raise LookupError(f"Can't build key from {env}")
+        self.key = bytes.fromhex(remove_0x_prefix(HexStr(env)))
+
+    def key(self) -> bytes:
+        return self.key
 
 
 class EnvType(IntEnum):

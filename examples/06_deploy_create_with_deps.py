@@ -4,6 +4,7 @@ from pathlib import Path
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
 
+from examples.utils import EnvPrivateKey
 from zksync2.core.types import EthBlockParams
 from zksync2.manage_contracts.contract_encoder_base import ContractEncoder
 from zksync2.manage_contracts.nonce_holder import NonceHolder
@@ -35,8 +36,9 @@ def generate_random_salt() -> bytes:
 
 def deploy_create_with_deps(base_contract: Path,
                             dep_contract: Path):
+    env = EnvPrivateKey("ZKSYNC_TEST_KEY")
     web3 = ZkSyncBuilder.build(ZKSYNC_TEST_URL)
-    account: LocalAccount = Account.from_key(PRIVATE_KEY2)
+    account: LocalAccount = Account.from_key(env.key())
     chain_id = web3.zksync.chain_id
     signer = PrivateKeyEthSigner(account, chain_id)
 

@@ -1,6 +1,8 @@
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
 from web3 import Web3
+
+from examples.utils import EnvPrivateKey
 from zksync2.core.types import ZkBlockParams, ADDRESS_DEFAULT, Token
 from zksync2.manage_contracts.erc20_contract import ERC20Contract, ERC20Encoder
 from zksync2.module.module_builder import ZkSyncBuilder
@@ -9,8 +11,6 @@ from zksync2.transaction.transaction_builders import TxFunctionCall
 
 ZKSYNC_TEST_URL = "https://zksync2-testnet.zksync.dev"
 ETH_TEST_URL = "https://rpc.ankr.com/eth_goerli"
-PRIVATE_KEY = bytes.fromhex("fd1f96220fa3a40c46d65f81d61dd90af600746fd47e5c82673da937a48b38ef")
-PRIVATE_KEY2 = bytes.fromhex("ba6852a8a14cd3c72f6cab8c08f70d033d5d1a56646ab04b4cf54c01cb7204dc")
 SERC20_Address = Web3.to_checksum_address("0xd782e03F4818A7eDb0bc5f70748F67B4e59CdB33")
 
 
@@ -27,9 +27,11 @@ class Colors:
 
 
 def transfer_erc20(amount: float):
+    env1 = EnvPrivateKey("ZKSYNC_TEST_KEY")
+    env2 = EnvPrivateKey("ZKSYNC_TEST_KEY2")
     web3 = ZkSyncBuilder.build(ZKSYNC_TEST_URL)
-    alice: LocalAccount = Account.from_key(PRIVATE_KEY)
-    bob: LocalAccount = Account.from_key(PRIVATE_KEY2)
+    alice: LocalAccount = Account.from_key(env1.key())
+    bob: LocalAccount = Account.from_key(env2.key())
     chain_id = web3.zksync.chain_id
     signer = PrivateKeyEthSigner(alice, chain_id)
 

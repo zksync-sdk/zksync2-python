@@ -3,6 +3,7 @@ from eth_account.signers.local import LocalAccount
 from web3 import Web3
 from web3.middleware import geth_poa_middleware
 
+from examples.utils import EnvPrivateKey
 from zksync2.core.types import Token
 from zksync2.module.module_builder import ZkSyncBuilder
 from zksync2.provider.eth_provider import EthereumProvider
@@ -10,7 +11,6 @@ from zksync2.transaction.transaction_builders import TxWithdraw
 
 ZKSYNC_TEST_URL = "http://127.0.0.1:3050"
 ETH_TEST_URL = "http://127.0.0.1:8545"
-PRIVATE_KEY2 = bytes.fromhex("fd1f96220fa3a40c46d65f81d61dd90af600746fd47e5c82673da937a48b38ef")
 
 
 class Colors:
@@ -26,8 +26,9 @@ class Colors:
 
 
 def example_withdrawal(amount: float):
+    env = EnvPrivateKey("ZKSYNC_TEST_KEY")
     web3 = ZkSyncBuilder.build(ZKSYNC_TEST_URL)
-    account: LocalAccount = Account.from_key(PRIVATE_KEY2)
+    account: LocalAccount = Account.from_key(env.key())
 
     eth_web3 = Web3(Web3.HTTPProvider(ETH_TEST_URL))
     eth_web3.middleware_onion.inject(geth_poa_middleware, layer=0)
