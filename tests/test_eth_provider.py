@@ -1,7 +1,7 @@
 import os
 from unittest import TestCase, skip
 from web3 import Web3
-from tests.test_config import ZKSYNC_TEST_URL, ETH_TEST_URL, PRIVATE_KEY2
+from tests.test_config import TESTNET, EnvPrivateKey
 from zksync2.core.types import Token, EthBlockParams
 from zksync2.module.module_builder import ZkSyncBuilder
 from eth_account import Account
@@ -16,9 +16,11 @@ def generate_random_salt() -> bytes:
 class ZkSyncWeb3Tests(TestCase):
 
     def setUp(self) -> None:
-        self.zksync = ZkSyncBuilder.build(ZKSYNC_TEST_URL)
-        self.eth_web3 = Web3(Web3.HTTPProvider(ETH_TEST_URL))
-        self.account: LocalAccount = Account.from_key(PRIVATE_KEY2)
+        self.env = TESTNET
+        env_key = EnvPrivateKey("ZKSYNC_KEY1")
+        self.zksync = ZkSyncBuilder.build(self.env.zksync_server)
+        self.eth_web3 = Web3(Web3.HTTPProvider(self.env.eth_server))
+        self.account: LocalAccount = Account.from_key(env_key.key)
         self.eth_provider = EthereumProvider(self.zksync, self.eth_web3, self.account)
 
     def test_deposit(self):

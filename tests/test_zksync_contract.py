@@ -1,7 +1,7 @@
 import os
 from unittest import TestCase
 from web3 import Web3
-from tests.test_config import ZKSYNC_TEST_URL, ETH_TEST_URL, PRIVATE_KEY2
+from tests.test_config import TESTNET, EnvPrivateKey
 from zksync2.core.utils import RecommendedGasLimit
 from zksync2.manage_contracts.zksync_contract import ZkSyncContract
 from zksync2.module.module_builder import ZkSyncBuilder
@@ -17,9 +17,11 @@ def generate_random_salt() -> bytes:
 class ZkSyncWeb3Tests(TestCase):
 
     def setUp(self) -> None:
-        self.zksync = ZkSyncBuilder.build(ZKSYNC_TEST_URL)
-        self.eth_web3 = Web3(Web3.HTTPProvider(ETH_TEST_URL))
-        self.account: LocalAccount = Account.from_key(PRIVATE_KEY2)
+        env = TESTNET
+        env_key = EnvPrivateKey("ZKSYNC_KEY1")
+        self.zksync = ZkSyncBuilder.build(env.zksync_server)
+        self.eth_web3 = Web3(Web3.HTTPProvider(env.eth_server))
+        self.account: LocalAccount = Account.from_key(env_key.key)
         self.chain_id = self.zksync.zksync.chain_id
         self.signer = PrivateKeyEthSigner(self.account, self.chain_id)
         self.zksync_contract = ZkSyncContract(self.zksync.zksync.zks_main_contract(),
