@@ -118,7 +118,7 @@ def transfer_eth(
     tx_receipt = zk_web3.zksync.wait_for_transaction_receipt(
         tx_hash, timeout=240, poll_latency=0.5
     )
-    print(f"Tx status: {tx_receipt.status}")
+    print(f"Tx status: {tx_receipt['status']}")
 
     # Return the transaction hash of the deposit
     return tx_hash
