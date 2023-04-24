@@ -40,13 +40,11 @@ def deploy_contract(
         account.address, EthBlockParams.PENDING.value
     )
 
-
     # Get contract ABI and bytecode information
     counter_contract = ContractEncoder.from_json(zk_web3, compiled_contract)
 
     # Get current gas price in Wei
     gas_price = zk_web3.zksync.gas_price
-
 
     # Create deployment contract transaction
     create_contract = TxCreateContract(
@@ -80,12 +78,10 @@ def deploy_contract(
         tx_hash, timeout=240, poll_latency=0.5
     )
 
-
     print(f"Tx status: {tx_receipt['status']}")
     contract_address = tx_receipt["contractAddress"]
 
     print(f"Deployed contract address: {contract_address}")
-
 
     # Return the contract deployed address
     return contract_address
@@ -109,5 +105,3 @@ if __name__ == "__main__":
 
     # Perform contract deployment
     deploy_contract(zk_web3, account, contract_path)
-
-
