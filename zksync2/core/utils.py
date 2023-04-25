@@ -49,6 +49,6 @@ def pad_front_bytes(bs: bytes, needed_length: int):
 
 
 class RecommendedGasLimit(IntEnum):
-    DEPOSIT = 600000
+    DEPOSIT = 10000000
     EXECUTE = 620000
     ERC20_APPROVE = 50000

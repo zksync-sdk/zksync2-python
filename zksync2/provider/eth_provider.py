@@ -145,10 +145,10 @@ class EthereumProvider:
             check_base_cost(base_cost, value)
 
             if approve_erc20:
-                approve_tx = self.approve_erc20(token,
-                                                amount,
-                                                bridge_address,
-                                                gas_limit)
+                self.approve_erc20(token,
+                                   amount,
+                                   bridge_address,
+                                   gas_limit)
             tx_receipt = bridge_contract.deposit(l2_receiver=to,
                                                  l1_token=token.l1_address,
                                                  amount=amount,

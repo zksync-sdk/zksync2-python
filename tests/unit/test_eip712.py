@@ -29,7 +29,7 @@ def make_mail(from_, to, content) -> Mail:
     return Mail(**kwargs)
 
 
-class TestEIP712Structured(TestCase):
+class EIP712Tests(TestCase):
 
     def setUp(self) -> None:
         self.person_from = Person(name="Cow", wallet="0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826")

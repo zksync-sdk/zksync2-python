@@ -29,7 +29,7 @@ def make_mail(from_, to, content) -> Mail:
     return Mail(**kwargs)
 
 
-class TestEthSigner(TestCase):
+class EthSignerTests(TestCase):
     _TEST_TYPED_EXPECTED_SIGNATURE = HexStr("0x4355c47d63924e8a72e509b65029052eb6c299d53a04e167c5775fd466751"
                                             "c9d07299936d304c153f6443dfa05f40ff007d72911b6f72307f996231605b915621c")
 

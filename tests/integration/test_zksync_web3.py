@@ -19,7 +19,7 @@ from zksync2.provider.eth_provider import EthereumProvider
 from zksync2.signer.eth_signer import PrivateKeyEthSigner
 from tests.contracts.utils import contract_path
 from zksync2.transaction.transaction_builders import TxFunctionCall, TxCreateContract, TxCreate2Contract, TxWithdraw
-from test_config import LOCAL_ENV, TESTNET, EnvType, EnvPrivateKey
+from test_config import LOCAL_ENV, EnvType, EnvPrivateKey
 
 
 def generate_random_salt() -> bytes:
@@ -31,7 +31,7 @@ class ZkSyncWeb3Tests(TestCase):
     ETH_TEST_NET_AMOUNT_BALANCE = Decimal(1)
 
     def setUp(self) -> None:
-        self.env = TESTNET
+        self.env = LOCAL_ENV
         self.web3 = ZkSyncBuilder.build(self.env.zksync_server)
         env_key = EnvPrivateKey("ZKSYNC_KEY1")
         self.account: LocalAccount = Account.from_key(env_key.key)
