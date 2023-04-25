@@ -3,7 +3,7 @@ from eth_typing import HexStr
 from eth_utils import add_0x_prefix
 from web3 import Web3
 from web3.types import Nonce
-from tests.test_config import TESTNET
+from test_config import LOCAL_ENV
 from zksync2.core.utils import hash_byte_code
 from tests.contracts.utils import contract_path
 from zksync2.manage_contracts.precompute_contract_deployer import PrecomputeContractDeployer
@@ -14,7 +14,7 @@ from zksync2.module.module_builder import ZkSyncBuilder
 class ContractDeployerTests(TestCase):
 
     def setUp(self) -> None:
-        env = TESTNET
+        env = LOCAL_ENV
         self.web3 = ZkSyncBuilder.build(env.zksync_server)
         self.contract_deployer = PrecomputeContractDeployer(self.web3)
         counter_contract = ContractEncoder.from_json(self.web3, contract_path("Counter.json"))

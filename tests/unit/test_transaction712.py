@@ -1,22 +1,24 @@
 from unittest import TestCase
+
+from eip712_structs import make_domain
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
-from eth_utils.crypto import keccak
-from eip712_structs import make_domain
-from eth_tester import PyEVMBackend
 from eth_typing import HexStr
-from web3 import Web3, EthereumTesterProvider
+from eth_utils.crypto import keccak
+from web3 import Web3
 from web3.types import Nonce
+
 from tests.contracts.utils import contract_path
+from test_config import LOCAL_ENV
 from zksync2.manage_contracts.contract_encoder_base import ContractEncoder
 from zksync2.module.request_types import EIP712Meta
-from zksync2.transaction.transaction_builders import TxCreateContract
 from zksync2.transaction.transaction712 import Transaction712
+from zksync2.transaction.transaction_builders import TxCreateContract
 
 PRIVATE_KEY2 = bytes.fromhex("fd1f96220fa3a40c46d65f81d61dd90af600746fd47e5c82673da937a48b38ef")
 
 
-class TestTransaction712(TestCase):
+class Transaction712Tests(TestCase):
     NONCE = Nonce(42)
     CHAIN_ID = 42
     GAS_LIMIT = 54321
@@ -32,7 +34,9 @@ class TestTransaction712(TestCase):
     EXPECTED_ENCODED_BYTES = "0x7519adb6e67031ee048d921120687e4fbdf83961bcf43756f349d689eed2b80c"
 
     def setUp(self) -> None:
-        self.web3 = Web3(EthereumTesterProvider(PyEVMBackend()))
+        # self.web3 = Web3(EthereumTesterProvider(PyEVMBackend()))
+        self.env = LOCAL_ENV
+        self.web3 = Web3(Web3.HTTPProvider(self.env.eth_server))
         self.account: LocalAccount = Account.from_key(PRIVATE_KEY2)
         self.counter_contract_encoder = ContractEncoder.from_json(self.web3, contract_path("Counter.json"))
         self.tx712 = Transaction712(chain_id=self.CHAIN_ID,

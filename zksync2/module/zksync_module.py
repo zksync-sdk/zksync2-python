@@ -325,10 +325,11 @@ class ZkSync(Eth, ABC):
         tx_hash = None
         for log in tx_receipt["logs"]:
             if log.address.lower() == main_contract.address.lower():
-                tx_hash = log.transactionHash
+                logs = main_contract.parse_new_priority_request(tx_receipt)
+                tx_hash = logs[0].args.txHash
                 break
         if tx_hash is None:
-            raise RuntimeError("Failed to parse tx logs")
+            raise RuntimeError("Wrong transaction received")
         return tx_hash
 
     def get_l2_transaction_from_priority_op(self, tx_receipt, main_contract: ZkSyncContract):
@@ -360,8 +361,7 @@ class ZkSync(Eth, ABC):
 
         except Timeout:
             raise TimeExhausted(
-                f"Transaction {HexBytes(transaction_hash) !r} is not in the chain "
-                f"after {timeout} seconds"
+                f"Transaction {HexBytes(transaction_hash) !r} is not in the chain after {timeout} seconds"
             )
 
     def wait_finalized(self,
@@ -372,19 +372,18 @@ class ZkSync(Eth, ABC):
             with Timeout(timeout) as _timeout:
                 while True:
                     try:
-                        block = self.get_block('finalized')
+                        block = self.get_block("finalized")
                         tx_receipt = self.get_transaction_receipt(transaction_hash)
                     except TransactionNotFound:
                         tx_receipt = None
                     if tx_receipt is not None and \
                             tx_receipt["blockHash"] is not None and \
-                            block['number'] >= tx_receipt['blockNumber']:
+                            block["number"] >= tx_receipt["blockNumber"]:
                         break
                     _timeout.sleep(poll_latency)
             return tx_receipt
 
         except Timeout:
             raise TimeExhausted(
-                f"Transaction {HexBytes(transaction_hash) !r} is not in the chain "
-                f"after {timeout} seconds"
+                f"Transaction {HexBytes(transaction_hash) !r} is not in the chain after {timeout} seconds"
             )

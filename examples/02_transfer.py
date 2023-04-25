@@ -12,11 +12,7 @@ from zksync2.signer.eth_signer import PrivateKeyEthSigner
 from zksync2.transaction.transaction_builders import TxFunctionCall
 
 
-# Byte-format private key
-PRIVATE_KEY = bytes.fromhex(os.environ.get("PRIVATE_KEY"))
-
-
-def get_eth_balance(zk_web3: ZkSyncBuilder, address: HexAddress) -> float:
+def get_eth_balance(zk_web3: Web3, address: HexAddress) -> float:
     """
     Get ETH balance of ETH address on zkSync network
 
@@ -45,7 +41,7 @@ def get_eth_balance(zk_web3: ZkSyncBuilder, address: HexAddress) -> float:
 
 
 def transfer_eth(
-    zk_web3: ZkSyncBuilder,
+    zk_web3: Web3,
     account: LocalAccount,
     address: HexAddress,
     amount: float
@@ -125,6 +121,8 @@ def transfer_eth(
 
 
 if __name__ == "__main__":
+    # Byte-format private key
+    PRIVATE_KEY = bytes.fromhex(os.environ.get("PRIVATE_KEY"))
 
     # Set a provider
     PROVIDER = "https://zksync2-testnet.zksync.dev"
@@ -142,7 +140,7 @@ if __name__ == "__main__":
     transfer_eth(
         zk_web3,
         account,
-        "0x14E16DB45aE0909cB356169E4AF86D55541BE18C",
+        to_checksum_address("0x14E16DB45aE0909cB356169E4AF86D55541BE18C"),
         0.01
         )
 
