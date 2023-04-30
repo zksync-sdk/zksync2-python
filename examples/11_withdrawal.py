@@ -1,9 +1,8 @@
 import os
 
+from web3 import Web3
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
-from eth_typing import HexStr
-from web3 import Web3
 
 from zksync2.core.types import Token
 from zksync2.module.module_builder import ZkSyncBuilder
@@ -12,7 +11,7 @@ from zksync2.transaction.transaction_builders import TxWithdraw
 
 def withdraw_to_l1(
     zk_web3: ZkSyncBuilder, account: LocalAccount, amount: float
-) -> HexStr:
+) -> bytes:
     """Withdraw from Layer 2 to Layer 1 on zkSync network
 
     :param zk_web3:
@@ -68,4 +67,4 @@ if __name__ == "__main__":
     account: LocalAccount = Account.from_key(PRIVATE_KEY)
 
     # Perform the withdraw
-    withdraw_to_l1(zk_web3, account, 0.01)
+    print(withdraw_to_l1(zk_web3, account, 0.01).hex())
