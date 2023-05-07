@@ -340,7 +340,7 @@ class ZkSyncContract:
         return VerifierParams(ret[0], ret[1], ret[2])
 
     def get_priority_tx_max_gas_limit(self) -> int:
-        return self._method_("getpriorityTxMaxGasLimit")().call(
+        return self._method_("getPriorityTxMaxGasLimit")().call(
             {
                 "chainId": self.chain_id,
                 "from": self.account.address,
