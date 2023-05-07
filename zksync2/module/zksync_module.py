@@ -321,20 +321,14 @@ class ZkSync(Eth, ABC):
 
     @staticmethod
     def get_l2_hash_from_priority_op(tx_receipt: TxReceipt, main_contract: ZkSyncContract):
-        # TODO: wrong tx hash log extraction, wait transaction on ZkSync side provides timeout error
-        tx_hash = None
-        for log in tx_receipt["logs"]:
-            if log.address.lower() == main_contract.address.lower():
-                logs = main_contract.parse_new_priority_request(tx_receipt)
-                tx_hash = logs[0].args.txHash
-                break
-        if tx_hash is None:
+        logs = main_contract.parse_events(tx_receipt, "NewPriorityRequest")
+        if len(logs):
+            return logs[0].args.txHash
+        else:
             raise RuntimeError("Wrong transaction received")
-        return tx_hash
 
     def get_l2_transaction_from_priority_op(self, tx_receipt, main_contract: ZkSyncContract):
         l2_hash = self.get_l2_hash_from_priority_op(tx_receipt, main_contract)
-        # INFO: loop to get the transaction in chain
         self.wait_for_transaction_receipt(l2_hash)
         return self.get_transaction(l2_hash)
 

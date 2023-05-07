@@ -434,7 +434,5 @@ class ZkSyncContract:
                 'nonce': self._nonce(),
             })
 
-    def parse_new_priority_request(self, tx_receipt: TxReceipt):
-        event = self.contract.events.NewPriorityRequest()
-        logs = event.process_receipt(tx_receipt)
-        return logs
+    def parse_events(self, tx_receipt: TxReceipt, event: str):
+        return self.contract.events[event]().process_receipt(tx_receipt)
