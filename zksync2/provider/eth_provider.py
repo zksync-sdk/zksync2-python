@@ -154,8 +154,6 @@ class EthereumProvider:
                                                  amount=amount,
                                                  l2_tx_gas_limit=l2_gas_limit,
                                                  l2_tx_gas_per_pubdata_byte=gas_per_pubdata_byte)
-            # TODO: resolve issue with getting L2 tx_hash from logs
-            # return self._zksync_web3.zksync.get_priority_op_response(tx_receipt, self.main_contract)
             return tx_receipt
 
     def request_execute(self,
@@ -196,8 +194,6 @@ class EthereumProvider:
                                                                gas_price=gas_price,
                                                                gas_limit=gas_limit,
                                                                l1_value=l1_value)
-        # TODO: resolve issue with getting L2 tx_hash from logs
-        # return self._zksync_web3.zksync.get_priority_op_response(tx_receipt, self.main_contract)
         return tx_receipt
 
     def _get_withdraw_log(self, tx_receipt: TxReceipt, index: int = 0):
