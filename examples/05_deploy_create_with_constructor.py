@@ -3,6 +3,7 @@ from pathlib import Path
 
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
+from eth_typing import HexAddress
 from web3 import Web3
 
 from zksync2.core.types import EthBlockParams
@@ -19,9 +20,9 @@ def generate_random_salt() -> bytes:
 
 
 def deploy_contract(
-        zk_web3: Web3, account: LocalAccount, compiled_contract: Path
-):
-    """Deploy compiled contract with dependency on zkSync network using create() opcode
+        zk_web3: Web3, account: LocalAccount, compiled_contract: Path, constructor_args: [dict | tuple]
+) -> HexAddress:
+    """Deploy compiled contract with constructor on zkSync network using create() opcode
 
     :param zk_web3:
         Instance of ZkSyncBuilder that interacts with zkSync network
@@ -31,6 +32,11 @@ def deploy_contract(
 
     :param compiled_contract:
         Compiled contract source.
+
+    :param constructor_args:
+        Constructor arguments that can be provided via:
+        dictionary: {"_incrementer": 2}
+        tuple: tuple([2])
 
     :return:
         Address of deployed contract.
@@ -59,22 +65,27 @@ def deploy_contract(
     deployer = PrecomputeContractDeployer(zk_web3)
     precomputed_address = deployer.compute_l2_create_address(account.address, deployment_nonce)
 
-    # Get ABI and bytecode of demo and foo contracts
-    demo_contract, foo_contract = ContractEncoder.from_json(zk_web3, compiled_contract)
+    # Get contract ABI and bytecode information
+    incrementer_contract = ContractEncoder.from_json(zk_web3, compiled_contract)[0]
+
+    # Encode the constructor arguments
+    encoded_constructor = incrementer_contract.encode_constructor(**constructor_args)
 
     # Get current gas price in Wei
     gas_price = zk_web3.zksync.gas_price
 
     # Create deployment contract transaction
-    create_contract = TxCreateContract(web3=zk_web3,
-                                       chain_id=chain_id,
-                                       nonce=nonce,
-                                       from_=account.address,
-                                       gas_limit=0,
-                                       gas_price=gas_price,
-                                       bytecode=demo_contract.bytecode,
-                                       deps=[foo_contract.bytecode],
-                                       salt=random_salt)
+    create_contract = TxCreateContract(
+        web3=zk_web3,
+        chain_id=chain_id,
+        nonce=nonce,
+        from_=account.address,
+        gas_limit=0,  # UNKNOWN AT THIS STATE,
+        gas_price=gas_price,
+        bytecode=incrementer_contract.bytecode,
+        call_data=encoded_constructor,
+        salt=random_salt
+    )
 
     # ZkSync transaction gas estimation
     estimate_gas = zk_web3.zksync.eth_estimate_gas(create_contract.tx)
@@ -105,10 +116,74 @@ def deploy_contract(
     if precomputed_address.lower() != contract_address.lower():
         raise RuntimeError("Precomputed contract address does now match with deployed contract address")
 
+    return contract_address
+
+
+def execute(
+        zk_web3: Web3, account: LocalAccount, compiled_contract: Path, contract_address: HexAddress
+):
+    """Interact with deployed smart contract on zkSync network
+
+    :param zk_web3:
+        Instance of ZkSyncBuilder that interacts with zkSync network
+
+    :param account:
+        From which account the deployment contract tx will be made
+
+    :param compiled_contract:
+        Compiled contract source.
+
+    :param contract_address:
+        Contract address on zkSync network
+    """
+    # Get contract ABI and bytecode information
+    incrementer_contract = ContractEncoder.from_json(zk_web3, compiled_contract)[0]
+
+    # Execute Get method on smart contract
+    value = incrementer_contract.contract.functions.get().call(
+        {
+            "from": account.address,
+            "to": contract_address
+        })
+    print(f"Value: {value}")
+
+    gas_price = zk_web3.zksync.gas_price
+
+    # Get nonce of ETH address on zkSync network
+    nonce = zk_web3.zksync.get_transaction_count(account.address, EthBlockParams.LATEST.value)
+
+    # Execute increment method on smart contract
+    tx = incrementer_contract.contract.functions.increment().build_transaction({
+        "nonce": nonce,
+        "from": account.address,
+        "maxPriorityFeePerGas": 1000000,
+        "maxFeePerGas": gas_price,
+        "to": contract_address
+    })
+
+    # Sign transaction
+    signed = account.sign_transaction(tx)
+
+    # Send transaction to zkSync network
+    tx_hash = zk_web3.zksync.send_raw_transaction(signed.rawTransaction)
+
+    # Wait for transaction to be finalized
+    zk_web3.zksync.wait_for_transaction_receipt(tx_hash)
+    print(f"Increment transaction: {tx_hash.hex()}")
+
+    # Execute Get method on smart contract
+    value = incrementer_contract.contract.functions.get().call(
+        {
+            "from": account.address,
+            "to": contract_address
+        })
+    print(f"Value after increment: {value}")
+
 
 if __name__ == "__main__":
     # Set a provider
-    PROVIDER = "https://zksync2-testnet.zksync.dev"
+    # PROVIDER = "https://zksync2-testnet.zksync.dev"
+    PROVIDER = "http://127.0.0.1:3050"
 
     # Byte-format private key
     PRIVATE_KEY = bytes.fromhex(os.environ.get("PRIVATE_KEY"))
@@ -120,7 +195,17 @@ if __name__ == "__main__":
     account: LocalAccount = Account.from_key(PRIVATE_KEY)
 
     # Provide a compiled JSON source contract
-    contract_path = Path("solidity/demo/build/combined.json")
+    contract_path = Path("solidity/incrementer/build/combined.json")
+
+    # Set constructor arguments
+    constructor_arguments = {"_incrementer": 2}
 
     # Perform contract deployment
-    deploy_contract(zk_web3, account, contract_path)
+    contract_address = deploy_contract(zk_web3, account, contract_path, constructor_arguments)
+
+    # alternative way specifying constructor arguments using args
+    # constructor_arguments = tuple([2])
+    # change 55 line of code with following:
+    # encoded_constructor = contract_encoder.encode_constructor(*constructor_args)
+
+    execute(zk_web3, account, contract_path, contract_address)

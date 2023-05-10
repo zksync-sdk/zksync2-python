@@ -3,6 +3,8 @@ from eth_typing import HexStr
 from web3 import Web3
 from typing import Optional
 import json
+
+from web3.logs import DISCARD
 from web3.types import Nonce, TxReceipt
 from eth_utils.crypto import keccak
 from zksync2.manage_contracts import contract_abi
@@ -52,11 +54,8 @@ class PrecomputeContractDeployer:
             raise OverflowError("Salt data must be 32 length")
 
         bytecode_hash = hash_byte_code(bytecode)
-        args = [
-            salt,
-            bytecode_hash,
-            call_data
-        ]
+        args = salt, bytecode_hash, call_data
+
         return self.contract_encoder.encode_method(fn_name=self.CREATE2_FUNC, args=args)
 
     def encode_create(self, bytecode: bytes, call_data: Optional[bytes] = None, salt_data: Optional[bytes] = None):
@@ -69,11 +68,8 @@ class PrecomputeContractDeployer:
             raise OverflowError("Salt data must be 32 length")
 
         bytecode_hash = hash_byte_code(bytecode)
-        args = [
-            salt_data,
-            bytecode_hash,
-            call_data
-        ]
+        args = salt_data, bytecode_hash, call_data
+
         return self.contract_encoder.encode_method(fn_name=self.CREATE_FUNC, args=args)
 
     def compute_l2_create_address(self, sender: HexStr, nonce: Nonce) -> HexStr:
@@ -106,7 +102,7 @@ class PrecomputeContractDeployer:
         return HexStr(Web3.to_checksum_address(address))
 
     def extract_contract_address(self, receipt: TxReceipt) -> HexStr:
-        result = self.contract_encoder.contract.events.ContractDeployed().process_receipt(receipt)
+        result = self.contract_encoder.contract.events.ContractDeployed().process_receipt(receipt, errors=DISCARD)
         entry = result[1]["args"]
         addr = entry["contractAddress"]
         return addr

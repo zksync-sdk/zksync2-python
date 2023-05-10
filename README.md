@@ -315,15 +315,15 @@ For example and usage, please have a look into example [section](#examples)
 
 ### Examples
 
+* [check balance](./examples/10_check_balance.py)
 * [deposit funds](./examples/01_deposit.py)
-* [check balance](./examples/12_misc.py)
 * [transfer](./examples/02_transfer.py)
 * [transfer erc20 tokens](./examples/03_transfer_erc20_token.py)
-* [withdraw funds](./examples/11_withdrawal.py)
+* [withdraw funds](./examples/09_withdrawal.py)
 * [deploy contract, precompute address by create](./examples/04_deploy_create.py)
-* [deploy contract with constructor(create method)](./examples/05_deploy_create_with_ctor.py)
+* [deploy contract with constructor(create method) and interact with contract](./examples/05_deploy_create_with_constructor.py)
 * [deploy contract with dependent contract(create method)](./examples/06_deploy_create_with_deps.py)
 * [deploy contract, precompute address by create2](./examples/07_deploy_create2.py)
 * [deploy contract with dependency, precompute address by create2](./examples/08_deploy_create2_deps.py)
-* [execute contracts method](./examples/09_execute_contract.py)
-* [support legacy transaction for call/execute contracts methods](./examples/10_execute_legacy.py)
+* [how to compile solidity contracts](./examples/README.md)
+

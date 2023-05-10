@@ -4,15 +4,15 @@ from examples.utils import EnvPrivateKey
 from zksync2.module.module_builder import ZkSyncBuilder
 from zksync2.core.types import EthBlockParams
 
-ZKSYNC_TEST_URL = "http://127.0.0.1:3050"
+ZKSYNC_PROVIDER = "https://zksync2-testnet.zksync.dev"
 
 
 def check_balance():
-    env = EnvPrivateKey("ZKSYNC_TEST_KEY")
+    env = EnvPrivateKey("PRIVATE_KEY")
     account: LocalAccount = Account.from_key(env.key)
-    zksync_web3 = ZkSyncBuilder.build(ZKSYNC_TEST_URL)
+    zksync_web3 = ZkSyncBuilder.build(ZKSYNC_PROVIDER)
     zk_balance = zksync_web3.zksync.get_balance(account.address, EthBlockParams.LATEST.value)
-    print(f"ZkSync balance: {zk_balance}")
+    print(f"Balance: {zk_balance}")
 
 
 if __name__ == "__main__":

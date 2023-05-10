@@ -34,12 +34,13 @@ class DepositTests(TestCase):
                                                   amount=amount,
                                                   gas_price=self.eth_web3.eth.gas_price)
 
+        l2_hash = self.zksync.zksync.get_l2_hash_from_priority_op(l1_tx_receipt, self.zksync_contract)
+        l2_tx_receipt = self.zksync.zksync.wait_for_transaction_receipt(l2_hash)
         l1_balance_after = self.eth_provider.get_l1_balance(eth_token, EthBlockParams.LATEST)
-        l2_tx_receipt = self.zksync.zksync.get_l2_transaction_from_priority_op(l1_tx_receipt, self.zksync_contract)
         l2_balance_after = self.zksync.zksync.get_balance(self.account.address, EthBlockParams.LATEST.value)
 
         print(f"L1 transaction: {l1_tx_receipt['transactionHash'].hex()}")
-        print(f"L2 transaction: {l2_tx_receipt['hash'].hex()}")
+        print(f"L2 transaction: {l2_tx_receipt['transactionHash'].hex()}")
         print(f"L1 balance after deposit: {Web3.from_wei(l1_balance_after, 'ether')} ETH")
         print(f"L2 balance after deposit: {Web3.from_wei(l2_balance_after, 'ether')} ETH")
 
