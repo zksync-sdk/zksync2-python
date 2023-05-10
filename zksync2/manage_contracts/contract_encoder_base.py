@@ -38,8 +38,9 @@ class ContractEncoder(BaseContractEncoder):
     def from_json(cls, web3: Web3, compiled_contract: Path):
         with compiled_contract.open(mode='r') as json_f:
             data = json.load(json_f)
-            bytecode = bytes.fromhex(remove_0x_prefix(data["bytecode"]))
-            return cls(web3, abi=data["abi"], bytecode=bytecode)
+            # bytecode = bytes.fromhex(remove_0x_prefix(data["bytecode"]))
+            # return cls(web3, abi=data["abi"], bytecode=bytecode)
+            return [cls(web3, abi=v["abi"], bytecode=v["bin"]) for k, v in data["contracts"].items()]
 
     def __init__(self, web3: Web3, abi, bytecode):
         super(ContractEncoder, self).__init__(web3, abi, bytecode)

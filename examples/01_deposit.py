@@ -2,7 +2,7 @@ import os
 
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
-from hexbytes import HexBytes
+from eth_typing import HexStr
 from web3 import Web3
 
 from zksync2.core.types import Token
@@ -17,7 +17,7 @@ def deposit(
         eth_provider: EthereumProvider,
         account: LocalAccount,
         amount: float
-) -> tuple[HexBytes, HexBytes]:
+) -> tuple[HexStr, HexStr]:
     """
     Deposit ETH from L1 to L2 network
     :param zksync_provider:
@@ -33,7 +33,8 @@ def deposit(
     :return:
         Deposit transaction hashes on L1 and L2 networks
     """
-    # execute deposit
+    # execute deposit on L1 network
+    print("Executing deposit transaction on L1 network")
     l1_tx_receipt = eth_provider.deposit(token=Token.create_eth(),
                                          amount=Web3.to_wei(amount, 'ether'),
                                          gas_price=eth_web3.eth.gas_price)
@@ -45,11 +46,17 @@ def deposit(
     # Get ZkSync contract on L1 network
     zksync_contract = ZkSyncContract(zksync_provider.zksync.main_contract_address, eth_web3, account)
 
-    # Wait for deposit transaction on L2 network to be finalized
-    l2_tx_receipt = zksync_provider.zksync.get_l2_transaction_from_priority_op(l1_tx_receipt, zksync_contract)
+    # Get hash of deposit transaction on L2 network
+    l2_hash = zksync_provider.zksync.get_l2_hash_from_priority_op(l1_tx_receipt, zksync_contract)
+
+    # Wait for deposit transaction on L2 network to be finalized (5-7 minutes)
+    print("Waiting for deposit transaction on L2 network to be finalized (5-7 minutes)")
+    l2_tx_receipt = zksync_provider.zksync.wait_for_transaction_receipt(transaction_hash=l2_hash,
+                                                                        timeout=360,
+                                                                        poll_latency=10)
 
     # return deposit transaction hashes from L1 and L2 networks
-    return l1_tx_receipt['transactionHash'].hex(), l2_tx_receipt['hash'].hex()
+    return l1_tx_receipt['transactionHash'].hex(), l2_tx_receipt['transactionHash'].hex()
 
 
 if __name__ == "__main__":

@@ -116,7 +116,7 @@ def transfer_eth(
     )
     print(f"Tx status: {tx_receipt['status']}")
 
-    # Return the transaction hash of the deposit
+    # Return the transaction hash of the transfer
     return tx_hash
 
 
@@ -140,8 +140,8 @@ if __name__ == "__main__":
     transfer_eth(
         zk_web3,
         account,
-        to_checksum_address("0x14E16DB45aE0909cB356169E4AF86D55541BE18C"),
-        0.01
+        to_checksum_address("0x81E9D85b65E9CC8618D85A1110e4b1DF63fA30d9"),
+        0.001
         )
 
     # Show balance after ETH transfer

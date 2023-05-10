@@ -4,6 +4,8 @@ from pathlib import Path
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
 from eth_typing import HexAddress
+from web3 import Web3
+
 from zksync2.core.types import EthBlockParams
 from zksync2.manage_contracts.contract_encoder_base import ContractEncoder
 from zksync2.module.module_builder import ZkSyncBuilder
@@ -12,7 +14,7 @@ from zksync2.transaction.transaction_builders import TxCreateContract
 
 
 def deploy_contract(
-    zk_web3: ZkSyncBuilder, account: LocalAccount, compiled_contract: Path
+    zk_web3: Web3, account: LocalAccount, compiled_contract: Path
 ) -> HexAddress:
     """Deploy compiled contract on zkSync network using create() opcode
 
@@ -22,12 +24,11 @@ def deploy_contract(
     :param account:
         From which account the deployment contract tx will be made
 
-    :compiled_contract:
+    :param compiled_contract:
         Compiled contract source.
 
     :return:
         Address of deployed contract.
-
     """
     # Get chain id of zkSync network
     chain_id = zk_web3.zksync.chain_id
@@ -41,7 +42,7 @@ def deploy_contract(
     )
 
     # Get contract ABI and bytecode information
-    counter_contract = ContractEncoder.from_json(zk_web3, compiled_contract)
+    storage_contract = ContractEncoder.from_json(zk_web3, compiled_contract)[0]
 
     # Get current gas price in Wei
     gas_price = zk_web3.zksync.gas_price
@@ -54,12 +55,12 @@ def deploy_contract(
         from_=account.address,
         gas_limit=0,  # UNKNOWN AT THIS STATE
         gas_price=gas_price,
-        bytecode=counter_contract.bytecode,
+        bytecode=storage_contract.bytecode,
     )
 
     # ZkSync transaction gas estimation
     estimate_gas = zk_web3.zksync.eth_estimate_gas(create_contract.tx)
-    print(f"Fee for transaction is: {estimate_gas * gas_price}")
+    print(f"Fee for transaction is: {Web3.from_wei(estimate_gas * gas_price, 'ether')} ETH")
 
     # Convert transaction to EIP-712 format
     tx_712 = create_contract.tx712(estimate_gas)
@@ -101,7 +102,7 @@ if __name__ == "__main__":
     account: LocalAccount = Account.from_key(PRIVATE_KEY)
 
     # Provide a compiled JSON source contract
-    contract_path = Path("compiled_contracts/HelloWorld.json")
+    contract_path = Path("solidity/storage/build/combined.json")
 
     # Perform contract deployment
     deploy_contract(zk_web3, account, contract_path)
