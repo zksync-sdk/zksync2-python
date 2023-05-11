@@ -1,24 +1,19 @@
 import os
 from pathlib import Path
+
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
 from eth_typing import HexAddress
 from web3 import Web3
 
-from examples.utils import EnvPrivateKey
 from zksync2.core.types import EthBlockParams
 from zksync2.manage_contracts.contract_encoder_base import ContractEncoder
-from zksync2.manage_contracts.nonce_holder import NonceHolder
 from zksync2.manage_contracts.precompute_contract_deployer import PrecomputeContractDeployer
 from zksync2.module.module_builder import ZkSyncBuilder
 from zksync2.signer.eth_signer import PrivateKeyEthSigner
 from zksync2.transaction.transaction_builders import TxCreate2Contract
 
-# ZKSYNC_TEST_URL = "http://127.0.0.1:3050"
-# ETH_TEST_URL = "http://127.0.0.1:8545"
-
 ZKSYNC_TEST_URL = "https://zksync2-testnet.zksync.dev"
-# ETH_TEST_URL = "https://rpc.ankr.com/eth_goerli"
 
 
 def generate_random_salt() -> bytes:
@@ -26,7 +21,7 @@ def generate_random_salt() -> bytes:
 
 
 def deploy_contract(
-    zk_web3: Web3, account: LocalAccount, compiled_contract: Path
+        zk_web3: Web3, account: LocalAccount, compiled_contract: Path
 ) -> HexAddress:
     """Deploy compiled contract on zkSync network using create2() opcode
 
