@@ -52,7 +52,7 @@ def deploy_contract(
         account.address, EthBlockParams.PENDING.value
     )
 
-    # Smart contract deployment without salt cannot be twice
+    # Deployment of same smart contract (same bytecode) without salt cannot be done twice
     # Remove salt if you want to deploy contract only once
     random_salt = generate_random_salt()
 
