@@ -315,11 +315,12 @@ For example and usage, please have a look into example [section](#examples)
 
 ### Examples
 
-* [check balance](./examples/10_check_balance.py)
+* [check balance](./examples/11_check_balance.py)
 * [deposit funds](./examples/01_deposit.py)
 * [transfer](./examples/02_transfer.py)
 * [transfer erc20 tokens](./examples/03_transfer_erc20_token.py)
 * [withdraw funds](./examples/09_withdrawal.py)
+* [finalize withdrawal](./examples/10_finalize_withdrawal.py)
 * [deploy contract, precompute address by create](./examples/04_deploy_create.py)
 * [deploy contract with constructor(create method) and interact with contract](./examples/05_deploy_create_with_constructor.py)
 * [deploy contract with dependent contract(create method)](./examples/06_deploy_create_with_deps.py)

@@ -7,46 +7,8 @@ from web3 import Web3
 from web3.middleware import geth_poa_middleware
 from web3.types import TxReceipt
 
-from zksync2.core.types import Token
 from zksync2.module.module_builder import ZkSyncBuilder
 from zksync2.provider.eth_provider import EthereumProvider
-from zksync2.transaction.transaction_builders import TxWithdraw
-
-
-def withdraw(
-        zksync_provider: Web3, account: LocalAccount, amount: float
-) -> HexBytes:
-    """Withdraw from Layer 2 to Layer 1 on zkSync network
-    :param zksync_provider:
-        Instance of ZkSync provider
-    :param account:
-        From which ETH account the withdrawal will be made
-    :param amount:
-        How much would the withdrawal will contain
-    :return:
-         Hash of withdraw transaction on L2 network
-    """
-
-    # Create withdrawal transaction
-    withdrawal = TxWithdraw(
-        web3=zksync_provider,
-        token=Token.create_eth(),
-        amount=Web3.to_wei(amount, "ether"),
-        gas_limit=0,  # unknown
-        account=account,
-    )
-
-    # ZkSync transaction gas estimation
-    estimated_gas = zksync_provider.zksync.eth_estimate_gas(withdrawal.tx)
-
-    # Estimate gas transaction
-    tx = withdrawal.estimated_gas(estimated_gas)
-
-    # Sign the transaction
-    signed = account.sign_transaction(tx)
-
-    # Broadcast the transaction to the network
-    return zksync_provider.zksync.send_raw_transaction(signed.rawTransaction)
 
 
 def finalize_withdraw(
@@ -82,6 +44,9 @@ if __name__ == "__main__":
     # Get the private key from OS environment variables
     PRIVATE_KEY = bytes.fromhex(os.environ.get("PRIVATE_KEY"))
 
+    # Get the withdrawal transaction hash from OS environment variables
+    WITHDRAW_TX_HASH = HexBytes.fromhex(os.environ.get("WITHDRAW_TX_HASH"))
+
     # Set a provider
     ZKSYNC_PROVIDER = "https://zksync2-testnet.zksync.dev"
     ETH_PROVIDER = "https://rpc.ankr.com/eth_goerli"
@@ -99,13 +64,10 @@ if __name__ == "__main__":
     # Create Ethereum provider
     eth_provider = EthereumProvider(zk_web3, eth_web3, account)
 
+    # Finalize withdraw of previous successful withdraw transaction
+    eth_tx_receipt = finalize_withdraw(zk_web3, eth_provider, WITHDRAW_TX_HASH)
+
+    fee = eth_tx_receipt["gasUsed"] * eth_tx_receipt["effectiveGasPrice"]
     amount = 0.01
-
-    # Perform the withdrawal
-    withdraw_tx_hash = withdraw(zk_web3, account, amount)
-
-    print(f"Withdraw transaction hash: {withdraw_tx_hash.hex()}")
-    print("Wait for withdraw transaction to be finalized on L2 network (11-24 hours)")
-    print("Read more about withdrawal delay: https://era.zksync.io/docs/dev/troubleshooting/withdrawal-delay.html")
-    print("When withdraw transaction is finalized, execute 10_finalize_withdrawal.py script  "
-          "with WITHDRAW_TX_HASH environment variable set")
+    print(f"Finalize withdraw transaction: {eth_tx_receipt['transactionHash'].hex()}")
+    print(f"Effective ETH withdraw (paid fee): {Web3.from_wei(Web3.to_wei(amount, 'ether') - fee, 'ether')}")

@@ -90,7 +90,7 @@ def transfer_eth(
         data=HexStr("0x"),
         gas_limit=0,  # UNKNOWN AT THIS STATE
         gas_price=gas_price,
-        max_priority_fee_per_gas=100000000,
+        max_priority_fee_per_gas=100_000_000,
     )
 
     # ZkSync transaction gas estimation

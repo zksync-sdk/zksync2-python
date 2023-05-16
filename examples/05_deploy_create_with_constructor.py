@@ -52,10 +52,6 @@ def deploy_contract(
         account.address, EthBlockParams.PENDING.value
     )
 
-    # Deployment of same smart contract (same bytecode) without salt cannot be done twice
-    # Remove salt if you want to deploy contract only once
-    random_salt = generate_random_salt()
-
     # Get deployment nonce
     nonce_holder = NonceHolder(zk_web3, account)
     deployment_nonce = nonce_holder.get_deployment_nonce(account.address)
@@ -84,7 +80,6 @@ def deploy_contract(
         gas_price=gas_price,
         bytecode=incrementer_contract.bytecode,
         call_data=encoded_constructor,
-        salt=random_salt
     )
 
     # ZkSync transaction gas estimation
@@ -156,7 +151,7 @@ def execute(
     tx = incrementer_contract.contract.functions.increment().build_transaction({
         "nonce": nonce,
         "from": account.address,
-        "maxPriorityFeePerGas": 1000000,
+        "maxPriorityFeePerGas": 1_000_000,
         "maxFeePerGas": gas_price,
         "to": contract_address
     })
@@ -182,8 +177,7 @@ def execute(
 
 if __name__ == "__main__":
     # Set a provider
-    # PROVIDER = "https://zksync2-testnet.zksync.dev"
-    PROVIDER = "http://127.0.0.1:3050"
+    PROVIDER = "https://zksync2-testnet.zksync.dev"
 
     # Byte-format private key
     PRIVATE_KEY = bytes.fromhex(os.environ.get("PRIVATE_KEY"))
@@ -203,9 +197,9 @@ if __name__ == "__main__":
     # Perform contract deployment
     contract_address = deploy_contract(zk_web3, account, contract_path, constructor_arguments)
 
-    # alternative way specifying constructor arguments using args
+    # alternative: specifying constructor arguments using args instead of kwargs
     # constructor_arguments = tuple([2])
-    # change 55 line of code with following:
+    # change 72 line of code with following:
     # encoded_constructor = contract_encoder.encode_constructor(*constructor_args)
 
     execute(zk_web3, account, contract_path, contract_address)
