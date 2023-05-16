@@ -46,10 +46,6 @@ def deploy_contract(
         account.address, EthBlockParams.PENDING.value
     )
 
-    # Deployment of same smart contract (same bytecode) without salt cannot be done twice
-    # Remove salt if you want to deploy contract only once
-    random_salt = generate_random_salt()
-
     # Get deployment nonce
     nonce_holder = NonceHolder(zk_web3, account)
     deployment_nonce = nonce_holder.get_deployment_nonce(account.address)
@@ -73,8 +69,7 @@ def deploy_contract(
                                        gas_limit=0,
                                        gas_price=gas_price,
                                        bytecode=demo_contract.bytecode,
-                                       deps=[foo_contract.bytecode],
-                                       salt=random_salt)
+                                       deps=[foo_contract.bytecode])
 
     # ZkSync transaction gas estimation
     estimate_gas = zk_web3.zksync.eth_estimate_gas(create_contract.tx)
