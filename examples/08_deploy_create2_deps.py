@@ -111,7 +111,7 @@ def deploy_contract(
 
 if __name__ == "__main__":
     # Set a provider
-    PROVIDER = "https://zksync2-testnet.zksync.dev"
+    PROVIDER = "https://testnet.era.zksync.dev"
 
     # Byte-format private key
     PRIVATE_KEY = bytes.fromhex(os.environ.get("PRIVATE_KEY"))

@@ -125,7 +125,7 @@ if __name__ == "__main__":
     PRIVATE_KEY = bytes.fromhex(os.environ.get("PRIVATE_KEY"))
 
     # Set a provider
-    PROVIDER = "https://zksync2-testnet.zksync.dev"
+    PROVIDER = "https://testnet.era.zksync.dev"
 
     # Connect to zkSync network
     zk_web3 = ZkSyncBuilder.build(PROVIDER)

@@ -64,7 +64,7 @@ if __name__ == "__main__":
     PRIVATE_KEY = bytes.fromhex(os.environ.get("PRIVATE_KEY"))
 
     # Set a provider
-    ZKSYNC_PROVIDER = "https://zksync2-testnet.zksync.dev"
+    ZKSYNC_PROVIDER = "https://testnet.era.zksync.dev"
     ETH_PROVIDER = "https://rpc.ankr.com/eth_goerli"
 
     # Connect to zkSync network
@@ -80,7 +80,7 @@ if __name__ == "__main__":
     eth_provider = EthereumProvider(zk_web3, eth_web3, account)
 
     # Perform the deposit
-    amount = 0.01
+    amount = 0.01  # ETH
     l1_tx_hash, l2_tx_hash = deposit(zk_web3, eth_web3, eth_provider, account, amount)
 
     print(f"L1 transaction: {l1_tx_hash}")

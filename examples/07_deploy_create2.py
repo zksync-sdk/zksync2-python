@@ -13,8 +13,6 @@ from zksync2.module.module_builder import ZkSyncBuilder
 from zksync2.signer.eth_signer import PrivateKeyEthSigner
 from zksync2.transaction.transaction_builders import TxCreate2Contract
 
-ZKSYNC_TEST_URL = "https://zksync2-testnet.zksync.dev"
-
 
 def generate_random_salt() -> bytes:
     return os.urandom(32)
@@ -113,7 +111,7 @@ def deploy_contract(
 
 if __name__ == "__main__":
     # Set a provider
-    PROVIDER = "https://zksync2-testnet.zksync.dev"
+    PROVIDER = "https://testnet.era.zksync.dev"
 
     # Byte-format private key
     PRIVATE_KEY = bytes.fromhex(os.environ.get("PRIVATE_KEY"))

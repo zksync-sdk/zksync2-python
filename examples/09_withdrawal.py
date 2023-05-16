@@ -83,7 +83,7 @@ if __name__ == "__main__":
     PRIVATE_KEY = bytes.fromhex(os.environ.get("PRIVATE_KEY"))
 
     # Set a provider
-    ZKSYNC_PROVIDER = "https://zksync2-testnet.zksync.dev"
+    ZKSYNC_PROVIDER = "https://testnet.era.zksync.dev"
     ETH_PROVIDER = "https://rpc.ankr.com/eth_goerli"
 
     # Connect to zkSync network

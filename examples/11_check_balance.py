@@ -4,7 +4,7 @@ from examples.utils import EnvPrivateKey
 from zksync2.module.module_builder import ZkSyncBuilder
 from zksync2.core.types import EthBlockParams
 
-ZKSYNC_PROVIDER = "https://zksync2-testnet.zksync.dev"
+ZKSYNC_PROVIDER = "https://testnet.era.zksync.dev"
 
 
 def check_balance():
