@@ -48,7 +48,7 @@ if __name__ == "__main__":
     WITHDRAW_TX_HASH = HexBytes.fromhex(os.environ.get("WITHDRAW_TX_HASH"))
 
     # Set a provider
-    ZKSYNC_PROVIDER = "https://zksync2-testnet.zksync.dev"
+    ZKSYNC_PROVIDER = "https://testnet.era.zksync.dev"
     ETH_PROVIDER = "https://rpc.ankr.com/eth_goerli"
 
     # Connect to zkSync network

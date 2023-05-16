@@ -9,7 +9,7 @@ from zksync2.module.module_builder import ZkSyncBuilder
 from zksync2.signer.eth_signer import PrivateKeyEthSigner
 from zksync2.transaction.transaction_builders import TxFunctionCall
 
-ZKSYNC_TEST_URL = "https://zksync2-testnet.zksync.dev"
+ZKSYNC_TEST_URL = "https://testnet.era.zksync.dev"
 ETH_TEST_URL = "https://rpc.ankr.com/eth_goerli"
 SERC20_Address = Web3.to_checksum_address("0xd782e03F4818A7eDb0bc5f70748F67B4e59CdB33")
 
