@@ -13,10 +13,10 @@
 ### Getting started
 
 #### Requirements
-| Tool            | Required  |
-|-----------------|-----------|
-| python          | 3.9, 3.10 |
-| package manager | pip       |
+| Tool            | Required       |
+|-----------------|----------------|
+| python          | 3.8, 3.9, 3.10 |
+| package manager | pip            |
 
 ### how to install
 
