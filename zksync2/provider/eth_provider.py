@@ -74,12 +74,12 @@ class EthereumProvider:
             return self.l1_bridge.l2_token_address(token.l1_address)
 
     def get_base_cost(self,
-                      gas_limit: int,
+                      l2_gas_limit: int,
                       gas_per_pubdata_byte: int = DEPOSIT_GAS_PER_PUBDATA_LIMIT,
                       gas_price: int = None):
         if gas_price is None:
             gas_price = self._eth_web3.eth.gas_price
-        return self.main_contract.l2_tx_base_cost(gas_price, gas_limit, gas_per_pubdata_byte)
+        return self.main_contract.l2_tx_base_cost(gas_price, l2_gas_limit, gas_per_pubdata_byte)
 
     def approve_erc20(self,
                       token: Token,
@@ -127,7 +127,7 @@ class EthereumProvider:
 
         base_cost = self.get_base_cost(gas_price=gas_price,
                                        gas_per_pubdata_byte=gas_per_pubdata_byte,
-                                       gas_limit=gas_limit)
+                                       gas_limit=l2_gas_limit)
 
         if token.is_eth():
             value = base_cost + operator_tip + amount
@@ -178,7 +178,7 @@ class EthereumProvider:
 
         base_cost = self.get_base_cost(gas_price=gas_price,
                                        gas_per_pubdata_byte=gas_per_pubdata_byte,
-                                       gas_limit=gas_limit)
+                                       gas_limit=l2_gas_limit)
         value = base_cost + operator_tip + l2_value
         check_base_cost(base_cost, value)
 
