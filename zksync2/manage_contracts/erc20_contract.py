@@ -12,7 +12,7 @@ from zksync2.manage_contracts import contract_abi
 erc_20_abi_cache = None
 
 
-def _erc_20_abi_default():
+def get_erc20_abi():
     global erc_20_abi_cache
 
     if erc_20_abi_cache is None:
@@ -33,7 +33,7 @@ class ERC20Contract:
         check_sum_address = Web3.to_checksum_address(contract_address)
         self.contract_address = check_sum_address
         self.module = web3
-        self.contract = self.module.contract(self.contract_address, abi=_erc_20_abi_default())
+        self.contract = self.module.contract(self.contract_address, abi=get_erc20_abi())
         self.account = account
 
     def _nonce(self) -> int:
@@ -85,5 +85,5 @@ class ERC20Encoder(BaseContractEncoder):
 
     def __init__(self, web3: Web3, abi: Optional[dict] = None):
         if abi is None:
-            abi = _erc_20_abi_default()
+            abi = get_erc20_abi()
         super(ERC20Encoder, self).__init__(web3, abi)

@@ -1,4 +1,5 @@
 import json
+from enum import Enum
 from pathlib import Path
 from typing import Any, Optional
 from eth_typing import HexStr
@@ -8,13 +9,21 @@ from web3._utils.abi import get_constructor_abi, merge_args_and_kwargs
 from web3._utils.contracts import encode_abi
 
 
+class JsonConfiguration(Enum):
+    COMBINED = "combined"
+    STANDARD = "standard"
+
+
 class BaseContractEncoder:
 
     @classmethod
-    def from_json(cls, web3: Web3, compiled_contract: Path):
+    def from_json(cls, web3: Web3, compiled_contract: Path, conf_type: JsonConfiguration = JsonConfiguration.COMBINED):
         with compiled_contract.open(mode='r') as json_f:
             data = json.load(json_f)
-            return cls(web3, abi=data["abi"])
+            if conf_type == JsonConfiguration.COMBINED:
+                return [cls(web3, abi=v["abi"], bytecode=v["bin"]) for k, v in data["contracts"].items()]
+            else:
+                return cls(web3, abi=data["abi"], bytecode=data["bytecode"])
 
     def __init__(self, web3: Web3, abi, bytecode: Optional[bytes] = None):
         self.web3 = web3
@@ -33,14 +42,6 @@ class BaseContractEncoder:
 
 
 class ContractEncoder(BaseContractEncoder):
-
-    @classmethod
-    def from_json(cls, web3: Web3, compiled_contract: Path):
-        with compiled_contract.open(mode='r') as json_f:
-            data = json.load(json_f)
-            # bytecode = bytes.fromhex(remove_0x_prefix(data["bytecode"]))
-            # return cls(web3, abi=data["abi"], bytecode=bytecode)
-            return [cls(web3, abi=v["abi"], bytecode=v["bin"]) for k, v in data["contracts"].items()]
 
     def __init__(self, web3: Web3, abi, bytecode):
         super(ContractEncoder, self).__init__(web3, abi, bytecode)

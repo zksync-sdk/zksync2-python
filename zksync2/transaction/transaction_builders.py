@@ -1,16 +1,18 @@
 from abc import ABC
 from typing import Optional, List
+
 from eth_account.signers.base import BaseAccount
 from eth_typing import HexStr
 from web3 import Web3
 from web3.types import Nonce
+
 from zksync2.core.types import Token, BridgeAddresses, L2_ETH_TOKEN_ADDRESS
-from zksync2.manage_contracts.precompute_contract_deployer import PrecomputeContractDeployer
 from zksync2.manage_contracts.deploy_addresses import ZkSyncAddresses
 from zksync2.manage_contracts.eth_token import EthToken
 from zksync2.manage_contracts.l2_bridge import L2Bridge
-from zksync2.transaction.transaction712 import Transaction712
+from zksync2.manage_contracts.precompute_contract_deployer import PrecomputeContractDeployer
 from zksync2.module.request_types import EIP712Meta, TransactionType, Transaction as ZkTx
+from zksync2.transaction.transaction712 import Transaction712
 
 
 class TxBase(ABC):
@@ -46,8 +48,14 @@ class TxFunctionCall(TxBase, ABC):
                  data: HexStr = HexStr("0x"),
                  gas_limit: int = 0,
                  gas_price: int = 0,
-                 max_priority_fee_per_gas=100000000):
-        default_meta = EIP712Meta()
+                 max_priority_fee_per_gas=100_000_000,
+                 paymaster_params=None,
+                 custom_signature=None):
+        eip712_meta = EIP712Meta(gas_per_pub_data=EIP712Meta.GAS_PER_PUB_DATA_DEFAULT,
+                                 custom_signature=custom_signature,
+                                 factory_deps=None,
+                                 paymaster_params=paymaster_params)
+
         super(TxFunctionCall, self).__init__(
             trans={
                 "chain_id": chain_id,
@@ -60,7 +68,7 @@ class TxFunctionCall(TxBase, ABC):
                 "value": value,
                 "data": data,
                 "transactionType": TransactionType.EIP_712_TX_TYPE.value,
-                "eip712Meta": default_meta
+                "eip712Meta": eip712_meta
             })
 
 
@@ -71,19 +79,16 @@ class TxCreateContract(TxBase, ABC):
                  chain_id: int,
                  nonce: int,
                  from_: HexStr,
-                 gas_limit: int,
-                 gas_price: int,
                  bytecode: bytes,
+                 gas_price: int,
+                 gas_limit: int = 0,
                  deps: List[bytes] = None,
                  call_data: Optional[bytes] = None,
                  value: int = 0,
-                 max_priority_fee_per_gas=100000000,
-                 salt: Optional[bytes] = None):
-
+                 max_priority_fee_per_gas=100_000_000
+                 ):
         contract_deployer = PrecomputeContractDeployer(web3)
-        generated_call_data = contract_deployer.encode_create(bytecode=bytecode,
-                                                              call_data=call_data,
-                                                              salt_data=salt)
+        generated_call_data = contract_deployer.encode_create(bytecode=bytecode, call_data=call_data)
         factory_deps = []
         if deps is not None:
             for dep in deps:
@@ -122,7 +127,7 @@ class TxCreate2Contract(TxBase, ABC):
                  deps: List[bytes] = None,
                  call_data: Optional[bytes] = None,
                  value: int = 0,
-                 max_priority_fee_per_gas=100000000,
+                 max_priority_fee_per_gas=100_000_000,
                  salt: Optional[bytes] = None
                  ):
         contract_deployer = PrecomputeContractDeployer(web3)
@@ -140,6 +145,93 @@ class TxCreate2Contract(TxBase, ABC):
                                  factory_deps=factory_deps,
                                  paymaster_params=None)
         super(TxCreate2Contract, self).__init__(trans={
+            "chain_id": chain_id,
+            "nonce": nonce,
+            "from": from_,
+            "to": Web3.to_checksum_address(ZkSyncAddresses.CONTRACT_DEPLOYER_ADDRESS.value),
+            "gas": gas_limit,
+            "gasPrice": gas_price,
+            "maxPriorityFeePerGas": max_priority_fee_per_gas,
+            "value": value,
+            "data": HexStr(generated_call_data),
+            "transactionType": TransactionType.EIP_712_TX_TYPE.value,
+            "eip712Meta": eip712_meta
+        })
+
+
+class TxCreateAccount(TxBase, ABC):
+
+    def __init__(self,
+                 web3: Web3,
+                 chain_id: int,
+                 nonce: int,
+                 from_: HexStr,
+                 bytecode: bytes,
+                 gas_price: int,
+                 gas_limit: int = 0,
+                 deps: List[bytes] = None,
+                 call_data: Optional[bytes] = None,
+                 value: int = 0,
+                 max_priority_fee_per_gas=100_000_000
+                 ):
+        contract_deployer = PrecomputeContractDeployer(web3)
+        generated_call_data = contract_deployer.encode_create_account(bytecode=bytecode, call_data=call_data)
+        factory_deps = []
+        if deps is not None:
+            for dep in deps:
+                factory_deps.append(dep)
+        factory_deps.append(bytecode)
+        eip712_meta = EIP712Meta(gas_per_pub_data=EIP712Meta.GAS_PER_PUB_DATA_DEFAULT,
+                                 custom_signature=None,
+                                 factory_deps=factory_deps,
+                                 paymaster_params=None)
+
+        super(TxCreateAccount, self).__init__(trans={
+            "chain_id": chain_id,
+            "nonce": nonce,
+            "from": from_,
+            "to": Web3.to_checksum_address(ZkSyncAddresses.CONTRACT_DEPLOYER_ADDRESS.value),
+            "gas": gas_limit,
+            "gasPrice": gas_price,
+            "maxPriorityFeePerGas": max_priority_fee_per_gas,
+            "value": value,
+            "data": HexStr(generated_call_data),
+            "transactionType": TransactionType.EIP_712_TX_TYPE.value,
+            "eip712Meta": eip712_meta
+        })
+
+
+class TxCreate2Account(TxBase, ABC):
+
+    def __init__(self,
+                 web3: Web3,
+                 chain_id: int,
+                 nonce: int,
+                 from_: HexStr,
+                 gas_limit: int,
+                 gas_price: int,
+                 bytecode: bytes,
+                 deps: List[bytes] = None,
+                 call_data: Optional[bytes] = None,
+                 value: int = 0,
+                 max_priority_fee_per_gas=100_000_000,
+                 salt: Optional[bytes] = None
+                 ):
+        contract_deployer = PrecomputeContractDeployer(web3)
+        generated_call_data = contract_deployer.encode_create2_account(bytecode=bytecode,
+                                                                       call_data=call_data,
+                                                                       salt=salt)
+        factory_deps = []
+        if deps is not None:
+            for dep in deps:
+                factory_deps.append(dep)
+        factory_deps.append(bytecode)
+
+        eip712_meta = EIP712Meta(gas_per_pub_data=EIP712Meta.GAS_PER_PUB_DATA_DEFAULT,
+                                 custom_signature=None,
+                                 factory_deps=factory_deps,
+                                 paymaster_params=None)
+        super(TxCreate2Account, self).__init__(trans={
             "chain_id": chain_id,
             "nonce": nonce,
             "from": from_,

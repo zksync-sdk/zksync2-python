@@ -100,7 +100,7 @@ def deploy_contract(
 
     print(f"Tx status: {tx_receipt['status']}")
     contract_address = tx_receipt["contractAddress"]
-    print(f"contract address: {contract_address}")
+    print(f"Contract address: {contract_address}")
 
     # Check does precompute address match with deployed address
     if precomputed_address.lower() != contract_address.lower():
