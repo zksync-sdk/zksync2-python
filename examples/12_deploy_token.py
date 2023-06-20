@@ -7,7 +7,7 @@ from eth_typing import HexAddress
 from web3 import Web3
 
 from zksync2.core.types import EthBlockParams
-from zksync2.manage_contracts.contract_encoder_base import ContractEncoder
+from zksync2.manage_contracts.contract_encoder_base import ContractEncoder, JsonConfiguration
 from zksync2.manage_contracts.precompute_contract_deployer import PrecomputeContractDeployer
 from zksync2.module.module_builder import ZkSyncBuilder
 from zksync2.signer.eth_signer import PrivateKeyEthSigner
@@ -19,7 +19,7 @@ def generate_random_salt() -> bytes:
 
 
 def deploy_contract(
-        zk_web3: Web3, account: LocalAccount, compiled_contract: Path
+        zk_web3: Web3, account: LocalAccount, compiled_contract: Path, constructor_args: [dict | tuple]
 ) -> HexAddress:
     """Deploy compiled contract on zkSync network using create2() opcode
 
@@ -31,6 +31,11 @@ def deploy_contract(
 
     :param compiled_contract:
         Compiled contract source.
+
+    :param constructor_args:
+        Constructor arguments that can be provided via:
+        dictionary: {"name_": "Crown", "symbol_": "Crown", "decimals": 18}
+        tuple: ("Crown", "Crown", 18)
 
     :return:
         Address of deployed contract.
@@ -56,12 +61,15 @@ def deploy_contract(
     deployer = PrecomputeContractDeployer(zk_web3)
 
     # Get contract ABI and bytecode information
-    storage_contract = ContractEncoder.from_json(zk_web3, compiled_contract)[0]
+    token_contract = ContractEncoder.from_json(zk_web3, compiled_contract, JsonConfiguration.STANDARD)
+
+    # Encode the constructor arguments
+    encoded_constructor = token_contract.encode_constructor(**constructor_args)
 
     # Get precomputed contract address
     precomputed_address = deployer.compute_l2_create2_address(sender=account.address,
-                                                              bytecode=storage_contract.bytecode,
-                                                              constructor=b'',
+                                                              bytecode=token_contract.bytecode,
+                                                              constructor=encoded_constructor,
                                                               salt=random_salt)
 
     # Get current gas price in Wei
@@ -74,8 +82,9 @@ def deploy_contract(
                                          from_=account.address,
                                          gas_limit=0,
                                          gas_price=gas_price,
-                                         bytecode=storage_contract.bytecode,
-                                         salt=random_salt)
+                                         bytecode=token_contract.bytecode,
+                                         salt=random_salt,
+                                         call_data=encoded_constructor)
 
     # ZkSync transaction gas estimation
     estimate_gas = zk_web3.zksync.eth_estimate_gas(create2_contract.tx)
@@ -123,7 +132,9 @@ if __name__ == "__main__":
     account: LocalAccount = Account.from_key(PRIVATE_KEY)
 
     # Provide a compiled JSON source contract
-    contract_path = Path("solidity/storage/build/combined.json")
+    contract_path = Path("solidity/custom_paymaster/build/Token.json")
+
+    constructor_arguments = {"name_": "Crown", "symbol_": "Crown", "decimals_": 18}
 
     # Perform contract deployment
-    deploy_contract(zk_web3, account, contract_path)
+    deploy_contract(zk_web3, account, contract_path, constructor_arguments)

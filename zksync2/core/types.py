@@ -87,3 +87,8 @@ class VmDebugTrace:
 class PaymasterParams(dict):
     paymaster: HexStr
     paymaster_input: bytes
+
+
+class AccountAbstractionVersion(Enum):
+    NONE = 0
+    VERSION_1 = 1

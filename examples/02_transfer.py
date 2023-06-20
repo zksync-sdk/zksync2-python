@@ -62,7 +62,7 @@ def transfer_eth(
       Desired ETH amount that you want to transfer.
 
     :return:
-      The transaction hash of the deposit transaction.
+      The transaction hash of the transfer transaction.
 
     """
 

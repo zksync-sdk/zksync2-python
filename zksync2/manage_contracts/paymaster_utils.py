@@ -25,7 +25,7 @@ class PaymasterFlowEncoder(BaseContractEncoder):
         super(PaymasterFlowEncoder, self).__init__(web3, abi=_paymaster_flow_abi_default())
 
     def encode_approval_based(self, address: HexStr, min_allowance: int, inner_input: bytes) -> HexStr:
-        return self.encode_method(fn_name="approvalBased", args=[address, min_allowance, inner_input])
+        return self.encode_method(fn_name="approvalBased", args=(address, min_allowance, inner_input))
 
     def encode_general(self, inputs: bytes) -> HexStr:
-        return self.encode_method(fn_name="general", args=[inputs])
+        return self.encode_method(fn_name="general", args=tuple([inputs]))

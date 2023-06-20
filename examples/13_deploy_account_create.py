@@ -7,21 +7,18 @@ from eth_typing import HexAddress
 from web3 import Web3
 
 from zksync2.core.types import EthBlockParams
-from zksync2.manage_contracts.contract_encoder_base import ContractEncoder
+from zksync2.manage_contracts.contract_encoder_base import ContractEncoder, JsonConfiguration
+from zksync2.manage_contracts.nonce_holder import NonceHolder
 from zksync2.manage_contracts.precompute_contract_deployer import PrecomputeContractDeployer
 from zksync2.module.module_builder import ZkSyncBuilder
 from zksync2.signer.eth_signer import PrivateKeyEthSigner
-from zksync2.transaction.transaction_builders import TxCreate2Contract
+from zksync2.transaction.transaction_builders import TxCreateAccount
 
 
-def generate_random_salt() -> bytes:
-    return os.urandom(32)
-
-
-def deploy_contract(
-        zk_web3: Web3, account: LocalAccount, compiled_contract: Path
+def deploy_account(
+        zk_web3: Web3, account: LocalAccount, compiled_contract: Path, constructor_args: [dict | tuple]
 ) -> HexAddress:
-    """Deploy compiled contract on zkSync network using create2() opcode
+    """Deploy custom account on zkSync network using create() opcode
 
     :param zk_web3:
         Instance of ZkSyncBuilder that interacts with zkSync network
@@ -30,7 +27,12 @@ def deploy_contract(
         From which account the deployment contract tx will be made
 
     :param compiled_contract:
-        Compiled contract source.
+        Compiled custom account.
+
+    :param constructor_args:
+        Constructor arguments that can be provided via:
+        dictionary: {"_erc20": token_address}
+        tuple: tuple([token_address])
 
     :return:
         Address of deployed contract.
@@ -47,42 +49,40 @@ def deploy_contract(
         account.address, EthBlockParams.PENDING.value
     )
 
-    # Deployment of same smart contract (same bytecode) without salt cannot be done twice
-    # Remove salt if you want to deploy contract only once
-    random_salt = generate_random_salt()
+    # Get deployment nonce
+    deployment_nonce = NonceHolder(zk_web3, account).get_deployment_nonce(account.address)
 
     # Precompute the address of smart contract
     # Use this if there is a case where contract address should be known before deployment
     deployer = PrecomputeContractDeployer(zk_web3)
+    precomputed_address = deployer.compute_l2_create_address(account.address, deployment_nonce)
 
     # Get contract ABI and bytecode information
-    storage_contract = ContractEncoder.from_json(zk_web3, compiled_contract)[0]
+    token_contract = ContractEncoder.from_json(zk_web3, compiled_contract, JsonConfiguration.STANDARD)
 
-    # Get precomputed contract address
-    precomputed_address = deployer.compute_l2_create2_address(sender=account.address,
-                                                              bytecode=storage_contract.bytecode,
-                                                              constructor=b'',
-                                                              salt=random_salt)
+    # Encode the constructor arguments
+    encoded_constructor = token_contract.encode_constructor(**constructor_args)
 
     # Get current gas price in Wei
     gas_price = zk_web3.zksync.gas_price
 
-    # Create2 deployment contract transaction
-    create2_contract = TxCreate2Contract(web3=zk_web3,
-                                         chain_id=chain_id,
-                                         nonce=nonce,
-                                         from_=account.address,
-                                         gas_limit=0,
-                                         gas_price=gas_price,
-                                         bytecode=storage_contract.bytecode,
-                                         salt=random_salt)
+    # Create deployment contract transaction
+    create_account = TxCreateAccount(
+        web3=zk_web3,
+        chain_id=chain_id,
+        nonce=nonce,
+        from_=account.address,
+        gas_price=gas_price,
+        bytecode=token_contract.bytecode,
+        call_data=encoded_constructor,
+    )
 
     # ZkSync transaction gas estimation
-    estimate_gas = zk_web3.zksync.eth_estimate_gas(create2_contract.tx)
+    estimate_gas = zk_web3.zksync.eth_estimate_gas(create_account.tx)
     print(f"Fee for transaction is: {Web3.from_wei(estimate_gas * gas_price, 'ether')} ETH")
 
     # Convert transaction to EIP-712 format
-    tx_712 = create2_contract.tx712(estimate_gas)
+    tx_712 = create_account.tx712(estimate_gas)
 
     # Sign message
     signed_message = signer.sign_typed_data(tx_712.to_eip712_struct())
@@ -123,7 +123,11 @@ if __name__ == "__main__":
     account: LocalAccount = Account.from_key(PRIVATE_KEY)
 
     # Provide a compiled JSON source contract
-    contract_path = Path("solidity/storage/build/combined.json")
+    contract_path = Path("solidity/custom_paymaster/build/Paymaster.json")
+
+    # Crown token than can be minted for free
+    token_address = zk_web3.to_checksum_address("0xCd9BDa1d0FC539043D4C80103bdF4f9cb108931B")
+    constructor_arguments = {"_erc20": token_address}
 
     # Perform contract deployment
-    deploy_contract(zk_web3, account, contract_path)
+    deploy_account(zk_web3, account, contract_path, constructor_arguments)
