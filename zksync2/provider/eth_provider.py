@@ -106,7 +106,7 @@ class EthereumProvider:
                 operator_tip: int = 0,
                 bridge_address: HexStr = None,
                 approve_erc20: bool = False,
-                l2_gas_limit: int = RECOMMENDED_DEPOSIT_L2_GAS_LIMIT,
+                l2_gas_limit: int = RecommendedGasLimit.DEPOSIT.value,
                 gas_per_pubdata_byte: int = DEPOSIT_GAS_PER_PUBDATA_LIMIT,
                 gas_price: int = None,
                 gas_limit: int = None
@@ -127,7 +127,7 @@ class EthereumProvider:
 
         base_cost = self.get_base_cost(gas_price=gas_price,
                                        gas_per_pubdata_byte=gas_per_pubdata_byte,
-                                       gas_limit=l2_gas_limit)
+                                       l2_gas_limit=l2_gas_limit)
 
         if token.is_eth():
             value = base_cost + operator_tip + amount
@@ -178,7 +178,7 @@ class EthereumProvider:
 
         base_cost = self.get_base_cost(gas_price=gas_price,
                                        gas_per_pubdata_byte=gas_per_pubdata_byte,
-                                       gas_limit=l2_gas_limit)
+                                       l2_gas_limit=l2_gas_limit)
         value = base_cost + operator_tip + l2_value
         check_base_cost(base_cost, value)
 

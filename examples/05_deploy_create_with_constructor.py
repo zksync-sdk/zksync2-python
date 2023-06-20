@@ -53,8 +53,7 @@ def deploy_contract(
     )
 
     # Get deployment nonce
-    nonce_holder = NonceHolder(zk_web3, account)
-    deployment_nonce = nonce_holder.get_deployment_nonce(account.address)
+    deployment_nonce = NonceHolder(zk_web3, account).get_deployment_nonce(account.address)
 
     # Precompute the address of smart contract
     # Use this if there is a case where contract address should be known before deployment
@@ -76,7 +75,6 @@ def deploy_contract(
         chain_id=chain_id,
         nonce=nonce,
         from_=account.address,
-        gas_limit=0,  # UNKNOWN AT THIS STATE,
         gas_price=gas_price,
         bytecode=incrementer_contract.bytecode,
         call_data=encoded_constructor,
@@ -105,7 +103,7 @@ def deploy_contract(
 
     print(f"Tx status: {tx_receipt['status']}")
     contract_address = tx_receipt["contractAddress"]
-    print(f"contract address: {contract_address}")
+    print(f"Contract address: {contract_address}")
 
     # Check does precompute address match with deployed address
     if precomputed_address.lower() != contract_address.lower():
