@@ -24,7 +24,7 @@ from web3._utils.method_formatters import (
 from web3.eth import Eth
 from web3.types import RPCEndpoint, _Hash32, TxReceipt
 from zksync2.core.types import Limit, From, ContractSourceDebugInfo, \
-    BridgeAddresses, TokenAddress, ZksMessageProof
+    BridgeAddresses, TokenAddress, ZksMessageProof, REQUIRED_L1_TO_L2_GAS_PER_PUBDATA_LIMIT
 from zksync2.manage_contracts.zksync_contract import ZkSyncContract
 from zksync2.module.request_types import *
 from zksync2.module.response_types import *
@@ -44,11 +44,11 @@ zks_get_bridge_contracts_rpc = RPCEndpoint("zks_getBridgeContracts")
 zks_get_l2_to_l1_msg_proof_prc = RPCEndpoint("zks_getL2ToL1MsgProof")
 zks_get_l2_to_l1_log_proof_prc = RPCEndpoint("zks_getL2ToL1LogProof")
 eth_estimate_gas_rpc = RPCEndpoint("eth_estimateGas")
-
 zks_set_contract_debug_info_rpc = RPCEndpoint("zks_setContractDebugInfo")
 zks_get_contract_debug_info_rpc = RPCEndpoint("zks_getContractDebugInfo")
 zks_get_transaction_trace_rpc = RPCEndpoint("zks_getTransactionTrace")
 zks_get_testnet_paymaster_address = RPCEndpoint("zks_getTestnetPaymaster")
+zks_estimate_l1_to_l2_execute = RPCEndpoint("zks_estimateGasL1ToL2")
 
 
 def bytes_to_list(v: bytes) -> List[int]:
@@ -273,6 +273,12 @@ class ZkSync(Eth, ABC):
         mungers=[default_root_munger]
     )
 
+    _zks_estimate_gas_l1: Method[Callable[[Transaction], int]] = Method(
+        zks_estimate_l1_to_l2_execute,
+        mungers=[default_root_munger],
+        request_formatters=zksync_get_request_formatters
+    )
+
     def __init__(self, web3: "Web3"):
         super(ZkSync, self).__init__(web3)
         self.main_contract_address = None
@@ -318,6 +324,22 @@ class ZkSync(Eth, ABC):
 
     def eth_estimate_gas(self, tx: Transaction) -> int:
         return self._eth_estimate_gas(tx)
+
+    def estimate_gas_l1(self, tx: Transaction) -> int:
+        return self._zks_estimate_gas_l1(tx)
+
+    def estimate_l1_to_l2_execute(self, tx: Transaction) -> int:
+        if tx.eip712Meta.gas_per_pub_data is None:
+            tx.eip712Meta.gas_per_pub_data = REQUIRED_L1_TO_L2_GAS_PER_PUBDATA_LIMIT
+
+        # If the `from` address is not provided, we use a random address, because
+        # due to storage slot aggregation, the gas estimation will depend on the address
+        # and so estimation for the zero address may be smaller than for the sender.
+        if tx["from"] is None:
+            from eth_account import Account
+            tx["from"] = Account.create()
+
+        return self.estimate_gas_l1(tx)
 
     @staticmethod
     def get_l2_hash_from_priority_op(tx_receipt: TxReceipt, main_contract: ZkSyncContract):

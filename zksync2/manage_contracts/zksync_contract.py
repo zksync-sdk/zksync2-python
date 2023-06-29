@@ -13,7 +13,7 @@ from eth_account.signers.base import BaseAccount
 zksync_abi_cache = None
 
 
-def _zksync_abi_default():
+def get_zksync_abi():
     global zksync_abi_cache
 
     if zksync_abi_cache is None:
@@ -88,7 +88,7 @@ class ZkSyncContract:
         check_sum_address = Web3.to_checksum_address(zksync_main_contract)
         self.contract_address = check_sum_address
         self.web3 = eth
-        self.contract = self.web3.eth.contract(self.contract_address, abi=_zksync_abi_default())
+        self.contract = self.web3.eth.contract(self.contract_address, abi=get_zksync_abi())
         self.account = account
         self.chain_id = self.web3.eth.chain_id
 

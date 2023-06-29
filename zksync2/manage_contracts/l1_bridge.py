@@ -12,7 +12,7 @@ from zksync2.manage_contracts import contract_abi
 l1_bridge_abi_cache = None
 
 
-def _l1_bridge_abi_default():
+def get_l1_bridge_abi():
     global l1_bridge_abi_cache
 
     if l1_bridge_abi_cache is None:
@@ -28,15 +28,13 @@ class L1Bridge:
                  contract_address: HexStr,
                  web3: Web3,
                  eth_account: BaseAccount,
-                 # gas_provider: GasProvider,
                  abi=None):
         check_sum_address = Web3.to_checksum_address(contract_address)
         self.web3 = web3
         self.addr = check_sum_address
         self.account = eth_account
-        # self.gas_provider = gas_provider
         if abi is None:
-            abi = _l1_bridge_abi_default()
+            abi = get_l1_bridge_abi()
         self.contract: Contract = self.web3.eth.contract(self.addr, abi=abi)
 
     def _get_nonce(self):
@@ -124,5 +122,5 @@ class L1BridgeEncoder(BaseContractEncoder):
 
     def __init__(self, web3: Web3, abi: Optional[dict] = None):
         if abi is None:
-            abi = _l1_bridge_abi_default()
+            abi = get_l1_bridge_abi()
         super(L1BridgeEncoder, self).__init__(web3, abi)

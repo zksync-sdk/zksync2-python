@@ -1,12 +1,15 @@
 from dataclasses import dataclass
 from decimal import Decimal
-from eth_typing import HexStr, Hash32
-from typing import Union, NewType, Dict, List, Any
-from hexbytes import HexBytes
 from enum import Enum
+from typing import Union, NewType, Dict, List, Any, Optional
+
+from eth_typing import HexStr, Hash32, ChecksumAddress, HexAddress
+from hexbytes import HexBytes
 
 ADDRESS_DEFAULT = HexStr("0x" + "0" * 40)
 L2_ETH_TOKEN_ADDRESS = HexStr('0x000000000000000000000000000000000000800a')
+
+REQUIRED_L1_TO_L2_GAS_PER_PUBDATA_LIMIT = 800
 
 TokenAddress = NewType('token_address', HexStr)
 TransactionHash = Union[Hash32, HexBytes, HexStr]
@@ -37,7 +40,7 @@ class Token:
 
     def is_eth(self) -> bool:
         return self.l1_address.lower() == ADDRESS_DEFAULT or \
-               self.l2_address.lower() == L2_ETH_TOKEN_ADDRESS
+            self.l2_address.lower() == L2_ETH_TOKEN_ADDRESS
 
     def into_decimal(self, amount: int) -> Decimal:
         return Decimal(amount).scaleb(self.decimals) // Decimal(10) ** self.decimals
@@ -92,3 +95,43 @@ class PaymasterParams(dict):
 class AccountAbstractionVersion(Enum):
     NONE = 0
     VERSION_1 = 1
+
+
+@dataclass
+class Overwrites(dict):
+    from_: Optional[ChecksumAddress | HexAddress | HexStr]
+    nonce: Optional[int]
+    value: Optional[int]
+    gas_price: Optional[int]
+    gas_limit: Optional[int]
+    max_priority_fee_per_gas: Optional[int]
+    max_fee_per_gas: Optional[int]
+
+
+@dataclass
+class DepositTransaction(dict):
+    token: ChecksumAddress | HexAddress | HexStr
+    amount: int
+    to: Optional[ChecksumAddress | HexAddress | HexStr]
+    operator_tip: Optional[int]
+    bridge_address: Optional[ChecksumAddress | HexAddress | HexStr]
+    approve_erc20: Optional[bool]
+    l2_gas_limit: Optional[int]
+    gas_per_pubdata_byte: Optional[int]
+    refund_recipient: Optional[ChecksumAddress | HexAddress | HexStr]
+    overrides: Optional[Overwrites]
+    approve_overrides: Optional[Overwrites]
+    custom_bridge_data: Optional[bytes]
+
+
+@dataclass
+class RequestExecuteTransaction(dict):
+    contract_address: ChecksumAddress | HexAddress | HexStr
+    l2_gas_limit: Optional[int]
+    l2_value: Optional[int]
+    calldata: Optional[bytes] = None
+    factory_deps: Optional[List[bytes]] = None
+    operator_tip: Optional[int] = 0
+    gas_per_pubdata_byte: Optional[int] = REQUIRED_L1_TO_L2_GAS_PER_PUBDATA_LIMIT
+    refund_recipient: Optional[ChecksumAddress | HexAddress | HexStr] = None
+    overrides: Optional[Overwrites] = None

@@ -10,7 +10,7 @@ from zksync2.manage_contracts import contract_abi
 l2_bridge_abi_cache = None
 
 
-def _l2_bridge_abi_default():
+def get_l2_bridge_abi():
     global l2_bridge_abi_cache
 
     if l2_bridge_abi_cache is None:
@@ -32,7 +32,7 @@ class L2Bridge:
         self.addr = check_sum_address
         self.zksync_account = zksync_account
         if abi is None:
-            abi = _l2_bridge_abi_default()
+            abi = get_l2_bridge_abi()
         self.contract: Contract = self.web3.eth.contract(self.addr, abi=abi)
 
     def _get_nonce(self):
