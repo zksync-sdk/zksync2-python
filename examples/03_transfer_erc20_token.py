@@ -15,7 +15,7 @@ def transfer_erc20(
         address: HexAddress,
         amount: float) -> HexStr:
     """
-       Transfer ETH to a desired address on zkSync network
+       Transfer ERC20 token to a desired address on zkSync network
 
        :param token_contract:
            Instance of ERC20 contract
@@ -56,21 +56,19 @@ def transfer_erc20(
 
 if __name__ == "__main__":
     # Byte-format private key
-    # PRIVATE_KEY = bytes.fromhex(os.environ.get("PRIVATE_KEY"))
-    PRIVATE_KEY = bytes.fromhex("7726827caac94a7f9e1b160f7ea819f172f7b6f9d2a97f992c38edeab82d4110")
+    PRIVATE_KEY = bytes.fromhex(os.environ.get("PRIVATE_KEY"))
 
     # Set a provider
-    # PROVIDER = "https://testnet.era.zksync.dev"
-    PROVIDER = "http://127.0.0.1:3050"
+    PROVIDER = "https://testnet.era.zksync.dev"
 
     # Connect to zkSync network
     zk_web3 = ZkSyncBuilder.build(PROVIDER)
 
     # Get account object by providing from private key
     account1: LocalAccount = Account.from_key(PRIVATE_KEY)
-    account2_address = zk_web3.to_checksum_address("0xa61464658AfeAf65CccaaFD3a512b69A83B77618")
+    account2_address = zk_web3.to_checksum_address("0x81E9D85b65E9CC8618D85A1110e4b1DF63fA30d9")
 
-    token_address = zk_web3.to_checksum_address("0x2Ed5EfAB90d161DdCC65693bd77c3344200c9a00")
+    token_address = zk_web3.to_checksum_address("0xCd9BDa1d0FC539043D4C80103bdF4f9cb108931B")
     token_contract = zk_web3.zksync.contract(token_address, abi=get_erc20_abi())
 
     # Show balance before token transfer
