@@ -49,7 +49,7 @@ if __name__ == "__main__":
 
     # Set a provider
     ZKSYNC_PROVIDER = "https://sepolia.era.zksync.dev"
-    ETH_PROVIDER = "https://rpc.ankr.com/eth_sepoliai"
+    ETH_PROVIDER = "https://rpc.ankr.com/eth_sepolia"
 
     # Connect to zkSync network
     zk_web3 = ZkSyncBuilder.build(ZKSYNC_PROVIDER)
