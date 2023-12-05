@@ -120,7 +120,7 @@ def deploy_account(
 
 if __name__ == "__main__":
     # Set a provider
-    PROVIDER = "https://testnet.era.zksync.dev"
+    PROVIDER = "https://sepolia.era.zksync.dev"
 
     # Byte-format private key
     PRIVATE_KEY = bytes.fromhex(os.environ.get("PRIVATE_KEY"))
