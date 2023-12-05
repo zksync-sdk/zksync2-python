@@ -48,8 +48,8 @@ if __name__ == "__main__":
     WITHDRAW_TX_HASH = HexBytes.fromhex(os.environ.get("WITHDRAW_TX_HASH"))
 
     # Set a provider
-    ZKSYNC_PROVIDER = "https://testnet.era.zksync.dev"
-    ETH_PROVIDER = "https://rpc.ankr.com/eth_goerli"
+    ZKSYNC_PROVIDER = "https://sepolia.era.zksync.dev"
+    ETH_PROVIDER = "https://rpc.ankr.com/eth_sepolia"
 
     # Connect to zkSync network
     zk_web3 = ZkSyncBuilder.build(ZKSYNC_PROVIDER)
