@@ -1,73 +1,50 @@
-# zkSync2 client sdk
+# 🚀 zksync2-python Python SDK 🚀
 
-## Contents
-- [Getting started](#getting-started)
-- [Provider](#provider-zksyncbuilder)
-- [Account](#account)
-- [Signer](#signer)
-- [Transactions](#transactions)
-- [Contract interfaces](#contract-interfaces)
-- [Examples](#examples)
+![Era Logo](https://github.com/matter-labs/era-contracts/raw/main/eraLogo.svg)
 
+In order to provide easy access to all the features of zkSync Era, the `zksync2-python` Python SDK was created,
+which is made in a way that has an interface very similar to those of [web3py](https://web3py.readthedocs.io/en/v6.6.1/). In
+fact, `web3py` is a peer dependency of our library and most of the objects exported by `zksync2-python` inherit from the corresponding `web3py` objects and override only the fields that need
+to be changed.
 
-### Getting started
+While most of the existing SDKs functionalities should work out of the box, deploying smart contracts or using unique zkSync features,
+like account abstraction, requires providing additional fields to those that Ethereum transactions have by default.
 
-#### Requirements
+The library is made in such a way that after replacing `web3py` with `zksync2-python` most client apps will work out of
+box.
+
+🔗 For a detailed walkthrough, refer to the [official documentation](https://era.zksync.io/docs/api/python).
+
+## 📌 Overview
+
+To begin, it is useful to have a basic understanding of the types of objects available and what they are responsible for, at a high level:
+
+-   `Provider` provides connection to the zkSync Era blockchain, which allows querying the blockchain state, such as account, block or transaction details,
+    querying event logs or evaluating read-only code using call. Additionally, the client facilitates writing to the blockchain by sending
+    transactions.
+-   `Wallet` wraps all operations that interact with an account. An account generally has a private key, which can be used to sign a variety of
+    types of payloads. It provides easy usage of the most common features.
+
+## 🛠 Prerequisites
 | Tool            | Required       |
 |-----------------|----------------|
 | python          | 3.8, 3.9, 3.10 |
 | package manager | pip            |
 
-### how to install
+## 📥 Installation & Setup
 
 ```console
 pip install zksync2
 ```
 
 
-### Provider (zkSyncBuilder)
+### Connect to the zkSync Era network:
 
-
-#### Design
-ZkSync 2.0 is designed with the same styling as web3.<br>
-It defines the zksync module based on Ethereum and extends it with zkSync-specific methods.<br>
-
-
-#### How to construct
-For usage, there is `ZkSyncBuilder` that returns a Web3 object with an instance of zksync module.<br>
-Construction only needs the URL to the zkSync blockchain.
-
-Example:
 ```python
 from zksync2.module.module_builder import ZkSyncBuilder
 ...
 web3 = ZkSyncBuilder.build("ZKSYNC_NET_URL")
 ```
-
-#### Module parameters and methods
-
-ZkSync module attributes:
-
-| Attribute | Description                                                     |
-|-----------|-----------------------------------------------------------------|
-| chain_id  | Returns an integer value for the currently configured "ChainId" |
-| gas_price | Returns the current gas price in Wei                            |
-
-
-ZkSync module methods:
-
-| Method                       | Parameters                              | Return value             | Description                                                                                                                                             |
-|------------------------------|-----------------------------------------|--------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
-| zks_estimate_fee             | zkSync Transaction                      | Fee structure            | Gets Fee for ZkSync transaction                                                                                                                         |
-| zks_main_contract            | -                                       | Address of main contract | Return address of main contract                                                                                                                         |
-| zks_get_confirmed_tokens     | from, limit                             | List[Token]              | Returns all tokens in the set range by global index                                                                                                     |
-| zks_l1_chain_id              | -                                       | ChainID                  | Return ethereum chain ID                                                                                                                                |
-| zks_get_all_account_balances | Address                                 | Dict[str, int]           | Return dictionary of token address and its value                                                                                                        |
-| zks_get_bridge_contracts     | -                                       | BridgeAddresses          | Returns addresses of all bridge contracts that are interacting with L1 layer                                                                            |
-| eth_estimate_gas             | Transaction                             | estimated gas            | Overloaded method of eth_estimate_gas for ZkSync transaction gas estimation                                                                             |
-| wait_for_transaction_receipt | Tx Hash, optional timeout,poll_latency  | TxReceipt                | Waits for the transaction to be included into block by its hash and returns its receipt. Optional arguments are `timeout` and `poll_latency` in seconds |
-| wait_finalized               | Tx Hash, optional timeout, poll_latency | TxReceipt                | Waits for the transaction to be finalized when finalized block occurs and it's number >= Tx block number                                                |
-
 
 ### Account
 
@@ -78,7 +55,6 @@ Account encapsulate private key and, frequently based on it, the unique user ide
 ZkSync2 Python SDK account is compatible with `eth_account` package
 In most cases user has its private key and gets account instance by using it.
 
-Example:
 ```python
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
@@ -114,26 +90,6 @@ zksync_web3 = ZkSyncBuilder.build("ZKSYNC_NETWORK_URL")
 chain_id = zksync_web3.zksync.chain_id
 signer = PrivateKeyEthSigner(account, chain_id)
 ```
-
-
-#### Methods
-
-
-Signer has a few methods to generate signature and verify message
-
-| Method            | Parameters                                   | Return value          | Description                                                               |
-|-------------------|----------------------------------------------|-----------------------|---------------------------------------------------------------------------|
-| sign_typed_data   | EIP712 Structure, optional domain            | Web3 py SignedMessage | Builds `SignedMessage` based on the encoded in EIP712 format Transaction  |
-| verify_typed_data | signature, EIP712 structure, optional domain | bool                  | return True if this encoded transaction is signed with provided signature |
-
-Signer class also has the following properties:
-
-| Attribute | Description                                                                    |
-|-----------|--------------------------------------------------------------------------------|
-| address   | Account address                                                                |
-| domain    | domain that is used to generate signature. It's depends on chain_id of network |
-
-
 
 ### Transactions
 
@@ -212,16 +168,6 @@ account: LocalAccount = Account.from_key("PRIVATE_KEY")
 nonce_holder = NonceHolder(zksync_web3, account)
 ```
 
-
-Methods:
-
-| Method                     | Parameters | Return value | Description                                                      |
-|----------------------------|------------|--------------|------------------------------------------------------------------|
-| get_account_nonce          | -          | Nonce        | returns account nonce                                            |
-| get_deployment_nonce       | -          | Nonce        | return current deployment nonce that is going to be used         |
-| increment_deployment_nonce | Address    | Nothing      | Manually increments deployment nonce by provided account address | 
-
-
 #### ERC20Encoder
 
 This is the helper for encoding ERC20 methods. It's used for transfer non-native tokens<br>
@@ -255,16 +201,6 @@ deployer = PrecomputeContractDeployer(zksync_web3)
 
 The most functionality is hidden in the function builder helper types. See transaction [section](#transactions)  
 
-Methods:
-
-| Method                     | Parameters                              | Return value | Description                                                                                                                                                                                                                                          |
-|----------------------------|-----------------------------------------|--------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| encode_create              | bytecode, optional `call_data` & `salt` | HexStr       | create binary representation of contract in internal deploying format.<br/> bytecode - contract binary representation, call_data is used for ctor bytecode only, salt is used to generate unique identifier of deploying contract                    |
-| encode_create2             | bytecode, optional `call_data` & `salt` | HexStr       | create binary representation of contract in internal deploying format.<br/> bytecode - contract binary representation, call_data is used for ctor bytecode only, salt is used to generate unique identifier of deploying contract                    |
- | compute_l2_create_address  | Address, Nonce                          | Address      | Accepts address of deployer and current deploying nonce and returns address of contract that is going to be deployed by `encode_create` method                                                                                                       |
-| compute_l2_create2_address | Address, bytecode, ctor bytecode, salt  | Address      | Accepts address of deployer, binary representation of contract, if needed it's constructor in binary format and self. By default constructor can be b'0' value. Returns address of contract that is going to be deployed by  `encode_create2` method |
-
-
 ### ContractEncoder
 
 This is type that helps with encoding contract methods and constructor <br>
@@ -280,16 +216,6 @@ from zksync2.module.module_builder import ZkSyncBuilder
 zksync_web3 = ZkSyncBuilder.build('ZKSYNC_TEST_URL')
 counter_contract = ContractEncoder.from_json(zksync_web3, Path("./Counter.json"))
 ```
-
-
-Methods:
-
-| Method             | Parameters                        | Return value | Description                                                                  |
-|--------------------|-----------------------------------|--------------|------------------------------------------------------------------------------|
-| encode_method      | function name, function arguments | HexStr       | encode contract function method with it's arguments in binary representation |
-| encode_constructor | constructor arguments             | bytes        | encode constructor with arguments in binary representation                   |
-
-
 
 #### PaymasterFlowEncoder
 
