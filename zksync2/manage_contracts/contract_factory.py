@@ -61,10 +61,7 @@ class LegacyContractFactory:
             encoder = ContractEncoder(self.web3, abi=self.abi, bytecode=self.byte_code)
             call_data = encoder.encode_constructor(args)
 
-        factory_deps = None
-        if deps is not None:
-            factory_deps = deps
-
+        factory_deps = deps if deps is not None else None
         create_contract = TxCreateContract(web3=self.web3,
                                            chain_id=self.web3.zksync.chain_id,
                                            nonce=nonce,
@@ -103,10 +100,7 @@ class LegacyContractFactory:
             encoder = ContractEncoder(self.web3, abi=self.abi, bytecode=self.byte_code)
             call_data = encoder.encode_constructor(args)
 
-        factory_deps = None
-        if deps is not None:
-            factory_deps = deps
-
+        factory_deps = deps if deps is not None else None
         create2_contract = TxCreate2Contract(web3=self.web3,
                                              chain_id=self.web3.zksync.chain_id,
                                              nonce=nonce,

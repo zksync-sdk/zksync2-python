@@ -85,8 +85,7 @@ class L1Bridge:
             })
         signed_tx = self.account.sign_transaction(tx)
         txn_hash = self.web3.eth.send_raw_transaction(signed_tx.rawTransaction)
-        txn_receipt = self.web3.eth.wait_for_transaction_receipt(txn_hash)
-        return txn_receipt
+        return self.web3.eth.wait_for_transaction_receipt(txn_hash)
 
     def finalize_withdrawal(self,
                             l2_block_number: int,
@@ -106,8 +105,7 @@ class L1Bridge:
             })
         signed_tx = self.account.sign_transaction(tx)
         txn_hash = self.web3.eth.send_raw_transaction(signed_tx.rawTransaction)
-        txn_receipt = self.web3.eth.wait_for_transaction_receipt(txn_hash)
-        return txn_receipt
+        return self.web3.eth.wait_for_transaction_receipt(txn_hash)
 
     def is_withdrawal_finalized(self, l2_block_number: int, l2_msg_index: int) -> bool:
         return self.contract.functions.isWithdrawalFinalized(l2_block_number, l2_msg_index).call()

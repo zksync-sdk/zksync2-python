@@ -109,7 +109,7 @@ class PrecomputeContractDeployer:
         result = self.CREATE_PREFIX + sender_bytes + nonce_bytes
         sha_result = keccak(result)
         address = sha_result[12:]
-        address = "0x" + address.hex()
+        address = f"0x{address.hex()}"
         return HexStr(Web3.to_checksum_address(address))
 
     def compute_l2_create2_address(self,
@@ -127,11 +127,10 @@ class PrecomputeContractDeployer:
         result = self.CREATE2_PREFIX + sender_bytes + salt + bytecode_hash + ctor_hash
         sha_result = keccak(result)
         address = sha_result[12:]
-        address = "0x" + address.hex()
+        address = f"0x{address.hex()}"
         return HexStr(Web3.to_checksum_address(address))
 
     def extract_contract_address(self, receipt: TxReceipt) -> HexStr:
         result = self.contract_encoder.contract.events.ContractDeployed().process_receipt(receipt, errors=DISCARD)
         entry = result[1]["args"]
-        addr = entry["contractAddress"]
-        return addr
+        return entry["contractAddress"]

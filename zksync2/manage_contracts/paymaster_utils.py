@@ -28,4 +28,4 @@ class PaymasterFlowEncoder(BaseContractEncoder):
         return self.encode_method(fn_name="approvalBased", args=(address, min_allowance, inner_input))
 
     def encode_general(self, inputs: bytes) -> HexStr:
-        return self.encode_method(fn_name="general", args=tuple([inputs]))
+        return self.encode_method(fn_name="general", args=(inputs,))

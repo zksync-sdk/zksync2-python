@@ -87,11 +87,11 @@ class PaymasterTests(TestCase):
     def get_balance(self, addr: HexStr, token: Token, at: EthBlockParams = EthBlockParams.LATEST):
         if token.is_eth():
             return self.web3.zksync.get_balance(addr, at.value)
-        else:
-            erc20 = ERC20Contract(self.web3.zksync,
-                                  contract_address=token.l2_address,
-                                  account=self.account)
-            return erc20.balance_of(addr)
+        
+        erc20 = ERC20Contract(self.web3.zksync,
+                              contract_address=token.l2_address,
+                              account=self.account)
+        return erc20.balance_of(addr)
 
     @skip("Integration test, paymaster params test not implemented yet")
     def test_send_funds_for_fee(self):

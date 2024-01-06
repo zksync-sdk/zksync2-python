@@ -165,10 +165,7 @@ class ZkSyncContract:
                 'nonce': self._nonce(),
             }
         )
-        result = list()
-        for facet in facets:
-            result.append(Facet(facet[0], facet[1]))
-        return result
+        return [Facet(facet[0], facet[1]) for facet in facets]
 
     def finalize_eth_withdrawal(self,
                                 l2_block_number: int,
@@ -418,8 +415,7 @@ class ZkSyncContract:
             })
         signed_tx = self.account.sign_transaction(tx)
         tx_hash = self.web3.eth.send_raw_transaction(signed_tx.rawTransaction)
-        tx_receipt = self.web3.eth.wait_for_transaction_receipt(tx_hash)
-        return tx_receipt
+        return self.web3.eth.wait_for_transaction_receipt(tx_hash)
 
     def l2_tx_base_cost(self,
                         gas_price: int,

@@ -56,8 +56,7 @@ class ERC20Contract:
             })
         signed_tx = self.account.sign_transaction(tx)
         tx_hash = self.module.send_raw_transaction(signed_tx.rawTransaction)
-        tx_receipt = self.module.wait_for_transaction_receipt(tx_hash)
-        return tx_receipt
+        return self.module.wait_for_transaction_receipt(tx_hash)
 
     def allowance(self, owner: HexStr, sender: HexStr) -> int:
         return self.contract.functions.allowance(owner, sender).call(

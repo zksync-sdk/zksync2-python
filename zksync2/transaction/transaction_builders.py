@@ -91,8 +91,7 @@ class TxCreateContract(TxBase, ABC):
         generated_call_data = contract_deployer.encode_create(bytecode=bytecode, call_data=call_data)
         factory_deps = []
         if deps is not None:
-            for dep in deps:
-                factory_deps.append(dep)
+            factory_deps.extend(iter(deps))
         factory_deps.append(bytecode)
         eip712_meta = EIP712Meta(gas_per_pub_data=EIP712Meta.GAS_PER_PUB_DATA_DEFAULT,
                                  custom_signature=None,
@@ -136,8 +135,7 @@ class TxCreate2Contract(TxBase, ABC):
                                                                salt=salt)
         factory_deps = []
         if deps is not None:
-            for dep in deps:
-                factory_deps.append(dep)
+            factory_deps.extend(iter(deps))
         factory_deps.append(bytecode)
 
         eip712_meta = EIP712Meta(gas_per_pub_data=EIP712Meta.GAS_PER_PUB_DATA_DEFAULT,
@@ -178,8 +176,7 @@ class TxCreateAccount(TxBase, ABC):
         generated_call_data = contract_deployer.encode_create_account(bytecode=bytecode, call_data=call_data)
         factory_deps = []
         if deps is not None:
-            for dep in deps:
-                factory_deps.append(dep)
+            factory_deps.extend(iter(deps))
         factory_deps.append(bytecode)
         eip712_meta = EIP712Meta(gas_per_pub_data=EIP712Meta.GAS_PER_PUB_DATA_DEFAULT,
                                  custom_signature=None,
@@ -223,8 +220,7 @@ class TxCreate2Account(TxBase, ABC):
                                                                        salt=salt)
         factory_deps = []
         if deps is not None:
-            for dep in deps:
-                factory_deps.append(dep)
+            factory_deps.extend(iter(deps))
         factory_deps.append(bytecode)
 
         eip712_meta = EIP712Meta(gas_per_pub_data=EIP712Meta.GAS_PER_PUB_DATA_DEFAULT,

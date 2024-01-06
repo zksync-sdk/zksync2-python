@@ -43,7 +43,7 @@ class Token:
         return Decimal(amount).scaleb(self.decimals) // Decimal(10) ** self.decimals
 
     def to_int(self, amount: Union[Decimal, int, float]) -> int:
-        if isinstance(amount, int) or isinstance(amount, float):
+        if isinstance(amount, (int, float)):
             amount = Decimal(amount)
         return int(amount * (Decimal(10) ** self.decimals))
 

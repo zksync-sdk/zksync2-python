@@ -71,7 +71,7 @@ class Transaction712Tests(TestCase):
     def test_serialize_to_eip712_encoded_value(self):
         eip712_struct = self.tx712.to_eip712_struct()
         encoded_value = eip712_struct.hash_struct()
-        result = "0x" + encoded_value.hex()
+        result = f"0x{encoded_value.hex()}"
         self.assertEqual(self.EXPECTED_ENCODED_VALUE, result)
 
     def test_serialize_to_eip712_message(self):
@@ -80,5 +80,5 @@ class Transaction712Tests(TestCase):
 
         result_bytes = eip712_struct.signable_bytes(domain)
         msg = keccak(result_bytes)
-        result = "0x" + msg.hex()
+        result = f"0x{msg.hex()}"
         self.assertEqual(self.EXPECTED_ENCODED_BYTES, result)

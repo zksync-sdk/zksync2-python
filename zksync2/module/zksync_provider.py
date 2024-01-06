@@ -13,5 +13,4 @@ class ZkSyncProvider(HTTPProvider):
 
     def make_request(self, method: RPCEndpoint, params: Any) -> RPCResponse:
         self.logger.debug(f"make_request: {method}, params : {params}")
-        response = HTTPProvider.make_request(self, method, params)
-        return response
+        return HTTPProvider.make_request(self, method, params)

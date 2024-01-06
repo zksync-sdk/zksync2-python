@@ -61,11 +61,11 @@ class EthereumProvider:
     def get_l1_balance(self, token: Token, block: EthBlockParams):
         if token.is_eth():
             return self._eth_web3.eth.get_balance(self.address, block.value)
-        else:
-            token_contract = ERC20Contract(self._eth_web3.eth,
-                                           token.l1_address,
-                                           self._l1_account)
-            return token_contract.balance_of(self.address)
+
+        token_contract = ERC20Contract(self._eth_web3.eth,
+                                       token.l1_address,
+                                       self._l1_account)
+        return token_contract.balance_of(self.address)
 
     def l2_token_address(self, token: Token):
         if token.is_eth():
@@ -149,12 +149,11 @@ class EthereumProvider:
                                    amount,
                                    bridge_address,
                                    gas_limit)
-            tx_receipt = bridge_contract.deposit(l2_receiver=to,
-                                                 l1_token=token.l1_address,
-                                                 amount=amount,
-                                                 l2_tx_gas_limit=l2_gas_limit,
-                                                 l2_tx_gas_per_pubdata_byte=gas_per_pubdata_byte)
-            return tx_receipt
+            return bridge_contract.deposit(l2_receiver=to,
+                                           l1_token=token.l1_address,
+                                           amount=amount,
+                                           l2_tx_gas_limit=l2_gas_limit,
+                                           l2_tx_gas_per_pubdata_byte=gas_per_pubdata_byte)
 
     def request_execute(self,
                         contract_address: HexStr,
@@ -170,7 +169,7 @@ class EthereumProvider:
                         gas_limit: int = RecommendedGasLimit.EXECUTE.value):
 
         if factory_deps is None:
-            factory_deps = list()
+            factory_deps = []
         if refund_recipient is None:
             refund_recipient = self.address
         if gas_price is None:
@@ -184,17 +183,16 @@ class EthereumProvider:
 
         call_data = to_bytes(call_data)
 
-        tx_receipt = self.main_contract.request_l2_transaction(contract_l2=contract_address,
-                                                               l2_value=l2_value,
-                                                               call_data=call_data,
-                                                               l2_gas_limit=l2_gas_limit,
-                                                               l2_gas_per_pubdata_byte_limit=gas_per_pubdata_byte,
-                                                               factory_deps=factory_deps,
-                                                               refund_recipient=refund_recipient,
-                                                               gas_price=gas_price,
-                                                               gas_limit=gas_limit,
-                                                               l1_value=l1_value)
-        return tx_receipt
+        return self.main_contract.request_l2_transaction(contract_l2=contract_address,
+                                                         l2_value=l2_value,
+                                                         call_data=call_data,
+                                                         l2_gas_limit=l2_gas_limit,
+                                                         l2_gas_per_pubdata_byte_limit=gas_per_pubdata_byte,
+                                                         factory_deps=factory_deps,
+                                                         refund_recipient=refund_recipient,
+                                                         gas_price=gas_price,
+                                                         gas_limit=gas_limit,
+                                                         l1_value=l1_value)
 
     def _get_withdraw_log(self, tx_receipt: TxReceipt, index: int = 0):
         topic = event_signature_to_log_topic("L1MessageSent(address,bytes32,bytes)")
@@ -207,10 +205,11 @@ class EthereumProvider:
         return filtered_logs[index], int(tx_receipt['l1BatchTxIndex'], 16)
 
     def _get_withdraw_l2_to_l1_log(self, tx_receipt: TxReceipt, index: int = 0):
-        msgs = []
-        for i, e in enumerate(tx_receipt['l2ToL1Logs']):
-            if e["sender"].lower() == self.L1_MESSENGER_ADDRESS.lower():
-                msgs.append((i, e))
+        msgs = [
+            (i, e)
+            for i, e in enumerate(tx_receipt['l2ToL1Logs'])
+            if e["sender"].lower() == self.L1_MESSENGER_ADDRESS.lower()
+        ]
         l2_to_l1_log_index, log = msgs[index]
         return l2_to_l1_log_index, log
 
@@ -236,10 +235,7 @@ class EthereumProvider:
 
     def finalize_withdrawal(self, withdraw_hash, index: int = 0):
         params = self._finalize_withdrawal_params(withdraw_hash, index)
-        merkle_proof = []
-        for proof in params["proof"]:
-            merkle_proof.append(to_bytes(proof))
-
+        merkle_proof = [to_bytes(proof) for proof in params["proof"]]
         if is_eth(params["sender"]):
             return self.main_contract.finalize_eth_withdrawal(
                 l2_block_number=params["l1_batch_number"],
@@ -247,18 +243,18 @@ class EthereumProvider:
                 l2_tx_number_in_block=params["l2_tx_number_in_block"],
                 message=params["message"],
                 merkle_proof=merkle_proof)
-        else:
-            # TODO: check should it be different account for L1/L2
-            l2bridge = L2Bridge(contract_address=params["sender"],
-                                web3_zks=self._zksync_web3,
-                                zksync_account=self._l1_account)
-            l1bridge = L1Bridge(contract_address=l2bridge.l1_bridge(),
-                                web3=self._eth_web3,
-                                eth_account=self._l1_account)
-            return l1bridge.finalize_withdrawal(l2_block_number=params["l1_batch_number"],
-                                                l2_msg_index=params["l2_message_index"],
-                                                msg=params["message"],
-                                                merkle_proof=merkle_proof)
+        
+        # TODO: check should it be different account for L1/L2
+        l2bridge = L2Bridge(contract_address=params["sender"],
+                            web3_zks=self._zksync_web3,
+                            zksync_account=self._l1_account)
+        l1bridge = L1Bridge(contract_address=l2bridge.l1_bridge(),
+                            web3=self._eth_web3,
+                            eth_account=self._l1_account)
+        return l1bridge.finalize_withdrawal(l2_block_number=params["l1_batch_number"],
+                                            l2_msg_index=params["l2_message_index"],
+                                            msg=params["message"],
+                                            merkle_proof=merkle_proof)
 
     def is_withdrawal_finalized(self, withdraw_hash, index: int = 0):
         tx_receipt = self._zksync_web3.zksync.get_transaction_receipt(withdraw_hash)
@@ -273,13 +269,13 @@ class EthereumProvider:
             return self.main_contract.is_eth_withdrawal_finalized(
                 l2_block_number=l2_block_number,
                 l2_message_index=proof.id)
-        else:
-            # TODO: check should it be different account for L1/L2
-            l2bridge = L2Bridge(contract_address=sender,
-                                web3_zks=self._zksync_web3,
-                                zksync_account=self._l1_account)
-            l1bridge = L1Bridge(contract_address=l2bridge.l1_bridge(),
-                                web3=self._eth_web3,
-                                eth_account=self._l1_account)
-            return l1bridge.is_withdrawal_finalized(l2_block_number=l2_block_number,
-                                                    l2_msg_index=proof.id)
+
+        # TODO: check should it be different account for L1/L2
+        l2bridge = L2Bridge(contract_address=sender,
+                            web3_zks=self._zksync_web3,
+                            zksync_account=self._l1_account)
+        l1bridge = L1Bridge(contract_address=l2bridge.l1_bridge(),
+                            web3=self._eth_web3,
+                            eth_account=self._l1_account)
+        return l1bridge.is_withdrawal_finalized(l2_block_number=l2_block_number,
+                                                l2_msg_index=proof.id)

@@ -51,7 +51,7 @@ class ContractEncoder(BaseContractEncoder):
 
         if constructor_abi:
             if not args:
-                args = tuple()
+                args = ()
             if not kwargs:
                 kwargs = {}
             arguments = merge_args_and_kwargs(constructor_abi, args, kwargs)

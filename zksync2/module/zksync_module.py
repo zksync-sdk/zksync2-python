@@ -113,10 +113,7 @@ def to_bridge_address(t: dict) -> BridgeAddresses:
 
 
 def to_zks_account_balances(t: dict) -> ZksAccountBalances:
-    result = dict()
-    for k, v in t.items():
-        result[k] = int(v, 16)
-    return result
+    return {k: int(v, 16) for k, v in t.items()}
 
 
 def to_fee(v: dict) -> Fee:
@@ -333,8 +330,7 @@ class ZkSync(Eth, ABC):
         return self.get_transaction(l2_hash)
 
     def get_priority_op_response(self, tx_receipt, main_contract: ZkSyncContract):
-        tx = self.get_l2_transaction_from_priority_op(tx_receipt, main_contract)
-        return tx
+        return self.get_l2_transaction_from_priority_op(tx_receipt, main_contract)
 
     def wait_for_transaction_receipt(self,
                                      transaction_hash: _Hash32,

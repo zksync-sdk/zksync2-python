@@ -114,7 +114,7 @@ class Transaction712:
         factory_deps = self.meta.factory_deps
         factory_deps_hashes = b''
         if factory_deps is not None and len(factory_deps):
-            factory_deps_hashes = tuple([hash_byte_code(bytecode) for bytecode in factory_deps])
+            factory_deps_hashes = tuple(hash_byte_code(bytecode) for bytecode in factory_deps)
 
         setattr(Transaction, 'txType',                   Uint(256))
         setattr(Transaction, 'from',                     Uint(256))
