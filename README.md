@@ -72,7 +72,7 @@ Signer is used to generate signature of provided transaction based on your accou
 This signature is added to the final EIP712 transaction for its validation
 
 
-#### Singer construction
+#### Signer construction
 
 zkSync2 already has implementation of signer. For constructing the instance it needs only account and chain_id
 
