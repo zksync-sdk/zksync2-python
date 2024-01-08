@@ -72,7 +72,7 @@ Signer is used to generate signature of provided transaction based on your accou
 This signature is added to the final EIP712 transaction for its validation
 
 
-#### Singer construction
+#### Signer construction
 
 zkSync2 already has implementation of signer. For constructing the instance it needs only account and chain_id
 
@@ -106,7 +106,7 @@ convert ordinary transaction to EIP712 :
 * TxCreate2Contract
 * TxWithdraw
 
-Usage will be described in the examples [section][#Examples]
+Usage will be described in the examples [section](#examples).
 
 
 ### Contract interfaces
@@ -175,7 +175,7 @@ This is the helper for encoding ERC20 methods. It's used for transfer non-native
 Construction needs only Web3 object with appended zksync module(ZkSyncBuilder)
 
 It has only 1 single method: `encode_method` with arguments of function name, and it's args
-Usage example you may find in [section](#examples) `Transfer funds (ERC20 tokens)`   
+Usage example you may find in [section](#examples) `Transfer funds (ERC20 tokens)`.
 
 
 #### PrecomputeContractDeployer
@@ -186,7 +186,7 @@ PrecomputeContractDeployer is utility contract represented as type to cover the 
 * encode binary contract representation by `create2` method for further deploying
 * Precompute contract address for `create` and `create2` methods
 
-Construction: needs only web3 object with appended zksync module
+Construction: needs only web3 object with appended zksync module.
 
 
 Example:
@@ -199,7 +199,7 @@ zksync_web3 = ZkSyncBuilder.build("ZKSYNC_NETWORK_URL")
 deployer = PrecomputeContractDeployer(zksync_web3)
 ```
 
-The most functionality is hidden in the function builder helper types. See transaction [section](#transactions)  
+The most functionality is hidden in the function builder helper types. See transaction [section](#transactions).
 
 ### ContractEncoder
 
@@ -236,7 +236,7 @@ This utility contract has 2 methods wrapped directly to python:
 * encode_approval_based
 * encode_general
 
-For example and usage, please have a look into example [section](#examples)
+For example and usage, please have a look into examples [section](#examples).
 
 
 ### Examples
