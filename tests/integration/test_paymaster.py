@@ -4,8 +4,8 @@ from eth_typing import HexStr
 from eth_utils import keccak, remove_0x_prefix
 from web3 import Web3
 
-from tests.test_config import ZKSYNC_TEST_URL, PRIVATE_KEY2
-from zksync2.manage_contracts.contract_encoder_base import ContractEncoder
+from .test_config import LOCAL_ENV
+from zksync2.manage_contracts.contract_encoder_base import ContractEncoder, JsonConfiguration
 from zksync2.manage_contracts.paymaster_utils import PaymasterFlowEncoder
 from zksync2.manage_contracts.erc20_contract import ERC20Contract
 from zksync2.module.module_builder import ZkSyncBuilder
@@ -36,11 +36,11 @@ class PaymasterTests(TestCase):
     SALT = keccak(text="TestPaymaster")
 
     def setUp(self) -> None:
-        self.web3 = ZkSyncBuilder.build(ZKSYNC_TEST_URL)
-        self.account: LocalAccount = Account.from_key(PRIVATE_KEY2)
+        self.web3 = ZkSyncBuilder.build(LOCAL_ENV.zksync_server)
+        self.account: LocalAccount = Account.from_key("7726827caac94a7f9e1b160f7ea819f172f7b6f9d2a97f992c38edeab82d4110")
         self.chain_id = self.web3.zksync.chain_id
         self.signer = PrivateKeyEthSigner(self.account, self.chain_id)
-        self.custom_paymaster = ContractEncoder.from_json(self.web3, contract_path("CustomPaymaster.json"))
+        self.custom_paymaster = ContractEncoder.from_json(self.web3, contract_path("CustomPaymaster.json"), JsonConfiguration.STANDARD)
 
     def _is_deployed(self):
         return len(self.web3.zksync.get_code(self.paymaster_address)) > 0
@@ -49,7 +49,7 @@ class PaymasterTests(TestCase):
     def paymaster_address(self) -> HexStr:
         return self.web3.zksync.zks_get_testnet_paymaster_address()
 
-    @skip("Integration test, paymaster params test not implemented yet")
+    # @skip("Integration test, paymaster params test not implemented yet")
     def test_deploy_paymaster(self):
         if not self._is_deployed():
             nonce = self.web3.zksync.get_transaction_count(self.account.address, EthBlockParams.PENDING.value)
@@ -69,7 +69,6 @@ class PaymasterTests(TestCase):
 
             estimate_gas = self.web3.zksync.eth_estimate_gas(create_contract.tx)
             gas_price = self.web3.zksync.gas_price
-            print(f"Fee for transaction is: {estimate_gas * gas_price}")
 
             tx_712 = create_contract.tx712(estimate_gas)
             eip712_structured = tx_712.to_eip712_struct()
@@ -81,8 +80,6 @@ class PaymasterTests(TestCase):
 
             contract_address = tx_receipt["contractAddress"]
             self.assertEqual(precomputed_address.lower(), contract_address)
-        else:
-            print("Skipping test, contract is already deployed")
 
     def get_balance(self, addr: HexStr, token: Token, at: EthBlockParams = EthBlockParams.LATEST):
         if token.is_eth():
@@ -93,7 +90,7 @@ class PaymasterTests(TestCase):
                                   account=self.account)
             return erc20.balance_of(addr)
 
-    @skip("Integration test, paymaster params test not implemented yet")
+    # @skip("Integration test, paymaster params test not implemented yet")
     def test_send_funds_for_fee(self):
         gas_price = self.web3.zksync.gas_price
         func_call = TxFunctionCall(self.chain_id,
@@ -103,9 +100,7 @@ class PaymasterTests(TestCase):
                                    gas_price=gas_price)
         estimate_gas = self.web3.zksync.eth_estimate_gas(func_call.tx)
         fee = estimate_gas * gas_price
-        print(f"Fee : {fee}")
         serc20_balance = self.get_balance(self.account.address, self.SERC20_TOKEN)
-        print(f"SERC20 balance: {serc20_balance}")
 
         self.assertTrue(serc20_balance >= fee, f"Not enough balance for pay fee {fee} with balance {serc20_balance}")
 
@@ -153,8 +148,6 @@ class PaymasterTests(TestCase):
         paymaster_est_gas = self.web3.zksync.eth_estimate_gas(transaction.tx)
         preprocessed_fee = gas_price * paymaster_est_gas
 
-        print(f"Paymaster fee: {preprocessed_fee}")
-
         erc20 = ERC20Contract(self.web3.zksync, contract_address=self.SERC20_TOKEN.l2_address,
                               account=self.account)
 
@@ -169,7 +162,6 @@ class PaymasterTests(TestCase):
         transaction = self.build_paymaster(transaction, preprocessed_fee)
 
         balance_before = self.web3.zksync.get_balance(self.account.address, EthBlockParams.PENDING.value)
-        print(f"balance before : {balance_before}")
 
         tx712 = transaction.tx712(paymaster_est_gas)
         singed_message = self.signer.sign_typed_data(tx712.to_eip712_struct())
@@ -179,6 +171,5 @@ class PaymasterTests(TestCase):
         self.assertEqual(1, tx_receipt["status"])
 
         balance_after = self.web3.zksync.get_balance(self.account.address, EthBlockParams.PENDING.value)
-        print(f"balance after: {balance_after}")
 
         self.assertEqual(balance_before, balance_after)
