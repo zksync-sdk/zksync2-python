@@ -1,41 +1,36 @@
-name: Release Python library
-
+name: Release
 on:
-  push:
-    tags:
-      - "v*"
+  workflow_dispatch:
 
-env:
-  GITHUB_REF: "${{ github.ref }}"
+permissions:
+  contents: read # for checkout
 
 jobs:
-  build_and_publish:
-    name: Build distribution of library
+  release:
+    name: Release
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # to be able to publish a GitHub release
+      issues: write # to be able to comment on released issues
+      pull-requests: write # to be able to comment on released pull requests
     steps:
-      - name: Query app version number
-        id: get_version
-        shell: bash
-        run: |
-          echo "using app version ${GITHUB_REF:11}"
-          echo "lib_version=${GITHUB_REF:11}" >> $GITHUB_ENV
-      - uses: actions/checkout@v3
-      - name: Set up Python 3
-        uses: actions/setup-python@v4
+      - name: Checkout
+        uses: actions/checkout@v3
         with:
-          python-version: '3.9'
-          cache: 'pip' # caching pip dependencies
-      - name: Prepare build
-        run: python3 -m pip install --upgrade build
-      - name: Install Twine
-        run: python3 -m pip install --upgrade twine
-      - name: Build package
-        run: python3 -m build
-      - name: Check distribution
-        run: python3 -m twine check --strict dist/*
-      - name: Publish package
-        run: python3 -m twine upload dist/*
+          fetch-depth: 0
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "lts/*"
+      - name: Install dependencies
+        run: |
+          npm install -g "semantic-release@21.0.7" \
+            "@semantic-release/commit-analyzer@11.1.0" \
+            "@semantic-release/changelog@6.0.3" \
+            "@semantic-release/git@10.0.1" \
+            "@semantic-release/github@9.0.4" \
+            "semantic-release-pypi@3.0.0"
+      - name: Release
         env:
-          VERSION: ${{ env.lib_version }}
-          TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
-          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx semantic-release
