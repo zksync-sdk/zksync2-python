@@ -4,7 +4,7 @@ from eth_account import Account
 from eth_account.signers.local import LocalAccount
 from web3 import Web3
 
-from test_config import LOCAL_ENV, EnvPrivateKey
+from .test_config import LOCAL_ENV
 from zksync2.core.types import Token, EthBlockParams
 from zksync2.manage_contracts.zksync_contract import ZkSyncContract
 from zksync2.module.module_builder import ZkSyncBuilder
@@ -14,10 +14,9 @@ from zksync2.provider.eth_provider import EthereumProvider
 class DepositTests(TestCase):
     def setUp(self) -> None:
         self.env = LOCAL_ENV
-        env_key = EnvPrivateKey("ZKSYNC_KEY1")
         self.zksync = ZkSyncBuilder.build(self.env.zksync_server)
         self.eth_web3 = Web3(Web3.HTTPProvider(self.env.eth_server))
-        self.account: LocalAccount = Account.from_key(env_key.key)
+        self.account: LocalAccount = Account.from_key("7726827caac94a7f9e1b160f7ea819f172f7b6f9d2a97f992c38edeab82d4110")
         self.eth_provider = EthereumProvider(self.zksync, self.eth_web3, self.account)
         self.zksync_contract = ZkSyncContract(self.zksync.zksync.main_contract_address, self.eth_web3, self.account)
 
@@ -27,9 +26,6 @@ class DepositTests(TestCase):
         l1_balance_before = self.eth_provider.get_l1_balance(eth_token, EthBlockParams.LATEST)
         l2_balance_before = self.zksync.zksync.get_balance(self.account.address, EthBlockParams.LATEST.value)
 
-        print(f"L1 balance before deposit: {Web3.from_wei(l1_balance_before, 'ether')} ETH")
-        print(f"L2 balance before deposit: {Web3.from_wei(l2_balance_before, 'ether')} ETH")
-
         l1_tx_receipt = self.eth_provider.deposit(token=Token.create_eth(),
                                                   amount=amount,
                                                   gas_price=self.eth_web3.eth.gas_price)
@@ -38,11 +34,6 @@ class DepositTests(TestCase):
         l2_tx_receipt = self.zksync.zksync.wait_for_transaction_receipt(l2_hash)
         l1_balance_after = self.eth_provider.get_l1_balance(eth_token, EthBlockParams.LATEST)
         l2_balance_after = self.zksync.zksync.get_balance(self.account.address, EthBlockParams.LATEST.value)
-
-        print(f"L1 transaction: {l1_tx_receipt['transactionHash'].hex()}")
-        print(f"L2 transaction: {l2_tx_receipt['transactionHash'].hex()}")
-        print(f"L1 balance after deposit: {Web3.from_wei(l1_balance_after, 'ether')} ETH")
-        print(f"L2 balance after deposit: {Web3.from_wei(l2_balance_after, 'ether')} ETH")
 
         self.assertEqual(1, l1_tx_receipt["status"], "L1 transaction should be successful")
         self.assertGreaterEqual(l2_balance_after, l2_balance_before + amount, "Balance on L2 should be increased")

@@ -9,8 +9,8 @@ from web3 import Web3
 from web3.types import Nonce
 
 from tests.contracts.utils import contract_path
-from test_config import LOCAL_ENV
-from zksync2.manage_contracts.contract_encoder_base import ContractEncoder
+from .test_config import LOCAL_ENV
+from zksync2.manage_contracts.contract_encoder_base import ContractEncoder, JsonConfiguration
 from zksync2.module.request_types import EIP712Meta
 from zksync2.transaction.transaction712 import Transaction712
 from zksync2.transaction.transaction_builders import TxCreateContract
@@ -38,7 +38,7 @@ class Transaction712Tests(TestCase):
         self.env = LOCAL_ENV
         self.web3 = Web3(Web3.HTTPProvider(self.env.eth_server))
         self.account: LocalAccount = Account.from_key(PRIVATE_KEY2)
-        self.counter_contract_encoder = ContractEncoder.from_json(self.web3, contract_path("Counter.json"))
+        self.counter_contract_encoder = ContractEncoder.from_json(self.web3, contract_path("Counter.json"), JsonConfiguration.STANDARD)
         self.tx712 = Transaction712(chain_id=self.CHAIN_ID,
                                     nonce=self.NONCE,
                                     gas_limit=self.GAS_LIMIT,
