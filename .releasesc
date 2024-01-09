@@ -1,0 +1,31 @@
+{
+  "repositoryUrl": "https://github.com/zksync-sdk/zksync2-python.git",
+  "branches": "master",
+  "debug": true,
+  "addReleases": "top",
+  "preset": "angular",
+  "plugins": [
+    "@semantic-release/commit-analyzer",
+    "@semantic-release/release-notes-generator",
+    [
+      "@semantic-release/changelog",
+      {
+        "changelogFile": "CHANGELOG.md"
+      }
+    ],
+    [
+      "semantic-release-pypi",
+      {
+        "pypiPublish": false
+      }
+    ],
+    [
+      "@semantic-release/git",
+      {
+        "assets": ["CHANGELOG.md", "pyproject.toml"],
+        "message": "${nextRelease.version} version bump [skip ci]\n\n${nextRelease.notes}"
+      }
+    ],
+    "@semantic-release/github"
+  ]
+}

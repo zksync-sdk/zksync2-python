@@ -17,6 +17,8 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 
+dynamic = ["dependencies", "license", "optional-dependencies"]
+
 [project.urls]
 "Homepage" = "https://github.com/zksync-sdk/zksync2-python"
 "Bug Tracker" = "https://github.com/zksync-sdk/zksync2-python/issues"
