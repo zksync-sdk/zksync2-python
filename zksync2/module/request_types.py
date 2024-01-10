@@ -22,7 +22,9 @@ class EIP712Meta:
     paymaster_params: Optional[PaymasterParams] = None
 
 
-Transaction = TypedDict("Transaction", {
+Transaction = TypedDict(
+    "Transaction",
+    {
         "chain_id": int,
         "nonce": int,
         "from": HexStr,
@@ -35,7 +37,9 @@ Transaction = TypedDict("Transaction", {
         "transactionType": int,
         "accessList": Optional[AccessList],
         "eip712Meta": EIP712Meta,
-}, total=False)
+    },
+    total=False,
+)
 
 
 class TransactionType(Enum):

@@ -21,20 +21,20 @@ def _icontract_deployer_abi_default():
 
     if icontract_deployer_abi_cache is None:
         with pkg_resources.path(contract_abi, "ContractDeployer.json") as p:
-            with p.open(mode='r') as json_file:
+            with p.open(mode="r") as json_file:
                 data = json.load(json_file)
                 icontract_deployer_abi_cache = data["abi"]
     return icontract_deployer_abi_cache
 
 
 class PrecomputeContractDeployer:
-    DEFAULT_SALT = b'\0' * 32
+    DEFAULT_SALT = b"\0" * 32
     CREATE_FUNC = "create"
     CREATE2_FUNC = "create2"
     CREATE_ACCOUNT_FUNC = "createAccount"
     CREATE2_ACCOUNT_FUNC = "create2Account"
-    MAX_BYTE_CODE_LENGTH = 2 ** 16
-    EMPTY_BYTES = b''
+    MAX_BYTE_CODE_LENGTH = 2**16
+    EMPTY_BYTES = b""
 
     CREATE_PREFIX = keccak(text="zksyncCreate")
     CREATE2_PREFIX = keccak(text="zksyncCreate2")
@@ -45,10 +45,12 @@ class PrecomputeContractDeployer:
             abi = _icontract_deployer_abi_default()
         self.contract_encoder = BaseContractEncoder(self.web3, abi)
 
-    def encode_create2(self, bytecode: bytes,
-                       call_data: Optional[bytes] = None,
-                       salt: Optional[bytes] = None) -> HexStr:
-
+    def encode_create2(
+        self,
+        bytecode: bytes,
+        call_data: Optional[bytes] = None,
+        salt: Optional[bytes] = None,
+    ) -> HexStr:
         if salt is None:
             salt = self.DEFAULT_SALT
         if call_data is None:
@@ -62,7 +64,9 @@ class PrecomputeContractDeployer:
 
         return self.contract_encoder.encode_method(fn_name=self.CREATE2_FUNC, args=args)
 
-    def encode_create(self, bytecode: bytes, call_data: Optional[bytes] = None) -> HexStr:
+    def encode_create(
+        self, bytecode: bytes, call_data: Optional[bytes] = None
+    ) -> HexStr:
         if call_data is None:
             call_data = self.EMPTY_BYTES
 
@@ -71,11 +75,13 @@ class PrecomputeContractDeployer:
 
         return self.contract_encoder.encode_method(fn_name=self.CREATE_FUNC, args=args)
 
-    def encode_create2_account(self, bytecode: bytes,
-                               call_data: Optional[bytes] = None,
-                               salt: Optional[bytes] = None,
-                               version: AccountAbstractionVersion = AccountAbstractionVersion.VERSION_1
-                               ) -> HexStr:
+    def encode_create2_account(
+        self,
+        bytecode: bytes,
+        call_data: Optional[bytes] = None,
+        salt: Optional[bytes] = None,
+        version: AccountAbstractionVersion = AccountAbstractionVersion.VERSION_1,
+    ) -> HexStr:
         if salt is None:
             salt = self.DEFAULT_SALT
         if call_data is None:
@@ -87,19 +93,25 @@ class PrecomputeContractDeployer:
         bytecode_hash = hash_byte_code(bytecode)
         args = salt, bytecode_hash, call_data, version.value
 
-        return self.contract_encoder.encode_method(fn_name=self.CREATE2_ACCOUNT_FUNC, args=args)
+        return self.contract_encoder.encode_method(
+            fn_name=self.CREATE2_ACCOUNT_FUNC, args=args
+        )
 
-    def encode_create_account(self, bytecode: bytes,
-                              call_data: Optional[bytes] = None,
-                              version: AccountAbstractionVersion = AccountAbstractionVersion.VERSION_1
-                              ) -> HexStr:
+    def encode_create_account(
+        self,
+        bytecode: bytes,
+        call_data: Optional[bytes] = None,
+        version: AccountAbstractionVersion = AccountAbstractionVersion.VERSION_1,
+    ) -> HexStr:
         if call_data is None:
             call_data = self.EMPTY_BYTES
 
         bytecode_hash = hash_byte_code(bytecode)
         args = self.DEFAULT_SALT, bytecode_hash, call_data, version.value
 
-        return self.contract_encoder.encode_method(fn_name=self.CREATE_ACCOUNT_FUNC, args=args)
+        return self.contract_encoder.encode_method(
+            fn_name=self.CREATE_ACCOUNT_FUNC, args=args
+        )
 
     def compute_l2_create_address(self, sender: HexStr, nonce: Nonce) -> HexStr:
         sender_bytes = to_bytes(sender)
@@ -112,11 +124,9 @@ class PrecomputeContractDeployer:
         address = "0x" + address.hex()
         return HexStr(Web3.to_checksum_address(address))
 
-    def compute_l2_create2_address(self,
-                                   sender: HexStr,
-                                   bytecode: bytes,
-                                   constructor: bytes,
-                                   salt: bytes) -> HexStr:
+    def compute_l2_create2_address(
+        self, sender: HexStr, bytecode: bytes, constructor: bytes, salt: bytes
+    ) -> HexStr:
         if len(salt) != 32:
             raise OverflowError("Salt data must be 32 length")
 
@@ -131,7 +141,11 @@ class PrecomputeContractDeployer:
         return HexStr(Web3.to_checksum_address(address))
 
     def extract_contract_address(self, receipt: TxReceipt) -> HexStr:
-        result = self.contract_encoder.contract.events.ContractDeployed().process_receipt(receipt, errors=DISCARD)
+        result = (
+            self.contract_encoder.contract.events.ContractDeployed().process_receipt(
+                receipt, errors=DISCARD
+            )
+        )
         entry = result[1]["args"]
         addr = entry["contractAddress"]
         return addr
