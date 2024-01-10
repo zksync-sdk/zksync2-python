@@ -34,17 +34,17 @@ def hash_byte_code(bytecode: bytes) -> bytes:
     bytecode_len = len(bytecode)
     bytecode_size = int(bytecode_len / 32)
     if bytecode_len % 32 != 0:
-        raise RuntimeError('Bytecode length in 32-byte words must be odd')
-    if bytecode_size > 2 ** 16:
+        raise RuntimeError("Bytecode length in 32-byte words must be odd")
+    if bytecode_size > 2**16:
         raise OverflowError("hash_byte_code, bytecode length must be less than 2^16")
     bytecode_hash = sha256(bytecode).digest()
-    encoded_len = bytecode_size.to_bytes(2, byteorder='big')
-    ret = b'\x01\00' + encoded_len + bytecode_hash[4:]
+    encoded_len = bytecode_size.to_bytes(2, byteorder="big")
+    ret = b"\x01\00" + encoded_len + bytecode_hash[4:]
     return ret
 
 
 def pad_front_bytes(bs: bytes, needed_length: int):
-    padded = b'\0' * (needed_length - len(bs)) + bs
+    padded = b"\0" * (needed_length - len(bs)) + bs
     return padded
 
 

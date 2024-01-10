@@ -15,53 +15,46 @@ def _nonce_holder_abi_default():
 
     if nonce_holder_abi_cache is None:
         with pkg_resources.path(contract_abi, "INonceHolder.json") as p:
-            with p.open(mode='r') as json_file:
+            with p.open(mode="r") as json_file:
                 nonce_holder_abi_cache = json.load(json_file)
     return nonce_holder_abi_cache
 
 
 class NonceHolder:
-
-    def __init__(self,
-                 web3: Web3,
-                 account: BaseAccount):
+    def __init__(self, web3: Web3, account: BaseAccount):
         self.web3 = web3
         self.account = account
-        self.contract = self.web3.zksync.contract(address=ZkSyncAddresses.NONCE_HOLDER_ADDRESS.value,
-                                                  abi=_nonce_holder_abi_default())
+        self.contract = self.web3.zksync.contract(
+            address=ZkSyncAddresses.NONCE_HOLDER_ADDRESS.value,
+            abi=_nonce_holder_abi_default(),
+        )
 
     def get_account_nonce(self) -> Nonce:
         return self.contract.functions.getAccountNonce().call(
-            {
-                "from": self.account.address
-            })
+            {"from": self.account.address}
+        )
 
     def get_deployment_nonce(self, addr: HexStr) -> Nonce:
         return self.contract.functions.getDeploymentNonce(addr).call(
-            {
-                "from": self.account.address
-            })
+            {"from": self.account.address}
+        )
 
     def get_raw_nonce(self, addr: HexStr) -> Nonce:
         return self.contract.functions.getRawNonce(addr).call(
-            {
-                "from": self.account.address
-            })
+            {"from": self.account.address}
+        )
 
     def increment_deployment_nonce(self, addr: HexStr):
         return self.contract.functions.incrementDeploymentNonce(addr).call(
-            {
-                "from": self.account.address
-            })
+            {"from": self.account.address}
+        )
 
     def increment_nonce(self):
         return self.contract.functions.incrementNonce().call(
-            {
-                "from": self.account.address
-            })
+            {"from": self.account.address}
+        )
 
     def increment_nonce_if_equals(self, expected_nonce: Nonce):
         return self.contract.functions.incrementNonceIfEquals(expected_nonce).call(
-            {
-                "from": self.account.address
-            })
+            {"from": self.account.address}
+        )

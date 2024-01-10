@@ -6,13 +6,13 @@ from hexbytes import HexBytes
 from enum import Enum
 
 ADDRESS_DEFAULT = HexStr("0x" + "0" * 40)
-L2_ETH_TOKEN_ADDRESS = HexStr('0x000000000000000000000000000000000000800a')
+L2_ETH_TOKEN_ADDRESS = HexStr("0x000000000000000000000000000000000000800a")
 
-TokenAddress = NewType('token_address', HexStr)
+TokenAddress = NewType("token_address", HexStr)
 TransactionHash = Union[Hash32, HexBytes, HexStr]
 L2WithdrawTxHash = Union[Hash32, HexBytes, HexStr]
 From = NewType("from", int)
-Limit = NewType('limit', int)
+Limit = NewType("limit", int)
 
 
 class ZkBlockParams(Enum):
@@ -36,8 +36,10 @@ class Token:
         return str(Decimal(amount) / Decimal(10) ** self.decimals)
 
     def is_eth(self) -> bool:
-        return self.l1_address.lower() == ADDRESS_DEFAULT or \
-               self.l2_address.lower() == L2_ETH_TOKEN_ADDRESS
+        return (
+            self.l1_address.lower() == ADDRESS_DEFAULT
+            or self.l2_address.lower() == L2_ETH_TOKEN_ADDRESS
+        )
 
     def into_decimal(self, amount: int) -> Decimal:
         return Decimal(amount).scaleb(self.decimals) // Decimal(10) ** self.decimals
@@ -48,7 +50,7 @@ class Token:
         return int(amount * (Decimal(10) ** self.decimals))
 
     @classmethod
-    def create_eth(cls) -> 'Token':
+    def create_eth(cls) -> "Token":
         return Token(ADDRESS_DEFAULT, L2_ETH_TOKEN_ADDRESS, "ETH", 18)
 
 

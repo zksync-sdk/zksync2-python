@@ -12,18 +12,16 @@ ZksBridgeAddresses = TypedDict(
         "l1EthDefaultBridge": HexStr,
         "l2EthDefaultBridge": HexStr,
         "l1Erc20DefaultBridge": HexStr,
-        "l2Erc20DefaultBridge": HexStr
-    })
+        "l2Erc20DefaultBridge": HexStr,
+    },
+)
 
 ZksContractDebugInfo = TypedDict(
-    "ZksContractDebugInfo",
-    {
-        "assemblyCode": HexStr,
-        "pcLineMapping": Dict[int, int]
-    })
+    "ZksContractDebugInfo", {"assemblyCode": HexStr, "pcLineMapping": Dict[int, int]}
+)
 
 ZksEstimateFee = NewType("ZksEstimateFee", Fee)
-ZksIsTokenLiquid = NewType('ZksIsTokenLiquid', bool)
+ZksIsTokenLiquid = NewType("ZksIsTokenLiquid", bool)
 ZksL1ChainId = NewType("ZksL1ChainId", int)
 ZksMainContract = HexStr
 ZksSetContractDebugInfoResult = NewType("ZksSetContractDebugInfoResult", bool)

@@ -15,13 +15,20 @@ class JsonConfiguration(Enum):
 
 
 class BaseContractEncoder:
-
     @classmethod
-    def from_json(cls, web3: Web3, compiled_contract: Path, conf_type: JsonConfiguration = JsonConfiguration.COMBINED):
-        with compiled_contract.open(mode='r') as json_f:
+    def from_json(
+        cls,
+        web3: Web3,
+        compiled_contract: Path,
+        conf_type: JsonConfiguration = JsonConfiguration.COMBINED,
+    ):
+        with compiled_contract.open(mode="r") as json_f:
             data = json.load(json_f)
             if conf_type == JsonConfiguration.COMBINED:
-                return [cls(web3, abi=v["abi"], bytecode=v["bin"]) for k, v in data["contracts"].items()]
+                return [
+                    cls(web3, abi=v["abi"], bytecode=v["bin"])
+                    for k, v in data["contracts"].items()
+                ]
             else:
                 return cls(web3, abi=data["abi"], bytecode=data["bytecode"])
 
@@ -31,7 +38,9 @@ class BaseContractEncoder:
         if bytecode is None:
             self.instance_contract = self.web3.eth.contract(abi=self.abi)
         else:
-            self.instance_contract = self.web3.eth.contract(abi=self.abi, bytecode=bytecode)
+            self.instance_contract = self.web3.eth.contract(
+                abi=self.abi, bytecode=bytecode
+            )
 
     def encode_method(self, fn_name, args: tuple) -> HexStr:
         return self.instance_contract.encodeABI(fn_name, args)
@@ -42,7 +51,6 @@ class BaseContractEncoder:
 
 
 class ContractEncoder(BaseContractEncoder):
-
     def __init__(self, web3: Web3, abi, bytecode):
         super(ContractEncoder, self).__init__(web3, abi, bytecode)
 

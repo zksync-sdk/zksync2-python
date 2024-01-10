@@ -9,7 +9,7 @@ class ZkSyncProvider(HTTPProvider):
     logger = logging.getLogger("ZkSyncProvider")
 
     def __init__(self, url: Optional[Union[URI, str]]):
-        super(ZkSyncProvider, self).__init__(url, request_kwargs={'timeout': 1000})
+        super(ZkSyncProvider, self).__init__(url, request_kwargs={"timeout": 1000})
 
     def make_request(self, method: RPCEndpoint, params: Any) -> RPCResponse:
         self.logger.debug(f"make_request: {method}, params : {params}")
