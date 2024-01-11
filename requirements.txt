@@ -1,4 +1,4 @@
-eip712_structs == 1.1.0
+eip712_structs_ng >= 2.0.1
 web3==6.0.0
 eth-tester
 black
