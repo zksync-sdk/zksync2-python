@@ -1,3 +1,4 @@
+from pathlib import Path
 from unittest import TestCase
 from eth_typing import HexStr
 from eth_utils import add_0x_prefix
@@ -17,7 +18,9 @@ class ContractDeployerTests(TestCase):
         env = LOCAL_ENV
         self.web3 = ZkSyncBuilder.build(env.zksync_server)
         self.contract_deployer = PrecomputeContractDeployer(self.web3)
-        counter_contract = ContractEncoder.from_json(self.web3, contract_path("Counter.json"), JsonConfiguration.STANDARD)
+        directory = Path(__file__).parent
+        path = directory / Path("../contracts/Counter.json")
+        counter_contract = ContractEncoder.from_json(self.web3, path.resolve(), JsonConfiguration.STANDARD)
         self.counter_contract_bin = counter_contract.bytecode
 
     def test_compute_l2_create2(self):

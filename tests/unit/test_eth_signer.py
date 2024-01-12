@@ -3,7 +3,7 @@ from eth_typing import HexStr
 from zksync2.signer.eth_signer import PrivateKeyEthSigner
 from eth_account.signers.local import LocalAccount
 from eth_account import Account
-from eip712_structs import make_domain, EIP712Struct, String, Address
+from zksync2.eip712 import make_domain, EIP712Struct, String, Address
 from eth_utils.crypto import keccak_256
 
 

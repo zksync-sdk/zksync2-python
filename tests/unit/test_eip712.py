@@ -3,7 +3,7 @@ from unittest import TestCase
 
 from eth_account.messages import encode_structured_data
 from eth_utils.crypto import keccak_256
-from eip712_structs import EIP712Struct, String, Address, make_domain
+from zksync2.eip712 import EIP712Struct, String, Address, make_domain
 from zksync2.core.utils import pad_front_bytes
 
 
