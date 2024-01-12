@@ -9,7 +9,7 @@ from rlp.sedes import List as rlpList
 from web3.types import Nonce
 from zksync2.module.request_types import EIP712Meta
 
-from eip712_structs import EIP712Struct, Address, Uint, Bytes, Array
+from zksync2.eip712 import EIP712Struct, Address, Uint, Bytes, Array
 from zksync2.core.utils import to_bytes, hash_byte_code, encode_address, int_to_bytes
 
 DynamicBytes = Bytes(0)
