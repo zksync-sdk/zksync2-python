@@ -1,6 +1,7 @@
+from pathlib import Path
 from unittest import TestCase
 
-from eip712_structs import make_domain
+from zksync2.eip712 import make_domain
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
 from eth_typing import HexStr
@@ -38,7 +39,9 @@ class Transaction712Tests(TestCase):
         self.env = LOCAL_ENV
         self.web3 = Web3(Web3.HTTPProvider(self.env.eth_server))
         self.account: LocalAccount = Account.from_key(PRIVATE_KEY2)
-        self.counter_contract_encoder = ContractEncoder.from_json(self.web3, contract_path("Counter.json"), JsonConfiguration.STANDARD)
+        directory = Path(__file__).parent
+        path = directory / Path("../contracts/Counter.json")
+        self.counter_contract_encoder = ContractEncoder.from_json(self.web3, path.resolve(), JsonConfiguration.STANDARD)
         self.tx712 = Transaction712(chain_id=self.CHAIN_ID,
                                     nonce=self.NONCE,
                                     gas_limit=self.GAS_LIMIT,

@@ -1,6 +1,6 @@
 import web3
 from abc import abstractmethod, ABC
-from eip712_structs import make_domain, EIP712Struct
+from zksync2.eip712 import make_domain, EIP712Struct
 from eth_account.datastructures import SignedMessage
 from eth_account.signers.base import BaseAccount
 from eth_typing import ChecksumAddress, HexStr

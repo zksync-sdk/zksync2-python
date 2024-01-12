@@ -1,5 +1,6 @@
 import os
 from decimal import Decimal
+from pathlib import Path
 from unittest import TestCase, skip
 from eth_typing import HexStr
 from web3 import Web3
@@ -310,7 +311,7 @@ class ZkSyncWeb3Tests(TestCase):
     # @skip("Integration test, used for develop purposes only")
     def test_estimate_gas_withdraw(self):
         withdraw = TxWithdraw(web3=self.web3,
-                              token=Token.create_eth(),
+                              token=Token.create_eth().l1_address,
                               amount=1,
                               gas_limit=0,  # unknown
                               account=self.account)
@@ -378,7 +379,9 @@ class ZkSyncWeb3Tests(TestCase):
 
     # @skip("Integration test, used for develop purposes only")
     def test_estimate_gas_deploy_contract(self):
-        counter_contract = ContractEncoder.from_json(self.web3, contract_path("Counter.json"), JsonConfiguration.STANDARD)
+        directory = Path(__file__).parent
+        path = directory / Path("../contracts/Counter.json")
+        counter_contract = ContractEncoder.from_json(self.web3, path.resolve(), JsonConfiguration.STANDARD)
         nonce = self.web3.zksync.get_transaction_count(self.account.address, EthBlockParams.PENDING.value)
         gas_price = self.web3.zksync.gas_price
         create2_contract = TxCreate2Contract(web3=self.web3,
@@ -399,7 +402,9 @@ class ZkSyncWeb3Tests(TestCase):
         deployment_nonce = nonce_holder.get_deployment_nonce(self.account.address)
         deployer = PrecomputeContractDeployer(self.web3)
         precomputed_address = deployer.compute_l2_create_address(self.account.address, deployment_nonce)
-        counter_contract = ContractEncoder.from_json(self.web3, contract_path("Counter.json"), JsonConfiguration.STANDARD)
+        directory = Path(__file__).parent
+        path = directory / Path("../contracts/Counter.json")
+        counter_contract = ContractEncoder.from_json(self.web3, path.resolve(), JsonConfiguration.STANDARD)
 
         gas_price = self.web3.zksync.gas_price
         create_contract = TxCreateContract(web3=self.web3,
@@ -445,7 +450,9 @@ class ZkSyncWeb3Tests(TestCase):
         deployer = PrecomputeContractDeployer(self.web3)
         precomputed_address = deployer.compute_l2_create_address(self.account.address, deployment_nonce)
 
-        constructor_encoder = ContractEncoder.from_json(self.web3, contract_path("SimpleConstructor.json"), JsonConfiguration.STANDARD)
+        directory = Path(__file__).parent
+        path = directory / Path("../contracts/SimpleConstructor.json")
+        constructor_encoder = ContractEncoder.from_json(self.web3, path.resolve(), JsonConfiguration.STANDARD)
         a = 2
         b = 3
         encoded_ctor = constructor_encoder.encode_constructor(a=a, b=b, shouldRevert=False)
@@ -472,12 +479,12 @@ class ZkSyncWeb3Tests(TestCase):
         contract_address = tx_receipt["contractAddress"]
         # INFO: does not work, contract_address is None
         self.assertEqual(precomputed_address.lower(), contract_address.lower())
+        contract = self.web3.eth.contract(address=Web3.to_checksum_address(contract_address), abi=constructor_encoder.abi)
 
-        value = constructor_encoder.contract.functions.get().call(
-            {
-                "from": self.account.address,
-                "to": contract_address
-            })
+        value = contract.functions.get().call({
+            "from":self.account.address,
+            "to":contract_address
+        })
         self.assertEqual(a * b, value)
 
     # @skip("Integration test, used for develop purposes only")
@@ -487,7 +494,9 @@ class ZkSyncWeb3Tests(TestCase):
         gas_price = self.web3.zksync.gas_price
         deployer = PrecomputeContractDeployer(self.web3)
 
-        counter_contract_encoder = ContractEncoder.from_json(self.web3, contract_path("Counter.json"), JsonConfiguration.STANDARD)
+        directory = Path(__file__).parent
+        path = directory / Path("../contracts/Counter.json")
+        counter_contract_encoder = ContractEncoder.from_json(self.web3, path.resolve(), JsonConfiguration.STANDARD)
         precomputed_address = deployer.compute_l2_create2_address(sender=self.account.address,
                                                                   bytecode=counter_contract_encoder.bytecode,
                                                                   constructor=b'',
@@ -525,8 +534,12 @@ class ZkSyncWeb3Tests(TestCase):
     # @skip("Integration test, used for develop purposes only")
     def test_deploy_contract_with_deps_create(self):
         random_salt = generate_random_salt()
-        import_contract = ContractEncoder.from_json(self.web3, contract_path("Import.json"), JsonConfiguration.STANDARD)
-        import_dependency_contract = ContractEncoder.from_json(self.web3, contract_path("Foo.json"), JsonConfiguration.STANDARD)
+        directory = Path(__file__).parent
+        path = directory / Path("../contracts/Import.json")
+        import_contract = ContractEncoder.from_json(self.web3, path.resolve(), JsonConfiguration.STANDARD)
+        directory = Path(__file__).parent
+        foo_path = directory / Path("../contracts/Foo.json")
+        import_dependency_contract = ContractEncoder.from_json(self.web3, foo_path.resolve(), JsonConfiguration.STANDARD)
         nonce = self.web3.zksync.get_transaction_count(self.account.address, EthBlockParams.PENDING.value)
         gas_price = self.web3.zksync.gas_price
         nonce_holder = NonceHolder(self.web3, self.account)
@@ -560,8 +573,12 @@ class ZkSyncWeb3Tests(TestCase):
     # @skip("Integration test, used for develop purposes only")
     def test_deploy_contract_with_deps_create2(self):
         random_salt = generate_random_salt()
-        import_contract = ContractEncoder.from_json(self.web3, contract_path("Import.json"), JsonConfiguration.STANDARD)
-        import_dependency_contract = ContractEncoder.from_json(self.web3, contract_path("Foo.json"), JsonConfiguration.STANDARD)
+        directory = Path(__file__).parent
+        path = directory / Path("../contracts/Import.json")
+        import_contract = ContractEncoder.from_json(self.web3, path.resolve(), JsonConfiguration.STANDARD)
+        directory = Path(__file__).parent
+        foo_path = directory / Path("../contracts/Foo.json")
+        import_dependency_contract = ContractEncoder.from_json(self.web3, foo_path.resolve(), JsonConfiguration.STANDARD)
         nonce = self.web3.zksync.get_transaction_count(self.account.address, EthBlockParams.PENDING.value)
         gas_price = self.web3.zksync.gas_price
 
@@ -593,7 +610,9 @@ class ZkSyncWeb3Tests(TestCase):
 
     # @skip("Integration test, used for develop purposes only")
     def test_execute_contract(self):
-        counter_contract = ContractEncoder.from_json(self.web3, contract_path("Counter.json"), JsonConfiguration.STANDARD)
+        directory = Path(__file__).parent
+        path = directory / Path("../contracts/Counter.json")
+        counter_contract = ContractEncoder.from_json(self.web3, path.resolve(), JsonConfiguration.STANDARD)
         if self.counter_address is None:
             random_salt = generate_random_salt()
             nonce = self.web3.zksync.get_transaction_count(self.account.address, EthBlockParams.PENDING.value)

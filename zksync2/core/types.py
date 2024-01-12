@@ -1,9 +1,22 @@
 from dataclasses import dataclass
+from datetime import datetime
 from decimal import Decimal
-from eth_typing import HexStr, Hash32
+from enum import Enum, IntEnum
 from typing import Union, NewType, Dict, List, Any
+
+from eth_typing import HexStr, Hash32
 from hexbytes import HexBytes
-from enum import Enum
+from web3.contract import Contract
+from web3.types import AccessList
+
+from zksync2.core.utils import DEPOSIT_GAS_PER_PUBDATA_LIMIT
+
+
+class RecommendedGasLimit(IntEnum):
+    DEPOSIT = 10000000
+    EXECUTE = 620000
+    ERC20_APPROVE = 50000
+    DEPOSIT_GAS_PER_PUBDATA_LIMIT = 800
 
 ADDRESS_DEFAULT = HexStr("0x" + "0" * 40)
 L2_ETH_TOKEN_ADDRESS = HexStr("0x000000000000000000000000000000000000800a")
@@ -18,6 +31,9 @@ Limit = NewType("limit", int)
 class ZkBlockParams(Enum):
     COMMITTED = "committed"
     FINALIZED = "finalized"
+    PENDING = "pending"
+    LATEST = "latest"
+    EARLIEST = "earliest"
 
 
 class EthBlockParams(Enum):
@@ -66,6 +82,18 @@ class Fee:
 class BridgeAddresses:
     erc20_l1_default_bridge: HexStr
     erc20_l2_default_bridge: HexStr
+    weth_bridge_l1: HexStr
+    weth_bridge_l2: HexStr
+
+@dataclass
+class L1BridgeContracts:
+    erc20: Contract
+    weth: Contract
+
+@dataclass
+class L2BridgeContracts:
+    erc20: Contract
+    weth: Contract
 
 
 @dataclass
@@ -90,7 +118,174 @@ class PaymasterParams(dict):
     paymaster: HexStr
     paymaster_input: bytes
 
-
 class AccountAbstractionVersion(Enum):
     NONE = 0
     VERSION_1 = 1
+
+@dataclass
+class BlockRange:
+    beginning: str
+    end: str
+@dataclass
+class BaseSystemContractsHashes:
+    bootloader: str
+    default_aa: str
+
+@dataclass
+class BatchDetails:
+    base_system_contracts_hashes: BaseSystemContractsHashes
+    commit_tx_hash: str
+    committed_at: datetime
+    execute_tx_hash: str
+    executed_at: datetime
+    l1_gas_price: int
+    l1_tx_count: int
+    l2_fair_gas_price: int
+    l2_tx_count: int
+    number: int
+    prove_tx_hash: str
+    proven_at: datetime
+    root_hash: str
+    status: str
+    timestamp: int
+
+@dataclass
+class BlockDetails:
+    commit_tx_hash: str
+    committed_at: datetime
+    execute_tx_hash: str
+    executed_at: datetime
+    l1_tx_count: int
+    l2_tx_count: int
+    number: int
+    prove_tx_hash: str
+    proven_at: datetime
+    root_hash: str
+    status: str
+    timestamp: int
+
+@dataclass
+class TransactionDetails:
+    ethCommitTxHash: str
+    ethExecuteTxHash: datetime
+    ethProveTxHash: str
+    fee: int
+    initiatorAddress: str
+    isL1Originated: bool
+    receivedAt: datetime
+    status: str
+
+@dataclass
+class DepositTransaction:
+    token: HexStr
+    amount: int = None
+    to: HexStr = None
+    operator_tip: int = 0
+    bridge_address: HexStr = None
+    approve_erc20: bool = False
+    l2_gas_limit: int = None
+    gas_per_pubdata_byte: int = DEPOSIT_GAS_PER_PUBDATA_LIMIT
+    max_fee_per_gas: int = None
+    gas_price: int = None
+    gas_limit: int = None
+    custom_bridge_data: bytes = None
+    refund_recipient: HexStr = None
+    value: int = None
+    l2_value: int = 0
+    max_priority_fee_per_gas: int = None
+
+@dataclass
+class TransferTransaction:
+    to: HexStr
+    amount: int = 0
+    token_address: HexStr = None
+    chain_id: int = None
+    nonce: int = None
+    gas_limit: int = 0
+    gas_price: int = 0
+    max_priority_fee_per_gas = 100_000_000
+    gas_per_pub_data: int = 50000
+
+@dataclass
+class RequestExecuteCallMsg:
+    contract_address: HexStr
+    call_data: Union[bytes, HexStr]
+    value: int = None
+    from_: HexStr = None
+    l2_gas_limit: int = 0
+    l2_value: int = 0
+    factory_deps: List[bytes] = None
+    operator_tip: int = 0
+    gas_per_pubdata_byte: int = DEPOSIT_GAS_PER_PUBDATA_LIMIT
+    refund_recipient: HexStr = None
+    gas_price: int = None
+    max_priority_fee_per_gas: int = None
+    max_fee_per_gas: int = None
+@dataclass
+class RequestExecuteTransaction:
+    contract_address: HexStr
+    call_data: Union[bytes, HexStr]
+    l2_gas_limit: int
+    l1_value: int = 0
+    l2_value: int = 0
+    factory_deps: List[bytes] = None
+    operator_tip: int = 0
+    gas_per_pubdata_byte: int = DEPOSIT_GAS_PER_PUBDATA_LIMIT
+    refund_recipient: HexStr = None
+    gas_price: int = None
+    gas_limit: int = RecommendedGasLimit.EXECUTE.value
+@dataclass
+class L1ToL2Log:
+    block_hash: HexStr
+    block_number: HexStr
+    l1_batch_number: HexStr
+    transaction_index: HexStr
+    transaction_hash: HexStr
+    transaction_log_index: HexStr
+    shard_id: HexStr
+    is_service: bool
+    sender: HexStr
+    key: HexStr
+    value: HexStr
+    log_index: HexStr
+@dataclass
+class TransactionReceipt:
+    from_: HexStr
+    to: HexStr
+    block_number: int
+    l1_batch_tx_index: HexStr
+    l2_to_l1_logs: List[L1ToL2Log]
+
+@dataclass
+class FullDepositFee:
+    base_cost: int
+    l1_gas_limit: int
+    l2_gas_limit: int
+    max_fee_per_gas: int = None
+    max_priority_fee_per_gas: int = None
+    gas_price: int = None
+
+
+# @dataclass
+# class RequestExecuteCallMsg:
+#     contract_address: HexStr
+#     calldata: bytes
+#     l2_gas_limit: int
+#     l2_value: int = 0
+#     factory_deps: List[bytes]
+#     operator_tip: int = 0
+#     gas_per_pubdata_byte: int = DEPOSIT_GAS_PER_PUBDATA_LIMIT
+#     refund_recepient: HexStr
+#     value: int
+#     gas: int
+#     gas_price: int
+#     gas_fee_cap: int
+#     gas_tip_cap: int
+#     access_list: AccessList
+
+
+
+
+
+
+

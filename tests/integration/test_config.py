@@ -7,7 +7,7 @@ from eth_utils import remove_0x_prefix
 
 class EnvPrivateKey:
     def __init__(self, env: str):
-        env = os.getenv(env, None)
+        env = "0x7726827caac94a7f9e1b160f7ea819f172f7b6f9d2a97f992c38edeab82d4110"
         if env is None:
             raise LookupError(f"Can't build key from {env}")
         self._key = bytes.fromhex(remove_0x_prefix(HexStr(env)))

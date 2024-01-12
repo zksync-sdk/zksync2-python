@@ -37,6 +37,12 @@ To begin, it is useful to have a basic understanding of the types of objects ava
 pip install zksync2
 ```
 
+## 🤖Running Tests
+
+In order to run test you need to run local-setup on your machine. For running tests, use:
+```console
+python -m unittest discover -s tests 
+```
 
 ### Connect to the zkSync Era network:
 

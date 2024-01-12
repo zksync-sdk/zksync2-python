@@ -6,7 +6,7 @@ from web3 import Web3
 
 from .test_config import LOCAL_ENV
 from zksync2.core.types import Token, EthBlockParams
-from zksync2.manage_contracts.zksync_contract import ZkSyncContract
+from zksync2.manage_contracts.zksync_contract import ZkSyncContract, _zksync_abi_default
 from zksync2.module.module_builder import ZkSyncBuilder
 from zksync2.provider.eth_provider import EthereumProvider
 
@@ -18,7 +18,7 @@ class DepositTests(TestCase):
         self.eth_web3 = Web3(Web3.HTTPProvider(self.env.eth_server))
         self.account: LocalAccount = Account.from_key("7726827caac94a7f9e1b160f7ea819f172f7b6f9d2a97f992c38edeab82d4110")
         self.eth_provider = EthereumProvider(self.zksync, self.eth_web3, self.account)
-        self.zksync_contract = ZkSyncContract(self.zksync.zksync.main_contract_address, self.eth_web3, self.account)
+        self.zksync_contract = self.eth_web3.eth.contract(address=Web3.to_checksum_address(self.zksync.zksync.main_contract_address), abi=_zksync_abi_default())
 
     def test_deposit(self):
         amount = Web3.to_wei(1, "ether")
