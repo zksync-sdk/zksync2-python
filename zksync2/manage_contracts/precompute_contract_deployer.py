@@ -12,20 +12,9 @@ from zksync2.core.types import AccountAbstractionVersion
 from zksync2.core.utils import pad_front_bytes, to_bytes, int_to_bytes, hash_byte_code
 from zksync2.manage_contracts import contract_abi
 from zksync2.manage_contracts.contract_encoder_base import BaseContractEncoder
+from zksync2.manage_contracts.utils import icontract_deployer_abi_default
 
 icontract_deployer_abi_cache = None
-
-
-def _icontract_deployer_abi_default():
-    global icontract_deployer_abi_cache
-
-    if icontract_deployer_abi_cache is None:
-        with pkg_resources.path(contract_abi, "ContractDeployer.json") as p:
-            with p.open(mode="r") as json_file:
-                data = json.load(json_file)
-                icontract_deployer_abi_cache = data["abi"]
-    return icontract_deployer_abi_cache
-
 
 class PrecomputeContractDeployer:
     DEFAULT_SALT = b"\0" * 32
@@ -42,7 +31,7 @@ class PrecomputeContractDeployer:
     def __init__(self, web3: Web3, abi: Optional[dict] = None):
         self.web3 = web3
         if abi is None:
-            abi = _icontract_deployer_abi_default()
+            abi = icontract_deployer_abi_default()
         self.contract_encoder = BaseContractEncoder(self.web3, abi)
 
     def encode_create2(
