@@ -30,4 +30,6 @@ class TestEnvironment:
     eth_server: str
 
 
-LOCAL_ENV = TestEnvironment(EnvType.LOCAL_HOST, "http://127.0.0.1:3050", "http://127.0.0.1:8545")
+LOCAL_ENV = TestEnvironment(
+    EnvType.LOCAL_HOST, "http://127.0.0.1:3050", "http://127.0.0.1:8545"
+)

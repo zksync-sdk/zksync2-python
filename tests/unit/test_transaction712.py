@@ -11,12 +11,17 @@ from web3.types import Nonce
 
 from tests.contracts.utils import contract_path
 from .test_config import LOCAL_ENV
-from zksync2.manage_contracts.contract_encoder_base import ContractEncoder, JsonConfiguration
+from zksync2.manage_contracts.contract_encoder_base import (
+    ContractEncoder,
+    JsonConfiguration,
+)
 from zksync2.module.request_types import EIP712Meta
 from zksync2.transaction.transaction712 import Transaction712
 from zksync2.transaction.transaction_builders import TxCreateContract
 
-PRIVATE_KEY2 = bytes.fromhex("fd1f96220fa3a40c46d65f81d61dd90af600746fd47e5c82673da937a48b38ef")
+PRIVATE_KEY2 = bytes.fromhex(
+    "fd1f96220fa3a40c46d65f81d61dd90af600746fd47e5c82673da937a48b38ef"
+)
 
 
 class Transaction712Tests(TestCase):
@@ -26,13 +31,19 @@ class Transaction712Tests(TestCase):
     SENDER = HexStr("0x1234512345123451234512345123451234512345")
     RECEIVER = HexStr("0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC")
 
-    TRANSACTION_SIGNATURE = "Transaction(uint256 txType,uint256 from,uint256 to,uint256 gasLimit,uint256 " \
-                            "gasPerPubdataByteLimit,uint256 maxFeePerGas,uint256 maxPriorityFeePerGas," \
-                            "uint256 paymaster,uint256 nonce,uint256 value,bytes data,bytes32[] factoryDeps," \
-                            "bytes paymasterInput)"
+    TRANSACTION_SIGNATURE = (
+        "Transaction(uint256 txType,uint256 from,uint256 to,uint256 gasLimit,uint256 "
+        "gasPerPubdataByteLimit,uint256 maxFeePerGas,uint256 maxPriorityFeePerGas,"
+        "uint256 paymaster,uint256 nonce,uint256 value,bytes data,bytes32[] factoryDeps,"
+        "bytes paymasterInput)"
+    )
 
-    EXPECTED_ENCODED_VALUE = '0x1e40bcee418db11047ffefb27b304f8ec1b5d644c35c56878f5cc12988b3162d'
-    EXPECTED_ENCODED_BYTES = "0x7519adb6e67031ee048d921120687e4fbdf83961bcf43756f349d689eed2b80c"
+    EXPECTED_ENCODED_VALUE = (
+        "0x1e40bcee418db11047ffefb27b304f8ec1b5d644c35c56878f5cc12988b3162d"
+    )
+    EXPECTED_ENCODED_BYTES = (
+        "0x7519adb6e67031ee048d921120687e4fbdf83961bcf43756f349d689eed2b80c"
+    )
 
     def setUp(self) -> None:
         # self.web3 = Web3(EthereumTesterProvider(PyEVMBackend()))
@@ -41,30 +52,40 @@ class Transaction712Tests(TestCase):
         self.account: LocalAccount = Account.from_key(PRIVATE_KEY2)
         directory = Path(__file__).parent
         path = directory / Path("../contracts/Counter.json")
-        self.counter_contract_encoder = ContractEncoder.from_json(self.web3, path.resolve(), JsonConfiguration.STANDARD)
-        self.tx712 = Transaction712(chain_id=self.CHAIN_ID,
-                                    nonce=self.NONCE,
-                                    gas_limit=self.GAS_LIMIT,
-                                    to=self.RECEIVER,
-                                    value=0,
-                                    data=self.counter_contract_encoder.encode_method(fn_name="increment", args=[42]),
-                                    maxPriorityFeePerGas=0,
-                                    maxFeePerGas=0,
-                                    from_=self.SENDER,
-                                    meta=EIP712Meta(0))
+        self.counter_contract_encoder = ContractEncoder.from_json(
+            self.web3, path.resolve(), JsonConfiguration.STANDARD
+        )
+        self.tx712 = Transaction712(
+            chain_id=self.CHAIN_ID,
+            nonce=self.NONCE,
+            gas_limit=self.GAS_LIMIT,
+            to=self.RECEIVER,
+            value=0,
+            data=self.counter_contract_encoder.encode_method(
+                fn_name="increment", args=[42]
+            ),
+            maxPriorityFeePerGas=0,
+            maxFeePerGas=0,
+            from_=self.SENDER,
+            meta=EIP712Meta(0),
+        )
 
     def test_deploy_contract_tx712(self):
-        tx = TxCreateContract(web3=self.web3,
-                              chain_id=280,
-                              nonce=0,
-                              from_=self.account.address.lower(),
-                              gas_limit=0,  # UNKNOWN AT THIS STATE
-                              gas_price=250000000,
-                              bytecode=self.counter_contract_encoder.bytecode)
+        tx = TxCreateContract(
+            web3=self.web3,
+            chain_id=280,
+            nonce=0,
+            from_=self.account.address.lower(),
+            gas_limit=0,  # UNKNOWN AT THIS STATE
+            gas_price=250000000,
+            bytecode=self.counter_contract_encoder.bytecode,
+        )
         tx_712 = tx.tx712(9910372)
         msg = tx_712.to_eip712_struct().hash_struct()
-        self.assertEqual("b65d7e33b4d31aa931d044aff74ad6780374acd5bcbd192b1b0210c40664ccb2",
-                         msg.hex())
+        self.assertEqual(
+            "b65d7e33b4d31aa931d044aff74ad6780374acd5bcbd192b1b0210c40664ccb2",
+            msg.hex(),
+        )
 
     def test_encode_to_eip712_type_string(self):
         eip712_struct = self.tx712.to_eip712_struct()

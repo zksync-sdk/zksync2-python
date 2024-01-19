@@ -16,6 +16,7 @@ from zksync2.manage_contracts.utils import icontract_deployer_abi_default
 
 icontract_deployer_abi_cache = None
 
+
 class PrecomputeContractDeployer:
     DEFAULT_SALT = b"\0" * 32
     CREATE_FUNC = "create"

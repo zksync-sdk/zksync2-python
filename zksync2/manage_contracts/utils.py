@@ -22,9 +22,9 @@ def zksync_abi_default():
 
     if zksync_abi_cache is None:
         with pkg_resources.path(contract_abi, "IZkSync.json") as p:
-            with p.open(mode='r') as json_file:
+            with p.open(mode="r") as json_file:
                 data = json.load(json_file)
-                zksync_abi_cache = data['abi']
+                zksync_abi_cache = data["abi"]
     return zksync_abi_cache
 
 
@@ -76,9 +76,9 @@ def l1_bridge_abi_default():
 
     if l1_bridge_abi_cache is None:
         with pkg_resources.path(contract_abi, "IL1Bridge.json") as p:
-            with p.open(mode='r') as json_file:
+            with p.open(mode="r") as json_file:
                 data = json.load(json_file)
-                l1_bridge_abi_cache = data['abi']
+                l1_bridge_abi_cache = data["abi"]
     return l1_bridge_abi_cache
 
 

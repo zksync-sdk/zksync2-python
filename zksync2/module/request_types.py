@@ -41,5 +41,6 @@ Transaction = TypedDict(
     total=False,
 )
 
+
 class TransactionType(Enum):
     EIP_712_TX_TYPE = 113
