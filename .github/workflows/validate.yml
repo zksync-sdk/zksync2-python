@@ -24,7 +24,7 @@ jobs:
       - name: Install dependencies
         run: pip install black
       - name: Check code format
-        run: black --check zksync2
+        run: make check-code-format
   commits:
     name: Check commits
     runs-on: ubuntu-latest
