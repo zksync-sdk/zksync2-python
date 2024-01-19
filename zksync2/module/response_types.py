@@ -21,19 +21,11 @@ ZksContractDebugInfo = TypedDict(
     "ZksContractDebugInfo", {"assemblyCode": HexStr, "pcLineMapping": Dict[int, int]}
 )
 
-ZksBlockRange = TypedDict(
-    "ZksBlockRange",
-    {
-        "begining": int,
-        "end": int
-    })
+ZksBlockRange = TypedDict("ZksBlockRange", {"begining": int, "end": int})
 
 ZksBaseSystemContractsHashes = TypedDict(
-    "ZksBaseSystemContractsHashes",
-    {
-        "bootloader": str,
-        "defaultAa": str
-    })
+    "ZksBaseSystemContractsHashes", {"bootloader": str, "defaultAa": str}
+)
 ZksBatchDetails = TypedDict(
     "ZksBatchDetails",
     {
@@ -51,8 +43,9 @@ ZksBatchDetails = TypedDict(
         "provenAt": datetime,
         "rootHash": str,
         "status": str,
-        "timestamp": int
-    })
+        "timestamp": int,
+    },
+)
 
 ZksBlockDetails = TypedDict(
     "ZksBlockDetails",
@@ -68,7 +61,9 @@ ZksBlockDetails = TypedDict(
         "provenAt": datetime,
         "rootHash": str,
         "status": str,
-        "timestamp": int})
+        "timestamp": int,
+    },
+)
 
 ZksTransactionDetails = TypedDict(
     "ZksTransactionDetails",
@@ -80,7 +75,9 @@ ZksTransactionDetails = TypedDict(
         "initiatorAddress": str,
         "isL1Originated": bool,
         "receivedAt": datetime,
-        "status": str})
+        "status": str,
+    },
+)
 
 ZksL1ToL2Log = TypedDict(
     "ZksL1ToL2Log",
@@ -97,7 +94,7 @@ ZksL1ToL2Log = TypedDict(
         "key": HexStr,
         "value": HexStr,
         "logIndex": HexStr,
-    }
+    },
 )
 
 ZksTransactionReceipt = TypedDict(
@@ -107,8 +104,8 @@ ZksTransactionReceipt = TypedDict(
         "to": HexStr,
         "blockNumber": int,
         "l1BatchTxIndex": HexStr,
-        "l2ToL1Logs": List[ZksL1ToL2Log]
-    }
+        "l2ToL1Logs": List[ZksL1ToL2Log],
+    },
 )
 
 ZksEstimateFee = NewType("ZksEstimateFee", Fee)
