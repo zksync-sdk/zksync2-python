@@ -31,8 +31,8 @@ jobs:
           docker-compose up -d
           popd
       - name: Wait for local-setup to be ready
-        run: python scripts/wait.py
+        run: make wait
       - name: Prepare environment
-        run: echo "Prepare env"
+        run: make prepare-tests
       - name: Run tests
-        run: python -m unittest discover -s tests
+        run: make run-tests
