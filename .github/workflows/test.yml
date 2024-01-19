@@ -33,6 +33,6 @@ jobs:
       - name: Wait for local-setup to be ready
         run: make wait
       - name: Prepare environment
-        run: make prepare-tests
+        run: make prepare-environment
       - name: Run tests
         run: make run-tests

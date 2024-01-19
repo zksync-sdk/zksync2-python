@@ -1,7 +1,7 @@
 run-tests:
 	python -m unittest discover -s tests
 
-prepare-test:
+prepare-environment:
 	python scripts/setup.py
 
 check-code-format:
