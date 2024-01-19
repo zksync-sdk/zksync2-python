@@ -1,18 +1,23 @@
 # Deposits token to l2 so that tests can run
 import json
+import os
+import sys
 from pathlib import Path
 
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
 from web3 import Web3
 
-from zksync2.account.wallet import Wallet
-from zksync2.core.types import DepositTransaction
-from zksync2.manage_contracts.utils import zksync_abi_default
-from zksync2.module.module_builder import ZkSyncBuilder
-
 
 def main():
+    current_directory = os.path.dirname(os.path.abspath(__file__))
+    parent_directory = os.path.join(current_directory, "..")
+    sys.path.append(parent_directory)
+
+    from zksync2.account.wallet import Wallet
+    from zksync2.manage_contracts.utils import zksync_abi_default
+    from zksync2.module.module_builder import ZkSyncBuilder
+
     zksync = ZkSyncBuilder.build("http://127.0.0.1:3050")
     eth_web3 = Web3(Web3.HTTPProvider("http://127.0.0.1:8545"))
     account: LocalAccount = Account.from_key(
@@ -27,7 +32,9 @@ def main():
     deposit_token(wallet, eth_web3, zksync, zksync_contract)
 
 
-def deposit_token(wallet: Wallet, eth_web3: Web3, zksync: Web3, zksync_contract):
+def deposit_token(wallet, eth_web3: Web3, zksync: Web3, zksync_contract):
+    from zksync2.core.types import DepositTransaction
+
     amount = 50
     l1_address = load_token()
 
@@ -47,7 +54,6 @@ def deposit_token(wallet: Wallet, eth_web3: Web3, zksync: Web3, zksync_contract)
     zksync.zksync.wait_for_transaction_receipt(
         transaction_hash=l2_hash, timeout=360, poll_latency=10
     )
-
 
 def load_token():
     directory = Path(__file__).parent.parent
