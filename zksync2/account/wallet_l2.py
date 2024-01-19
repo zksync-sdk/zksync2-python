@@ -151,9 +151,9 @@ class WalletL2:
             except:
                 pass
             if l2_weth_token == ADDRESS_DEFAULT:
-                tx.bridge_address = self.get_l2_bridge_contracts().erc20
+                tx.bridge_address = self.get_l2_bridge_contracts().erc20.address
             else:
-                tx.bridge_address = self.get_l2_bridge_contracts().weth
+                tx.bridge_address = self.get_l2_bridge_contracts().weth.address
         bridge = self._zksync_web3.zksync.contract(
             address=Web3.to_checksum_address(
                 Web3.to_checksum_address(Web3.to_checksum_address(tx.bridge_address))
