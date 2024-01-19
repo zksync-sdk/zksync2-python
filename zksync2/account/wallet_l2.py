@@ -155,7 +155,7 @@ class WalletL2:
             else:
                 tx.bridge_address = self.get_l2_bridge_contracts().weth
         bridge = self._zksync_web3.zksync.contract(
-            address=Web3.to_checksum_address(tx.bridge_address),
+            address=Web3.to_checksum_address(Web3.to_checksum_address(tx.bridge_address)),
             abi=l2_bridge_abi_default(),
         )
         transaction = bridge.functions.withdraw(
