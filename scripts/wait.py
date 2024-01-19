@@ -1,3 +1,6 @@
+# Waiting for local setup to be ready
+
+
 import time
 
 import os
