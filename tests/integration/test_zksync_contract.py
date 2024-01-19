@@ -7,7 +7,7 @@ from web3 import Web3
 
 from tests.unit.test_config import LOCAL_ENV, EnvPrivateKey
 from zksync2.core.utils import RecommendedGasLimit
-from zksync2.manage_contracts.zksync_contract import ZkSyncContract, _zksync_abi_default
+from zksync2.manage_contracts.utils import zksync_abi_default
 from zksync2.module.module_builder import ZkSyncBuilder
 from zksync2.signer.eth_signer import PrivateKeyEthSigner
 
@@ -26,11 +26,8 @@ class ZkSyncWeb3Tests(TestCase):
         self.account: LocalAccount = Account.from_key(env_key)
         self.chain_id = self.zksync.zksync.chain_id
         self.signer = PrivateKeyEthSigner(self.account, self.chain_id)
-        self.zksync_contract = self.eth_web3.eth.contract(Web3.to_checksum_address(self.zksync.zksync.zks_main_contract()), abi=_zksync_abi_default())
+        self.zksync_contract = self.eth_web3.eth.contract(Web3.to_checksum_address(self.zksync.zksync.zks_main_contract()), abi=zksync_abi_default())
 
-        self.c = ZkSyncContract(self.zksync.zksync.zks_main_contract(),
-                                              self.eth_web3,
-                                              self.account)
     def test_facet_addresses_call(self):
         facets = self.zksync_contract.functions.facets().call(
             {
@@ -150,7 +147,7 @@ class ZkSyncWeb3Tests(TestCase):
         gas_price = self.eth_web3.eth.gas_price
         gas_limit = RecommendedGasLimit.EXECUTE.value
         l2_value = 0
-        contract = self.eth_web3.eth.contract(Web3.to_checksum_address(self.zksync.zksync.zks_main_contract()), abi=_zksync_abi_default())
+        contract = self.eth_web3.eth.contract(Web3.to_checksum_address(self.zksync.zksync.zks_main_contract()), abi=zksync_abi_default())
         tx = contract.functions.requestL2Transaction(Web3.to_checksum_address(self.zksync.zksync.zks_main_contract()),
                                                                 l2_value,
                                                                 b'',
