@@ -18,6 +18,7 @@ class RecommendedGasLimit(IntEnum):
     ERC20_APPROVE = 50000
     DEPOSIT_GAS_PER_PUBDATA_LIMIT = 800
 
+
 ADDRESS_DEFAULT = HexStr("0x" + "0" * 40)
 L2_ETH_TOKEN_ADDRESS = HexStr("0x000000000000000000000000000000000000800a")
 
@@ -85,10 +86,12 @@ class BridgeAddresses:
     weth_bridge_l1: HexStr
     weth_bridge_l2: HexStr
 
+
 @dataclass
 class L1BridgeContracts:
     erc20: Contract
     weth: Contract
+
 
 @dataclass
 class L2BridgeContracts:
@@ -133,6 +136,7 @@ class AccountNonceOrdering(Enum):
 class ContractAccountInfo:
     account_abstraction_version: AccountAbstractionVersion
     account_nonce_ordering: AccountNonceOrdering
+
 
 @dataclass
 class BlockRange:
@@ -285,10 +289,3 @@ class FullDepositFee:
     max_fee_per_gas: int = None
     max_priority_fee_per_gas: int = None
     gas_price: int = None
-
-
-
-
-
-
-

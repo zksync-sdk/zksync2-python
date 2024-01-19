@@ -30,9 +30,9 @@ def wait_for_node():
     raise Exception("Maximum retries exceeded.")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     current_directory = os.path.dirname(os.path.abspath(__file__))
-    parent_directory = os.path.join(current_directory, '..')
+    parent_directory = os.path.join(current_directory, "..")
     sys.path.append(parent_directory)
     try:
         wait_for_node()

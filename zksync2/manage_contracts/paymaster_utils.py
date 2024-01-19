@@ -9,8 +9,6 @@ from zksync2.manage_contracts.utils import paymaster_flow_abi_default
 paymaster_flow_abi_cache = None
 
 
-
-
 class PaymasterFlowEncoder(BaseContractEncoder):
     def __init__(self, web3: Web3):
         super(PaymasterFlowEncoder, self).__init__(

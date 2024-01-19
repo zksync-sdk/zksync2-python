@@ -13,11 +13,12 @@ ADDRESS_MODULO = pow(2, 160)
 L1_TO_L2_ALIAS_OFFSET = "0x1111000000000000000000000000000000001111"
 
 ADDRESS_DEFAULT = HexStr("0x" + "0" * 40)
-L2_ETH_TOKEN_ADDRESS = HexStr('0x000000000000000000000000000000000000800a')
+L2_ETH_TOKEN_ADDRESS = HexStr("0x000000000000000000000000000000000000800a")
 BOOTLOADER_FORMAL_ADDRESS = HexStr("0x0000000000000000000000000000000000008001")
 
 DEPOSIT_GAS_PER_PUBDATA_LIMIT = 800
 MAX_PRIORITY_FEE_PER_GAS = 100_000_000
+
 
 def int_to_bytes(x: int) -> bytes:
     return x.to_bytes((x.bit_length() + 7) // 8, byteorder=sys.byteorder)
@@ -63,18 +64,21 @@ def get_custom_bridge_data(token_contract) -> bytes:
     name = token_contract.functions.name().call()
     symbol = token_contract.functions.symbol().call()
     decimals = token_contract.functions.decimals().call()
-    name_encoded = encode(['string'], [name])
-    symbol_encoded = encode(['string'], [symbol])
-    decimals_encoded = encode(['uint256'], [decimals])
+    name_encoded = encode(["string"], [name])
+    symbol_encoded = encode(["string"], [symbol])
+    decimals_encoded = encode(["uint256"], [decimals])
 
-    return encode(['bytes', 'bytes', 'bytes'], [name_encoded, symbol_encoded, decimals_encoded])
+    return encode(
+        ["bytes", "bytes", "bytes"], [name_encoded, symbol_encoded, decimals_encoded]
+    )
 
 
 def apply_l1_to_l2_alias(address: HexStr):
     value = (int(L1_TO_L2_ALIAS_OFFSET, 16) + int(address, 16)) % ADDRESS_MODULO
     hex_result = remove_0x_prefix(Web3.to_hex(value))
-    result = hex_result.rjust(40, '0')
+    result = hex_result.rjust(40, "0")
     return add_0x_prefix(result)
+
 
 def undo_l1_to_l2_alias(address: HexStr):
     result = int(address, 16) - int(L1_TO_L2_ALIAS_OFFSET, 16)
@@ -87,6 +91,7 @@ def undo_l1_to_l2_alias(address: HexStr):
 class RequestExecuteTransaction:
     pass
 
+
 class RecommendedGasLimit(IntEnum):
     DEPOSIT = 10000000
     EXECUTE = 620000
@@ -94,4 +99,3 @@ class RecommendedGasLimit(IntEnum):
     DEPOSIT_GAS_PER_PUBDATA_LIMIT = 800
     L1_RECOMMENDED_ETH_DEPOSIT_GAS_LIMIT = 200000
     L1_RECOMMENDED_MIN_ERC_20_DEPOSIT_GAS_LIMIT = 400000
-

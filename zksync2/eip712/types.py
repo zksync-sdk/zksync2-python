@@ -11,6 +11,7 @@ class EIP712Type:
 
     Generally you wouldn't use this - instead, see the subclasses below. Or you may want an EIP712Struct instead.
     """
+
     def __init__(self, type_name: str, none_val: Any):
         self.type_name = type_name
         self.none_val = none_val
@@ -34,8 +35,8 @@ class EIP712Type:
         pass
 
     def __eq__(self, other):
-        self_type = getattr(self, 'type_name')
-        other_type = getattr(other, 'type_name')
+        self_type = getattr(self, "type_name")
+        other_type = getattr(other, "type_name")
 
         return self_type is not None and self_type == other_type
 
@@ -44,7 +45,9 @@ class EIP712Type:
 
 
 class Array(EIP712Type):
-    def __init__(self, member_type: Union[EIP712Type, Type[EIP712Type]], fixed_length: int = 0):
+    def __init__(
+        self, member_type: Union[EIP712Type, Type[EIP712Type]], fixed_length: int = 0
+    ):
         """Represents an array member type.
 
         Example:
@@ -54,9 +57,9 @@ class Array(EIP712Type):
         """
         fixed_length = int(fixed_length)
         if fixed_length == 0:
-            type_name = f'{member_type.type_name}[]'
+            type_name = f"{member_type.type_name}[]"
         else:
-            type_name = f'{member_type.type_name}[{fixed_length}]'
+            type_name = f"{member_type.type_name}[{fixed_length}]"
         self.member_type = member_type
         self.fixed_length = fixed_length
         super(Array, self).__init__(type_name, [])
@@ -65,13 +68,13 @@ class Array(EIP712Type):
         """Arrays are encoded by concatenating their encoded contents, and taking the keccak256 hash."""
         encoder = self.member_type
         encoded_values = [encoder.encode_value(v) for v in value]
-        return keccak(b''.join(encoded_values))
+        return keccak(b"".join(encoded_values))
 
 
 class Address(EIP712Type):
     def __init__(self):
         """Represents an ``address`` type."""
-        super(Address, self).__init__('address', 0)
+        super(Address, self).__init__("address", 0)
 
     def _encode_value(self, value):
         """Addresses are encoded like Uint160 numbers."""
@@ -89,7 +92,7 @@ class Address(EIP712Type):
 class Boolean(EIP712Type):
     def __init__(self):
         """Represents a ``bool`` type."""
-        super(Boolean, self).__init__('bool', False)
+        super(Boolean, self).__init__("bool", False)
 
     def _encode_value(self, value):
         """Booleans are encoded like the uint256 values of 0 and 1."""
@@ -98,7 +101,7 @@ class Boolean(EIP712Type):
         elif value is True:
             return Uint(256).encode_value(1)
         else:
-            raise ValueError(f'Must be True or False. Got: {value}')
+            raise ValueError(f"Must be True or False. Got: {value}")
 
 
 class Bytes(EIP712Type):
@@ -115,13 +118,13 @@ class Bytes(EIP712Type):
         length = int(length)
         if length == 0:
             # Special case: Length of 0 means a dynamic bytes type
-            type_name = 'bytes'
+            type_name = "bytes"
         elif 1 <= length <= 32:
-            type_name = f'bytes{length}'
+            type_name = f"bytes{length}"
         else:
-            raise ValueError(f'Byte length must be between 1 or 32. Got: {length}')
+            raise ValueError(f"Byte length must be between 1 or 32. Got: {length}")
         self.length = length
-        super(Bytes, self).__init__(type_name, b'')
+        super(Bytes, self).__init__(type_name, b"")
 
     def _encode_value(self, value):
         """Static bytesN types are encoded by right-padding to 32 bytes. Dynamic bytes types are keccak256 hashed."""
@@ -133,7 +136,9 @@ class Bytes(EIP712Type):
             return keccak(value)
         else:
             if len(value) > self.length:
-                raise ValueError(f'{self.type_name} was given bytes with length {len(value)}')
+                raise ValueError(
+                    f"{self.type_name} was given bytes with length {len(value)}"
+                )
             padding = bytes(32 - len(value))
             return value + padding
 
@@ -149,20 +154,22 @@ class Int(EIP712Type):
         """
         length = int(length)
         if length < 8 or length > 256 or length % 8 != 0:
-            raise ValueError(f'Int length must be a multiple of 8, between 8 and 256. Got: {length}')
+            raise ValueError(
+                f"Int length must be a multiple of 8, between 8 and 256. Got: {length}"
+            )
         self.length = length
-        super(Int, self).__init__(f'int{length}', 0)
+        super(Int, self).__init__(f"int{length}", 0)
 
     def _encode_value(self, value: int):
         """Ints are encoded by padding them to 256-bit representations."""
-        value.to_bytes(self.length // 8, byteorder='big', signed=True)  # For validation
-        return value.to_bytes(32, byteorder='big', signed=True)
+        value.to_bytes(self.length // 8, byteorder="big", signed=True)  # For validation
+        return value.to_bytes(32, byteorder="big", signed=True)
 
 
 class String(EIP712Type):
     def __init__(self):
         """Represents a string type."""
-        super(String, self).__init__('string', '')
+        super(String, self).__init__("string", "")
 
     def _encode_value(self, value):
         """Strings are encoded by taking the keccak256 hash of their contents."""
@@ -180,38 +187,42 @@ class Uint(EIP712Type):
         """
         length = int(length)
         if length < 8 or length > 256 or length % 8 != 0:
-            raise ValueError(f'Uint length must be a multiple of 8, between 8 and 256. Got: {length}')
+            raise ValueError(
+                f"Uint length must be a multiple of 8, between 8 and 256. Got: {length}"
+            )
         self.length = length
-        super(Uint, self).__init__(f'uint{length}', 0)
+        super(Uint, self).__init__(f"uint{length}", 0)
 
     def _encode_value(self, value: int):
         """Uints are encoded by padding them to 256-bit representations."""
-        value.to_bytes(self.length // 8, byteorder='big', signed=False)  # For validation
-        return value.to_bytes(32, byteorder='big', signed=False)
+        value.to_bytes(
+            self.length // 8, byteorder="big", signed=False
+        )  # For validation
+        return value.to_bytes(32, byteorder="big", signed=False)
 
 
 # This helper dict maps solidity's type names to our EIP712Type classes
 solidity_type_map = {
-    'address': Address,
-    'bool': Boolean,
-    'bytes': Bytes,
-    'int': Int,
-    'string': String,
-    'uint': Uint,
+    "address": Address,
+    "bool": Boolean,
+    "bytes": Bytes,
+    "int": Int,
+    "string": String,
+    "uint": Uint,
 }
 
 
 def from_solidity_type(solidity_type: str):
     """Convert a string into the EIP712Type implementation. Basic types only."""
-    pattern = r'([a-z]+)(\d+)?(\[(\d+)?\])?'
+    pattern = r"([a-z]+)(\d+)?(\[(\d+)?\])?"
     match = re.match(pattern, solidity_type)
 
     if match is None:
         return None
 
     type_name = match.group(1)  # The type name, like the "bytes" in "bytes32"
-    opt_len = match.group(2)    # An optional length spec, like the "32" in "bytes32"
-    is_array = match.group(3)   # Basically just checks for square brackets
+    opt_len = match.group(2)  # An optional length spec, like the "32" in "bytes32"
+    is_array = match.group(3)  # Basically just checks for square brackets
     array_len = match.group(4)  # For fixed length arrays only, this is the length
 
     if type_name not in solidity_type_map:
