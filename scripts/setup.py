@@ -55,6 +55,7 @@ def deposit_token(wallet, eth_web3: Web3, zksync: Web3, zksync_contract):
         transaction_hash=l2_hash, timeout=360, poll_latency=10
     )
 
+
 def load_token():
     directory = Path(__file__).parent.parent
     path = directory / "tests/integration/token.json"
