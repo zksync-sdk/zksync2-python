@@ -28,10 +28,12 @@ from web3.eth import Eth
 from web3.types import RPCEndpoint, _Hash32, TxReceipt, BlockIdentifier
 from zksync2.core.types import Limit, From, ContractSourceDebugInfo, \
     BridgeAddresses, TokenAddress, ZksMessageProof, BatchDetails, BlockRange, BlockDetails, BaseSystemContractsHashes, \
-    TransactionDetails, ADDRESS_DEFAULT, ZkBlockParams, L1ToL2Log
-from zksync2.core.utils import is_eth
-from zksync2.manage_contracts.erc20_contract import ERC20Contract, ERC20Encoder, get_erc20_abi
-from zksync2.manage_contracts.zksync_contract import ZkSyncContract
+    TransactionDetails, ADDRESS_DEFAULT, ZkBlockParams, L1ToL2Log, TransferTransaction, TransactionOptions, \
+    WithdrawTransaction, ContractAccountInfo
+from zksync2.core.utils import is_eth, MAX_PRIORITY_FEE_PER_GAS
+from zksync2.manage_contracts.deploy_addresses import ZkSyncAddresses
+from zksync2.manage_contracts.utils import ERC20Encoder, get_erc20_abi, icontract_deployer_abi_default, \
+    l2_bridge_abi_default
 from zksync2.module.request_types import *
 from zksync2.module.response_types import *
 from zksync2.core.types import TransactionReceipt
@@ -53,7 +55,6 @@ zks_estimate_gas_l1_to_l2_rpc = RPCEndpoint("zks_estimateGasL1ToL2")
 
 zks_estimate_fee_rpc = RPCEndpoint("zks_estimateFee")
 zks_main_contract_rpc = RPCEndpoint("zks_getMainContract")
-zks_get_confirmed_tokens_rpc = RPCEndpoint("zks_getConfirmedTokens")
 zks_get_token_price_rpc = RPCEndpoint("zks_getTokenPrice")
 zks_l1_chain_id_rpc = RPCEndpoint("zks_L1ChainId")
 zks_get_all_account_balances_rpc = RPCEndpoint("zks_getAllAccountBalances")
@@ -231,7 +232,6 @@ def to_msg_proof(v: dict) -> ZksMessageProof:
 
 
 ZKSYNC_RESULT_FORMATTERS: Dict[RPCEndpoint, Callable[..., Any]] = {
-    zks_get_confirmed_tokens_rpc: apply_list_to_array_formatter(to_token),
     zks_get_bridge_contracts_rpc: to_bridge_address,
     zks_get_all_account_balances_rpc: to_zks_account_balances,
     zks_estimate_fee_rpc: to_fee,
@@ -334,12 +334,6 @@ class ZkSync(Eth, ABC):
         mungers=None
     )
 
-    _zks_get_confirmed_tokens: Method[Callable[[From, Limit], ZksTokens]] = Method(
-        zks_get_confirmed_tokens_rpc,
-        mungers=[default_root_munger],
-        result_formatters=zksync_get_result_formatters
-    )
-
     _zks_get_token_price: Method[Callable[[TokenAddress], ZksTokenPrice]] = Method(
         zks_get_token_price_rpc,
         mungers=[default_root_munger]
@@ -436,23 +430,16 @@ class ZkSync(Eth, ABC):
     def zks_estimate_gas_l1_to_l2(self, transaction: Transaction) -> int:
         return int(self._zks_estimate_gas_l1_to_l2(transaction), 16)
 
-    def zks_estimate_gas_transfer(self, transaction: Transaction) -> int:
-        token = transaction["token"]
+    def zks_estimate_gas_transfer(self, transaction: Transaction, token_address: HexStr = ADDRESS_DEFAULT) -> int:
 
-        if token is not None and not token.is_eth():
-            transfer_params = (transaction["to"], token.to_int(transaction["value"]))
-            erc20_encoder = ERC20Encoder(transaction["web3"])
-            call_data = erc20_encoder.encode_method("transfer", args=transfer_params)
-            nonce = self.get_transaction_count(transaction["from_"], ZkBlockParams.COMMITTED.value)
+        if token_address is not None and not is_eth(token_address):
+            transfer_params = (transaction["to"], transaction["value"])
+            transaction["value"] = 0
+            contract = self.contract(Web3.to_checksum_address(token_address), abi=get_erc20_abi())
+            transaction["data"] = contract.encodeABI("transfer", args=transfer_params)
+            transaction["nonce"] = self.get_transaction_count(transaction["from_"], ZkBlockParams.COMMITTED.value)
 
-            func_call = TxFunctionCall(chain_id=self.chain_id,
-                                       nonce=nonce,
-                                       from_=transaction["from_"],
-                                       to=token.l2_address,
-                                       data=call_data)
-            estimate_gas = self.eth_estimate_gas(func_call.tx)
-
-        return estimate_gas
+        return self.eth_estimate_gas(transaction)
 
     def zks_estimate_l1_to_l2_execute(self, transaction: Transaction) -> int:
         if transaction["from"] is None:
@@ -467,9 +454,6 @@ class ZkSync(Eth, ABC):
         if self.main_contract_address is None:
             self.main_contract_address = self._zks_main_contract()
         return self.main_contract_address
-
-    def zks_get_confirmed_tokens(self, offset: From, limit: Limit) -> List[Token]:
-        return self._zks_get_confirmed_tokens(offset, limit)
 
     def zks_get_token_price(self, token_address: TokenAddress) -> Decimal:
         return self._zks_get_token_price(token_address)
@@ -486,6 +470,42 @@ class ZkSync(Eth, ABC):
             return token.functions.balanceOf(address).call()
         except:
             return 0
+
+    def l1_token_address(self, token: HexStr) -> HexStr:
+        if is_eth(token):
+            return ADDRESS_DEFAULT
+        bridge_address = self.zks_get_bridge_contracts()
+        l2_weth_bridge = self.contract(Web3.to_checksum_address(bridge_address.weth_bridge_l2),
+                                       abi=l2_bridge_abi_default())
+        try:
+            l1_weth_token = l2_weth_bridge.functions.l1TokenAddress(token).call()
+            if not is_eth(l1_weth_token):
+                return l1_weth_token
+        except:
+            pass
+
+        erc20_bridge = self.contract(Web3.to_checksum_address(bridge_address.erc20_l2_default_bridge),
+                                     abi=l2_bridge_abi_default())
+
+        return erc20_bridge.functions.l1TokenAddress(token).call()
+
+    def l2_token_address(self, token: HexStr) -> HexStr:
+        if is_eth(token):
+            return ADDRESS_DEFAULT
+        bridge_address = self.zks_get_bridge_contracts()
+        l2_weth_bridge = self.contract(Web3.to_checksum_address(bridge_address.weth_bridge_l2),
+                                       abi=l2_bridge_abi_default())
+        try:
+            l1_weth_token = l2_weth_bridge.functions.l2TokenAddress(token).call()
+            if not is_eth(l1_weth_token):
+                return l1_weth_token
+        except:
+            pass
+
+        erc20_bridge = self.contract(Web3.to_checksum_address(bridge_address.erc20_l2_default_bridge),
+                                     abi=l2_bridge_abi_default())
+
+        return erc20_bridge.functions.l2TokenAddress(token).call()
 
     def zks_get_all_account_balances(self, addr: Address) -> ZksAccountBalances:
         return self._zks_get_all_account_balances(addr)
@@ -525,14 +545,10 @@ class ZkSync(Eth, ABC):
         else:
             raise RuntimeError("Wrong transaction received")
 
-    def get_l2_transaction_from_priority_op(self, tx_receipt, main_contract: ZkSyncContract):
+    def get_l2_transaction_from_priority_op(self, tx_receipt, main_contract: Contract):
         l2_hash = self.get_l2_hash_from_priority_op(tx_receipt, main_contract)
         self.wait_for_transaction_receipt(l2_hash)
         return self.get_transaction(l2_hash)
-
-    def get_priority_op_response(self, tx_receipt, main_contract: ZkSyncContract):
-        tx = self.get_l2_transaction_from_priority_op(tx_receipt, main_contract)
-        return tx
 
     def wait_for_transaction_receipt(self,
                                      transaction_hash: _Hash32,
@@ -579,3 +595,69 @@ class ZkSync(Eth, ABC):
             raise TimeExhausted(
                 f"Transaction {HexBytes(transaction_hash) !r} is not in the chain after {timeout} seconds"
             )
+
+    def get_withdraw_transaction(self, tx: WithdrawTransaction, from_: HexStr,) -> TxWithdraw:
+        if tx.options is None:
+            tx.options = TransactionOptions()
+        if tx.options.chain_id is None:
+            tx.options.chain_id = self.chain_id
+        if tx.options.nonce is None:
+            tx.options.nonce = self.get_transaction_count(Web3.to_checksum_address(from_), ZkBlockParams.LATEST.value)
+        if tx.options.gas_price is None:
+            tx.options.gas_price = self.gas_price
+        if tx.options.gas_limit is None:
+            tx.options.gas_limit = 0
+
+        transaction = TxWithdraw(
+            chain_id=tx.options.chain_id,
+            nonce=tx.options.nonce,
+            to=tx.to,
+            amount=tx.amount,
+            gas_limit=tx.options.gas_limit,
+            gas_price=tx.options.gas_price,
+            token=tx.token,
+            bridge_address=tx.bridge_address
+        )
+
+        return transaction
+
+    def get_transfer_transaction(self, tx: TransferTransaction, from_: HexStr) -> TxFunctionCall:
+        if tx.options is None:
+            tx.options = TransactionOptions()
+        if tx.options.chain_id is None:
+            tx.options.chain_id = self.chain_id
+        if tx.options.nonce is None:
+            tx.options.nonce = self.get_transaction_count(Web3.to_checksum_address(from_), ZkBlockParams.LATEST.value)
+        if tx.options.gas_price is None:
+            tx.options.gas_price = self.gas_price
+        if tx.options.max_priority_fee_per_gas is None:
+            tx.options.max_priority_fee_per_gas = MAX_PRIORITY_FEE_PER_GAS
+        if tx.options.gas_limit is None:
+            tx.options.gas_limit = 0
+
+        call_data = "0x"
+        if tx.token_address is not None and not is_eth(tx.token_address):
+            transfer_params = (tx.to, tx.amount)
+            contract = self.contract(Web3.to_checksum_address(tx.token_address), abi=get_erc20_abi())
+            call_data = contract.encodeABI("transfer", transfer_params)
+        transaction = TxFunctionCall(
+            chain_id=tx.options.chain_id,
+            nonce=tx.options.nonce,
+            from_=from_,
+            to=tx.to,
+            data=call_data,
+            value=tx.amount,
+            gas_limit=tx.options.gas_limit,
+            gas_price=tx.options.gas_price,
+            max_priority_fee_per_gas=tx.options.max_priority_fee_per_gas,
+            gas_per_pub_data=tx.gas_per_pub_data,
+        )
+
+        return transaction
+
+    def get_contract_account_info(self, address: HexStr) -> ContractAccountInfo:
+        deployer = self.contract(address=Web3.to_checksum_address(ZkSyncAddresses.CONTRACT_DEPLOYER_ADDRESS.value),
+                                 abi=icontract_deployer_abi_default())
+        data = deployer.functions.getAccountInfo(Web3.to_checksum_address(address)).call()
+        return ContractAccountInfo(account_abstraction_version=data[0],
+                                   account_nonce_ordering=data[1])

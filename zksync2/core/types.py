@@ -118,18 +118,33 @@ class PaymasterParams(dict):
     paymaster: HexStr
     paymaster_input: bytes
 
+
 class AccountAbstractionVersion(Enum):
     NONE = 0
     VERSION_1 = 1
+
+
+class AccountNonceOrdering(Enum):
+    Sequential = 0
+    Arbitrary = 1
+
+
+@dataclass
+class ContractAccountInfo:
+    account_abstraction_version: AccountAbstractionVersion
+    account_nonce_ordering: AccountNonceOrdering
 
 @dataclass
 class BlockRange:
     beginning: str
     end: str
+
+
 @dataclass
 class BaseSystemContractsHashes:
     bootloader: str
     default_aa: str
+
 
 @dataclass
 class BatchDetails:
@@ -149,6 +164,7 @@ class BatchDetails:
     status: str
     timestamp: int
 
+
 @dataclass
 class BlockDetails:
     commit_tx_hash: str
@@ -164,6 +180,7 @@ class BlockDetails:
     status: str
     timestamp: int
 
+
 @dataclass
 class TransactionDetails:
     ethCommitTxHash: str
@@ -175,6 +192,27 @@ class TransactionDetails:
     receivedAt: datetime
     status: str
 
+
+@dataclass
+class TransactionOptions:
+    chain_id: int = None
+    nonce: int = None
+    value: int = None
+    gas_price: int = None
+    max_fee_per_gas: int = None
+    max_priority_fee_per_gas: int = None
+    gas_limit: int = None
+
+
+@dataclass
+class WithdrawTransaction:
+    token: HexStr
+    amount: int
+    to: HexStr = None
+    bridge_address: HexStr = None
+    options: TransactionOptions = None
+
+
 @dataclass
 class DepositTransaction:
     token: HexStr
@@ -185,32 +223,25 @@ class DepositTransaction:
     approve_erc20: bool = False
     l2_gas_limit: int = None
     gas_per_pubdata_byte: int = DEPOSIT_GAS_PER_PUBDATA_LIMIT
-    max_fee_per_gas: int = None
-    gas_price: int = None
-    gas_limit: int = None
     custom_bridge_data: bytes = None
     refund_recipient: HexStr = None
-    value: int = None
     l2_value: int = 0
-    max_priority_fee_per_gas: int = None
+    options: TransactionOptions = None
+
 
 @dataclass
 class TransferTransaction:
     to: HexStr
     amount: int = 0
     token_address: HexStr = None
-    chain_id: int = None
-    nonce: int = None
-    gas_limit: int = 0
-    gas_price: int = 0
-    max_priority_fee_per_gas = 100_000_000
     gas_per_pub_data: int = 50000
+    options: TransactionOptions = None
+
 
 @dataclass
 class RequestExecuteCallMsg:
     contract_address: HexStr
     call_data: Union[bytes, HexStr]
-    value: int = None
     from_: HexStr = None
     l2_gas_limit: int = 0
     l2_value: int = 0
@@ -218,22 +249,9 @@ class RequestExecuteCallMsg:
     operator_tip: int = 0
     gas_per_pubdata_byte: int = DEPOSIT_GAS_PER_PUBDATA_LIMIT
     refund_recipient: HexStr = None
-    gas_price: int = None
-    max_priority_fee_per_gas: int = None
-    max_fee_per_gas: int = None
-@dataclass
-class RequestExecuteTransaction:
-    contract_address: HexStr
-    call_data: Union[bytes, HexStr]
-    l2_gas_limit: int
-    l1_value: int = 0
-    l2_value: int = 0
-    factory_deps: List[bytes] = None
-    operator_tip: int = 0
-    gas_per_pubdata_byte: int = DEPOSIT_GAS_PER_PUBDATA_LIMIT
-    refund_recipient: HexStr = None
-    gas_price: int = None
-    gas_limit: int = RecommendedGasLimit.EXECUTE.value
+    options: TransactionOptions = None
+
+
 @dataclass
 class L1ToL2Log:
     block_hash: HexStr
@@ -248,6 +266,8 @@ class L1ToL2Log:
     key: HexStr
     value: HexStr
     log_index: HexStr
+
+
 @dataclass
 class TransactionReceipt:
     from_: HexStr
@@ -255,6 +275,7 @@ class TransactionReceipt:
     block_number: int
     l1_batch_tx_index: HexStr
     l2_to_l1_logs: List[L1ToL2Log]
+
 
 @dataclass
 class FullDepositFee:
@@ -264,24 +285,6 @@ class FullDepositFee:
     max_fee_per_gas: int = None
     max_priority_fee_per_gas: int = None
     gas_price: int = None
-
-
-# @dataclass
-# class RequestExecuteCallMsg:
-#     contract_address: HexStr
-#     calldata: bytes
-#     l2_gas_limit: int
-#     l2_value: int = 0
-#     factory_deps: List[bytes]
-#     operator_tip: int = 0
-#     gas_per_pubdata_byte: int = DEPOSIT_GAS_PER_PUBDATA_LIMIT
-#     refund_recepient: HexStr
-#     value: int
-#     gas: int
-#     gas_price: int
-#     gas_fee_cap: int
-#     gas_tip_cap: int
-#     access_list: AccessList
 
 
 

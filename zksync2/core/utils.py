@@ -5,7 +5,7 @@ from typing import Union
 
 from eth_abi import encode
 from eth_typing import HexStr, Address, ChecksumAddress
-from eth_utils import remove_0x_prefix
+from eth_utils import remove_0x_prefix, add_0x_prefix
 from hexbytes import HexBytes
 from web3 import Web3
 
@@ -17,6 +17,7 @@ L2_ETH_TOKEN_ADDRESS = HexStr('0x000000000000000000000000000000000000800a')
 BOOTLOADER_FORMAL_ADDRESS = HexStr("0x0000000000000000000000000000000000008001")
 
 DEPOSIT_GAS_PER_PUBDATA_LIMIT = 800
+MAX_PRIORITY_FEE_PER_GAS = 100_000_000
 
 def int_to_bytes(x: int) -> bytes:
     return x.to_bytes((x.bit_length() + 7) // 8, byteorder=sys.byteorder)
@@ -70,91 +71,21 @@ def get_custom_bridge_data(token_contract) -> bytes:
 
 
 def apply_l1_to_l2_alias(address: HexStr):
-    result = (int(L1_TO_L2_ALIAS_OFFSET, 16) + int(address, 16)) % ADDRESS_MODULO
-    return Web3.to_hex(result)
+    value = (int(L1_TO_L2_ALIAS_OFFSET, 16) + int(address, 16)) % ADDRESS_MODULO
+    hex_result = remove_0x_prefix(Web3.to_hex(value))
+    result = hex_result.rjust(40, '0')
+    return add_0x_prefix(result)
 
 def undo_l1_to_l2_alias(address: HexStr):
-    result = int(L1_TO_L2_ALIAS_OFFSET, 16) - int(address, 16)
+    result = int(address, 16) - int(L1_TO_L2_ALIAS_OFFSET, 16)
     if result < 0:
         result += ADDRESS_MODULO
 
     return Web3.to_hex(result)
 
 
-# def estimate_default_bridge_deposit_l2_gas(token: HexStr,
-#                                            amount: int,
-#                                            to: HexStr,
-#                                            provider_l1: Web3,
-#                                            provider_l2: Web3,
-#                                            l1_account: BaseAccount,
-#                                            gas_per_pubdata_byte: int = DEPOSIT_GAS_PER_PUBDATA_LIMIT,
-#                                            from_: HexStr = None) -> int:
-#     if from_ is None:
-#         account = Account.create()
-#         from_ = account.address
-#
-#     if token == ADDRESS_DEFAULT or token == L2_ETH_TOKEN_ADDRESS:
-#         func_call = TxFunctionCall(to=to,
-#                                    from_=from_,
-#                                    value=amount,
-#                                    gas_per_pub_data=gas_per_pubdata_byte)
-#         return provider_l2.zksync.zks_estimate_l1_to_l2_execute(func_call.tx)
-#     else:
-#         bridge_addresses = provider_l2.zksync.zks_get_bridge_contracts()
-#         l1_weth_bridge = L1Bridge(bridge_addresses.weth_bridge_l1,
-#                                   provider_l2,
-#                                   l1_account)
-#         l2_weth_token = l1_weth_bridge.l2_token_address(token)
-#
-#         if l2_weth_token == ADDRESS_DEFAULT:
-#             l1_bridge_address = bridge_addresses.weth_bridge_l1
-#             l2_bridge_address = bridge_addresses.weth_bridge_l2
-#             bridge_data = "0x"
-#         else:
-#             l1_bridge_address = bridge_addresses.erc20_l1_default_bridge
-#             l2_bridge_address = bridge_addresses.erc20_l2_default_bridge
-#             token_contract = provider_l2.zksync.contract(token, abi=get_erc20_abi())
-#             bridge_data = get_custom_bridge_data(token_contract)
-#
-#     return estimate_custom_bridge_deposit_l2_gas(provider_l2,
-#                                                  l1_bridge_address,
-#                                                  l2_bridge_address,
-#                                                  token,
-#                                                  amount,
-#                                                  to,
-#                                                  from_,
-#                                                  bridge_data,
-#                                                  l1_account,
-#                                                  gas_per_pubdata_byte)
-#
-# def estimate_custom_bridge_deposit_l2_gas(provider_l2: Web3,
-#                                           l1_bridge_address: HexStr,
-#                                           l2_bridge_address: HexStr,
-#                                           token: HexStr,
-#                                           amount: int,
-#                                           to: HexStr,
-#                                           from_: HexStr,
-#                                           bridge_data: bytes,
-#                                           l1_account: BaseAccount,
-#                                           gas_per_pubdata_byte: int = DEPOSIT_GAS_PER_PUBDATA_LIMIT) -> int:
-#     calldata = get_erc_20_call_data(token, from_, to, amount, bridge_data, provider_l2, l1_account)
-#     tx = TxFunctionCall(from_=apply_l1_to_l2_alias(l1_bridge_address),
-#                         to=l2_bridge_address,
-#                         data=calldata,
-#                         gas_per_pub_data=gas_per_pubdata_byte)
-#
-#     return provider_l2.zksync.zks_estimate_l1_to_l2_execute(tx.tx)
-#
-# def get_erc_20_call_data(l1_token_address: HexStr,
-#                           l1_sender: HexStr,
-#                           l2_receiver: HexStr,
-#                           amount: int,
-#                           bridge_data: bytes,
-#                           provider_l2: Web3,
-#                           l1_account: BaseAccount) -> HexStr:
-#         l2_bridge = L2Bridge(l1_token_address, provider_l2, l1_account)
-#         return l2_bridge.finalize_deposit(l1_sender, l2_receiver, l1_token_address, amount, bridge_data)
-
+class RequestExecuteTransaction:
+    pass
 
 class RecommendedGasLimit(IntEnum):
     DEPOSIT = 10000000
