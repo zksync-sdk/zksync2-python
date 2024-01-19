@@ -6,12 +6,11 @@ from eth_typing import HexStr
 from web3 import Web3
 from web3.types import Nonce
 
-from zksync2.core.types import Token, BridgeAddresses
-from zksync2.core.utils import is_eth
+from zksync2.core.types import Token, BridgeAddresses, TransactionOptions
+from zksync2.core.utils import is_eth, MAX_PRIORITY_FEE_PER_GAS
 from zksync2.manage_contracts.deploy_addresses import ZkSyncAddresses
-from zksync2.manage_contracts.eth_token import _eth_token_abi_default
-from zksync2.manage_contracts.l2_bridge import _l2_bridge_abi_default
 from zksync2.manage_contracts.precompute_contract_deployer import PrecomputeContractDeployer
+from zksync2.manage_contracts.utils import l2_bridge_abi_default, eth_token_abi_default
 from zksync2.module.request_types import EIP712Meta, TransactionType, Transaction as ZkTx
 from zksync2.transaction.transaction712 import Transaction712
 
@@ -50,7 +49,7 @@ class TxFunctionCall(TxBase, ABC):
                  data: HexStr = HexStr("0x"),
                  gas_limit: int = 0,
                  gas_price: int = 0,
-                 max_priority_fee_per_gas=100_000_000,
+                 max_priority_fee_per_gas: int = MAX_PRIORITY_FEE_PER_GAS,
                  paymaster_params=None,
                  custom_signature=None,
                  gas_per_pub_data: int = EIP712Meta.GAS_PER_PUB_DATA_DEFAULT):
@@ -246,7 +245,6 @@ class TxCreate2Account(TxBase, ABC):
             "eip712Meta": eip712_meta
         })
 
-
 class TxWithdraw(TxBase, ABC):
 
     def __init__(self,
@@ -257,19 +255,25 @@ class TxWithdraw(TxBase, ABC):
                  account: BaseAccount,
                  gas_price: int = None,
                  to: HexStr = None,
-                 bridge_address: HexStr = None):
+                 bridge_address: HexStr = None,
+                 chain_id: int = None,
+                 nonce: int = None):
 
         # INFO: send to self
         if to is None:
             to = account.address
         if gas_price is None:
             gas_price = web3.zksync.gas_price
+        if nonce is None:
+            web3.zksync.get_transaction_count(account.address)
 
         if is_eth(token):
-            contract = web3.zksync.contract(Web3.to_checksum_address(L2_ETH_TOKEN_ADDRESS), abi=_eth_token_abi_default())
+            if chain_id is None:
+                web3.zksync.chain_id
+            contract = web3.zksync.contract(Web3.to_checksum_address(L2_ETH_TOKEN_ADDRESS), abi=eth_token_abi_default())
             tx = contract.functions.withdraw(to).build_transaction({
-                "nonce": web3.zksync.get_transaction_count(account.address),
-                "chainId": web3.zksync.chain_id,
+                "nonce": nonce,
+                "chainId": chain_id,
                 "gas": gas_limit,
                 "gasPrice": gas_price,
                 "value": amount,
@@ -280,13 +284,13 @@ class TxWithdraw(TxBase, ABC):
                 bridge_addresses: BridgeAddresses = web3.zksync.zks_get_bridge_contracts()
                 bridge_address = bridge_addresses.erc20_l2_default_bridge
             l2_bridge = web3.eth.contract(address=Web3.to_checksum_address(bridge_address),
-                                             abi=_l2_bridge_abi_default())
+                                             abi=l2_bridge_abi_default())
             tx = l2_bridge.functions.withdraw(to,
                                               token,
                                               amount).build_transaction(
             {
                 "from": account.address,
-                "nonce": web3.zksync.get_transaction_count(account.address),
+                "nonce": nonce,
                 "gas": gas_limit,
             })
         super(TxWithdraw, self).__init__(trans=tx)

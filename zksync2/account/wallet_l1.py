@@ -1,27 +1,28 @@
-from typing import Union, List
+from pathlib import Path, PosixPath
+from typing import Union, List, Type
 
 from web3 import Web3
+from web3.contract import Contract
 from web3.types import TxReceipt, BlockIdentifier, LatestBlockParam
 from web3._utils.contracts import encode_abi
 from web3.middleware import geth_poa_middleware
 
 from eth_typing import HexStr, Address
-from eth_utils import event_signature_to_log_topic, add_0x_prefix
+from eth_utils import event_signature_to_log_topic, add_0x_prefix, remove_0x_prefix
 from eth_account import Account
 from eth_account.signers.base import BaseAccount
 from eth_abi import abi
 
-
-from zksync2.core.types import BridgeAddresses, Token, ZksMessageProof, EthBlockParams, TransactionDetails, \
+from zksync2.account.utils import deposit_to_request_execute, prepare_transaction_options
+from zksync2.core.types import BridgeAddresses, Token, ZksMessageProof, EthBlockParams, \
     DepositTransaction, ADDRESS_DEFAULT, L1ToL2Log, RequestExecuteCallMsg, FullDepositFee, L1BridgeContracts, \
-    RequestExecuteTransaction
+    TransactionOptions
 from zksync2.core.utils import RecommendedGasLimit, to_bytes, is_eth, apply_l1_to_l2_alias, \
     get_custom_bridge_data, BOOTLOADER_FORMAL_ADDRESS, undo_l1_to_l2_alias, DEPOSIT_GAS_PER_PUBDATA_LIMIT
+from zksync2.manage_contracts.contract_encoder_base import ContractEncoder, JsonConfiguration
 from zksync2.manage_contracts.deploy_addresses import ZkSyncAddresses
-from zksync2.manage_contracts.erc20_contract import get_erc20_abi
-from zksync2.manage_contracts.l1_bridge import L1Bridge, _l1_bridge_abi_default
-from zksync2.manage_contracts.l2_bridge import _l2_bridge_abi_default
-from zksync2.manage_contracts.zksync_contract import ZkSyncContract, _zksync_abi_default
+from zksync2.manage_contracts.utils import zksync_abi_default, l1_bridge_abi_default, get_erc20_abi, \
+    l2_bridge_abi_default
 from zksync2.module.request_types import EIP712Meta
 from zksync2.transaction.transaction712 import Transaction712
 from zksync2.transaction.transaction_builders import TxFunctionCall
@@ -47,12 +48,12 @@ class WalletL1:
         self._eth_web3.middleware_onion.inject(geth_poa_middleware, layer=0)
         self._zksync_web3 = zksync_web3
         self._main_contract_address = Web3.to_checksum_address(self._zksync_web3.zksync.zks_main_contract())
-        self.contract = self._eth_web3.eth.contract(self._main_contract_address, abi=_zksync_abi_default())
+        self.contract = self._eth_web3.eth.contract(self._main_contract_address, abi=zksync_abi_default())
         self._l1_account = l1_account
         self.bridge_addresses: BridgeAddresses = self._zksync_web3.zksync.zks_get_bridge_contracts()
 
     @property
-    def main_contract(self):
+    def main_contract(self) -> Union[Type[Contract], Contract]:
         return self.contract
 
     @property
@@ -98,11 +99,11 @@ class WalletL1:
 
     def get_l1_bridge_contracts(self) -> L1BridgeContracts:
         return L1BridgeContracts(erc20=self._eth_web3.eth.contract(address=Web3.to_checksum_address(self.bridge_addresses.erc20_l1_default_bridge),
-                                                                   abi=_l1_bridge_abi_default()),
+                                                                   abi=l1_bridge_abi_default()),
                                  weth=self._eth_web3.eth.contract(address=Web3.to_checksum_address(self.bridge_addresses.weth_bridge_l1),
-                                                                  abi=_l1_bridge_abi_default()))
+                                                                  abi=l1_bridge_abi_default()))
 
-    def get_l1_balance(self, token: HexStr = Token.create_eth().l1_address, block: EthBlockParams = EthBlockParams.LATEST):
+    def get_l1_balance(self, token: HexStr = ADDRESS_DEFAULT, block: EthBlockParams = EthBlockParams.LATEST) -> int:
         if is_eth(token):
             return self._eth_web3.eth.get_balance(self.address, block.value)
         else:
@@ -114,10 +115,17 @@ class WalletL1:
             })
 
     def get_allowance_l1(self, token: HexStr, bridge_address: Address = None):
-        token_contract = self._zksync_web3.zksync.contract(address=token, abi=get_erc20_abi())
+        token_contract = self._eth_web3.eth.contract(address=Web3.to_checksum_address(token), abi=get_erc20_abi())
         if bridge_address is None:
-            bridge_address = self.bridge_addresses.erc20_l1_default_bridge
-
+            l2_weth_token = ADDRESS_DEFAULT
+            try:
+                l2_weth_token = self.get_l1_bridge_contracts().weth.functions.l2TokenAddress(token).call()
+            except:
+                pass
+            if l2_weth_token == ADDRESS_DEFAULT:
+                bridge_address = self.bridge_addresses.erc20_l1_default_bridge
+            else:
+                bridge_address = self.bridge_addresses.weth_bridge_l1
         return token_contract.functions.allowance(self.address, bridge_address).call(
             {
                 "chainId": self._eth_web3.eth.chain_id,
@@ -127,15 +135,15 @@ class WalletL1:
     def l2_token_address(self, address: HexStr) -> HexStr:
         if is_eth(address):
             return ADDRESS_DEFAULT
-        else:
-            contracts = self.get_l1_bridge_contracts()
-            try:
-                l2_weth_token = contracts.weth.functions.l2TokenAddress(address).call()
-                if l2_weth_token != ADDRESS_DEFAULT:
-                    return l2_weth_token
-            except:
-                pass
-            return contracts.erc20.functions.l2TokenAddress(address).call()
+
+        contracts = self.get_l1_bridge_contracts()
+        try:
+            l2_weth_token = contracts.weth.functions.l2TokenAddress(address).call()
+            if l2_weth_token != ADDRESS_DEFAULT:
+                return l2_weth_token
+        except:
+            pass
+        return contracts.erc20.functions.l2TokenAddress(address).call()
 
     def approve_erc20(self,
                       token: HexStr,
@@ -145,24 +153,27 @@ class WalletL1:
         if is_eth(token):
             raise RuntimeError("ETH token can't be approved. The address of the token does not exist on L1")
 
-        if bridge_address is None:
-            bridge_address = self.bridge_addresses.erc20_l1_default_bridge
-
         erc20 = self._eth_web3.eth.contract(address=Web3.to_checksum_address(token), abi=get_erc20_abi())
 
+        if bridge_address is None:
+            l2_weth_token = ADDRESS_DEFAULT
+            try:
+                l2_weth_token = self.get_l1_bridge_contracts().weth.functions.l2TokenAddress(token).call()
+            except:
+                pass
+            if l2_weth_token == ADDRESS_DEFAULT:
+                bridge_address = self.bridge_addresses.erc20_l1_default_bridge
+            else:
+                bridge_address = self.bridge_addresses.weth_bridge_l1
         if gas_limit is None:
             # TODO: get the approve(bridgeAddress, amount) estimateGas transaction to put correct gas_limit
             gas_limit = RecommendedGasLimit.ERC20_APPROVE
-        gas_price = self._eth_web3.eth.gas_price
+        options = TransactionOptions(chain_id=self._eth_web3.eth.chain_id,
+                                     gas_price=self._eth_web3.eth.gas_price,
+                                     gas_limit=gas_limit,
+                                     nonce=self._eth_web3.eth.get_transaction_count(self.address))
         tx = erc20.functions.approve(bridge_address,
-                                             amount).build_transaction(
-            {
-                "chainId": self._eth_web3.eth.chain_id,
-                "from": self.address,
-                "gasPrice": gas_price,
-                "gas": gas_limit,
-                "nonce": self._eth_web3.eth.get_transaction_count(self.address)
-            })
+                                             amount).build_transaction(prepare_transaction_options(options, self.address))
         signed_tx = self._l1_account.sign_transaction(tx)
         tx_hash = self._eth_web3.eth.send_raw_transaction(signed_tx.rawTransaction)
         tx_receipt = self._eth_web3.eth.wait_for_transaction_receipt(tx_hash)
@@ -175,27 +186,29 @@ class WalletL1:
                       gas_price: int = None):
         if gas_price is None:
             gas_price = self._eth_web3.eth.gas_price
-
+        options = TransactionOptions(chain_id=self._eth_web3.eth.chain_id,
+                                     nonce=self._eth_web3.eth.get_transaction_count(self.address))
         return self.contract.functions.l2TransactionBaseCost(gas_price,
                                                              l2_gas_limit,
-                                                             gas_per_pubdata_byte).call(
-            {
-                "chainId": self._eth_web3.eth.chain_id,
-                "from": self.address,
-                'nonce': self._eth_web3.eth.get_transaction_count(self.address),
-            })
+                                                             gas_per_pubdata_byte).call(prepare_transaction_options(options, self.address))
 
     def prepare_deposit_tx(self, transaction: DepositTransaction) -> DepositTransaction:
+        if transaction.options is None:
+            transaction.options = TransactionOptions()
         if transaction.to is None:
             transaction.to = self.address
-
+        if transaction.options.chain_id is None:
+            transaction.options.chain_id = self._eth_web3.eth.chain_id
         if transaction.bridge_address is not None:
             bridge_contract = self._eth_web3.eth.contract(address=Web3.to_checksum_address(transaction.bridge_address),
-                                                          abi=_l1_bridge_abi_default())
+                                                          abi=l1_bridge_abi_default())
 
             if transaction.custom_bridge_data is None:
-                token_contract = self._zksync_web3.zksync.contract(transaction.token, abi=get_erc20_abi())
-                transaction.custom_bridge_data = get_custom_bridge_data(token_contract)
+                if transaction.bridge_address == self.bridge_addresses.weth_bridge_l1:
+                    transaction.custom_bridge_data = "0x"
+                else:
+                    token_contract = self._zksync_web3.zksync.contract(transaction.token, abi=get_erc20_abi())
+                    transaction.custom_bridge_data = get_custom_bridge_data(token_contract)
 
             if transaction.l2_gas_limit is None:
                 l2_address = bridge_contract.functions.l2TokenAddress(transaction.token).call()
@@ -213,31 +226,34 @@ class WalletL1:
                                                                                    transaction.to,
                                                                                    transaction.gas_per_pubdata_byte,
                                                                                    self.address)
-        if transaction.gas_price is None and transaction.max_fee_per_gas is None:
+        if transaction.options.gas_price is None and transaction.options.max_fee_per_gas is None:
             isReady, head = self.check_if_l1_chain_is_london_ready()
             if isReady:
-                if transaction.max_priority_fee_per_gas is None:
-                    transaction.max_priority_fee_per_gas = self._eth_web3.eth.max_priority_fee
-                transaction.max_fee_per_gas = int(((head["baseFeePerGas"] * 3)/2) + transaction.max_priority_fee_per_gas)
+                if transaction.options.max_priority_fee_per_gas is None:
+                    transaction.options.max_priority_fee_per_gas = self._eth_web3.eth.max_priority_fee
+                transaction.options.max_fee_per_gas = int(((head["baseFeePerGas"] * 3)/2)
+                                                          + transaction.options.max_priority_fee_per_gas)
         else:
-            transaction.gas_price = self._eth_web3.eth.gas_price
+            transaction.options.gas_price = self._eth_web3.eth.gas_price
 
         gas_price_for_estimation: int
-        if transaction.max_priority_fee_per_gas is not None:
-            gas_price_for_estimation = transaction.max_fee_per_gas
+        if transaction.options.max_priority_fee_per_gas is not None:
+            gas_price_for_estimation = transaction.options.max_fee_per_gas
         else:
-            gas_price_for_estimation = transaction.gas_price
+            gas_price_for_estimation = transaction.options.gas_price
 
-        base_cost = self.get_base_cost(transaction.l2_gas_limit, transaction.gas_per_pubdata_byte, gas_price_for_estimation)
+        base_cost = self.get_base_cost(transaction.l2_gas_limit,
+                                       transaction.gas_per_pubdata_byte,
+                                       gas_price_for_estimation)
 
         if is_eth(transaction.token):
-            transaction.value = base_cost + transaction.operator_tip + transaction.amount
+            transaction.options.value = base_cost + transaction.operator_tip + transaction.amount
         else:
             if transaction.refund_recipient is None:
                 transaction.refund_recipient = ADDRESS_DEFAULT
-            transaction.value = base_cost + transaction.operator_tip
+            transaction.options.value = base_cost + transaction.operator_tip
 
-        check_base_cost(base_cost, transaction.value)
+        check_base_cost(base_cost, transaction.options.value)
 
         return transaction
 
@@ -245,21 +261,26 @@ class WalletL1:
         #It is assumed that the L2 fee for the transaction does not depend on its value.
         dummy_amount = 1
 
+        if transaction.options is None:
+            transaction.options = TransactionOptions()
+
         if transaction.to is None:
             transaction.to = self.address
 
         if transaction.bridge_address is not None:
             bridge_contract = self._eth_web3.eth.contract(address=Web3.to_checksum_address(transaction.bridge_address),
-                                                          abi=_l1_bridge_abi_default())
+                                                          abi=l1_bridge_abi_default())
 
             if transaction.custom_bridge_data is None:
-                token_contract = self._zksync_web3.zksync.contract(transaction.token.l1_address, abi=get_erc20_abi())
-                transaction.custom_bridge_data = get_custom_bridge_data(token_contract)
+                if transaction.bridge_address == self.bridge_addresses.weth_bridge_l1:
+                    transaction.custom_bridge_data = "0x"
+                else:
+                    token_contract = self._zksync_web3.zksync.contract(transaction.token, abi=get_erc20_abi())
+                    transaction.custom_bridge_data = get_custom_bridge_data(token_contract)
 
             if transaction.l2_gas_limit is None:
-                l2_address = bridge_contract.functions.l2TokenAddress(transaction.token.l1_address).call()
-                transaction.l2_gas_limit = self.estimate_custom_bridge_deposit_l2_gas(self._zksync_web3,
-                                                                                      transaction.bridge_address,
+                l2_address = bridge_contract.functions.l2TokenAddress(transaction.token).call()
+                transaction.l2_gas_limit = self.estimate_custom_bridge_deposit_l2_gas(transaction.bridge_address,
                                                                                       l2_address,
                                                                                       transaction.token,
                                                                                       dummy_amount,
@@ -273,20 +294,21 @@ class WalletL1:
                                                                                    transaction.to,
                                                                                    transaction.gas_per_pubdata_byte,
                                                                                    self.address)
-        if transaction.gas_price is None and transaction.max_fee_per_gas is None:
+        if transaction.options.gas_price is None and transaction.options.max_fee_per_gas is None:
             isReady, head = self.check_if_l1_chain_is_london_ready()
             if isReady:
-                if transaction.max_priority_fee_per_gas is None:
-                    transaction.max_priority_fee_per_gas = self._eth_web3.eth.max_priority_fee
-                transaction.max_fee_per_gas = int(((head["baseFeePerGas"] * 3)/2) + transaction.max_priority_fee_per_gas)
+                if transaction.options.max_priority_fee_per_gas is None:
+                    transaction.options.max_priority_fee_per_gas = self._eth_web3.eth.max_priority_fee
+                transaction.options.max_fee_per_gas = int(((head["baseFeePerGas"] * 3)/2)
+                                                          + transaction.options.max_priority_fee_per_gas)
         else:
-            transaction.gas_price = self._eth_web3.eth.gas_price
+            transaction.options.gas_price = self._eth_web3.eth.gas_price
 
         gas_price_for_estimation: int
-        if transaction.max_priority_fee_per_gas is not None:
-            gas_price_for_estimation = transaction.max_fee_per_gas
+        if transaction.options.max_priority_fee_per_gas is not None:
+            gas_price_for_estimation = transaction.options.max_fee_per_gas
         else:
-            gas_price_for_estimation = transaction.gas_price
+            gas_price_for_estimation = transaction.options.gas_price
 
         base_cost = self.get_base_cost(transaction.l2_gas_limit, transaction.gas_per_pubdata_byte,
                                        gas_price_for_estimation)
@@ -310,9 +332,9 @@ class WalletL1:
         # Deleting the explicit gas limits in the fee estimation
         # in order to prevent the situation where the transaction
         # fails because the user does not have enough balance
-        del transaction.gas_price
-        del transaction.max_fee_per_gas
-        del transaction.max_priority_fee_per_gas
+        del transaction.options.gas_price
+        del transaction.options.max_fee_per_gas
+        del transaction.options.max_priority_fee_per_gas
 
         transaction.amount = dummy_amount
         l1_gas_limit = self.estimate_gas_deposit(transaction)
@@ -320,11 +342,11 @@ class WalletL1:
         full_cost: FullDepositFee = FullDepositFee(base_cost=base_cost,
                                                    l1_gas_limit=l1_gas_limit,
                                                    l2_gas_limit=transaction.l2_gas_limit)
-        if transaction.gas_price is not None:
-            full_cost.gas_price = transaction.gas_price
+        if transaction.options.gas_price is not None:
+            full_cost.gas_price = transaction.options.gas_price
         else:
-            full_cost.max_priority_fee_per_gas = transaction.max_priority_fee_per_gas
-            full_cost.max_fee_per_gas = transaction.max_fee_per_gas
+            full_cost.max_priority_fee_per_gas = transaction.options.max_priority_fee_per_gas
+            full_cost.max_fee_per_gas = transaction.options.max_fee_per_gas
 
         return full_cost
 
@@ -332,41 +354,46 @@ class WalletL1:
         transaction = self.prepare_deposit_tx(transaction)
 
         if is_eth(transaction.token):
-            return self.request_execute(RequestExecuteTransaction(
-                contract_address=transaction.to,
-                call_data=HexStr("0x"),
-                l2_gas_limit=transaction.l2_gas_limit,
-                gas_per_pubdata_byte=transaction.gas_per_pubdata_byte,
-                gas_price=transaction.gas_price,
-                gas_limit=transaction.gas_limit,
-                l1_value=transaction.value))
+            tx = deposit_to_request_execute(transaction)
+            return self.request_execute(tx)
         else:
             if transaction.approve_erc20:
                 self.approve_erc20(transaction.token,
                                    transaction.amount,
                                    transaction.bridge_address,
-                                   transaction.gas_limit)
+                                   transaction.options.gas_limit)
 
             if transaction.bridge_address is not None:
                 l1_bridge = self._eth_web3.eth.contract(address=Web3.to_checksum_address(transaction.bridge_address),
-                                                        abi=_l1_bridge_abi_default())
+                                                        abi=l1_bridge_abi_default())
             else:
+                l2_weth_token = ADDRESS_DEFAULT
+                try:
+                    l2_weth_token = self.get_l1_bridge_contracts().weth.functions.l2TokenAddress(transaction.token).call()
+                except:
+                    pass
+                if l2_weth_token == ADDRESS_DEFAULT:
+                    bridge_address = self.bridge_addresses.erc20_l1_default_bridge
+                else:
+                    bridge_address = self.bridge_addresses.weth_bridge_l1
                 l1_bridge = self._eth_web3.eth.contract(
-                    address=Web3.to_checksum_address(self.bridge_addresses.erc20_l1_default_bridge),
-                    abi=_l1_bridge_abi_default())
+                    address=Web3.to_checksum_address(bridge_address),
+                    abi=l1_bridge_abi_default())
+            if transaction.options.nonce is None:
+                transaction.options.nonce = self._eth_web3.eth.get_transaction_count(self.address)
             tx = l1_bridge.functions.deposit(transaction.to,
                                              transaction.token,
                                              transaction.amount,
                                              transaction.l2_gas_limit,
                                              transaction.gas_per_pubdata_byte,
                                              transaction.refund_recipient
-                                             ).build_transaction(
-                {
+                                             ).build_transaction({
                     "from": self.address,
-                    "maxFeePerGas": transaction.max_fee_per_gas,
-                    "maxPriorityFeePerGas": transaction.max_priority_fee_per_gas,
+                    "maxFeePerGas": transaction.options.max_fee_per_gas,
+                    "maxPriorityFeePerGas": transaction.options.max_priority_fee_per_gas,
                     "nonce": self._eth_web3.eth.get_transaction_count(self.address),
-                    "value": transaction.value
+                    "value": transaction.options.value,
+
                 })
             signed_tx = self._l1_account.sign_transaction(tx)
             txn_hash = self._eth_web3.eth.send_raw_transaction(signed_tx.rawTransaction)
@@ -382,12 +409,7 @@ class WalletL1:
                                                               transaction.l2_gas_limit,
                                                               transaction.gas_per_pubdata_byte,
                                                               list(),
-                                                              self.address).build_transaction(
-                {
-                    "from": self.address,
-                    "maxFeePerGas": transaction.max_fee_per_gas,
-                    "value": transaction.value
-                })
+                                                              self.address).build_transaction(prepare_transaction_options(transaction.options, self.address))
 
             return self._eth_web3.eth.estimate_gas(tx)
         else:
@@ -403,14 +425,7 @@ class WalletL1:
                                           transaction.l2_gas_limit,
                                           transaction.gas_per_pubdata_byte,
                                           self.address
-                                          ).build_transaction(
-                {
-                    "from": self.address,
-                    "maxFeePerGas": transaction.max_fee_per_gas,
-                    "maxPriorityFeePerGas": transaction.max_priority_fee_per_gas,
-                    "nonce": self._eth_web3.eth.get_transaction_count(self.address),
-                    "value": transaction.value
-                })
+                                          ).build_transaction(prepare_transaction_options(transaction.options, self.address))
 
             return self._eth_web3.eth.estimate_gas(tx)
 
@@ -431,27 +446,24 @@ class WalletL1:
 
         l1_bridge_address = undo_l1_to_l2_alias(receipt.from_)
         l1_bridge = self._eth_web3.eth.contract(address=Web3.to_checksum_address(l1_bridge_address),
-                                                abi=_l1_bridge_abi_default())
+                                                abi=l1_bridge_abi_default())
 
-        l2_bridge = self._eth_web3.eth.contract(abi=_l2_bridge_abi_default())
+        l2_bridge = self._eth_web3.eth.contract(abi=l2_bridge_abi_default())
         calldata = l2_bridge.decode_function_input(transaction["data"])
 
         proof = self._zksync_web3.zksync.zks_get_log_proof(deposit_hash, success_log_index)
         if proof is None:
             raise RuntimeError("Log proof not found!")
 
-        params = {
-            "chainId": self._eth_web3.eth.chain_id,
-            "from": self.address,
-            "nonce": self._eth_web3.eth.get_transaction_count(self.address)
-        }
+        options = TransactionOptions(chain_id=self._eth_web3.eth.chain_id,
+                                     nonce=self._eth_web3.eth.get_transaction_count(self.address))
         return l1_bridge.functions.claimFailedDeposit(calldata[1]["_l1Sender"],
                                                       calldata[1]["_l1Token"],
                                                       to_bytes(deposit_hash),
                                                       receipt.block_number,
                                                       proof.id,
                                                       receipt.l1_batch_tx_index,
-                                                      proof.proof).call(params)
+                                                      proof.proof).call(prepare_transaction_options(options, self.address))
 
     def estimate_default_bridge_deposit_l2_gas(self,
                                                token: HexStr,
@@ -460,8 +472,7 @@ class WalletL1:
                                                gas_per_pubdata_byte: int = None,
                                                from_: HexStr = None) -> int:
         if from_ is None:
-            account = Account.create()
-            from_ = account.address
+            from_ = self._l1_account.address
         if gas_per_pubdata_byte is None:
             gas_per_pubdata_byte = DEPOSIT_GAS_PER_PUBDATA_LIMIT
         if is_eth(token):
@@ -471,14 +482,26 @@ class WalletL1:
                                        gas_per_pub_data = gas_per_pubdata_byte)
             return self._zksync_web3.zksync.zks_estimate_l1_to_l2_execute(func_call.tx)
         else:
-            l1_bridge_address = self.bridge_addresses.erc20_l1_default_bridge
-            l2_bridge_address = self.bridge_addresses.erc20_l2_default_bridge
-            token_contract = self._eth_web3.eth.contract(Web3.to_checksum_address(token), abi=get_erc20_abi())
-            bridge_data = get_custom_bridge_data(token_contract)
+            l2_weth_token = ADDRESS_DEFAULT
+            try:
+                l2_weth_token = self.get_l1_bridge_contracts().weth.functions.l2TokenAddress(token).call()
+            except:
+                pass
+            if l2_weth_token == ADDRESS_DEFAULT:
+                value = 0
+                l1_bridge_address = self.bridge_addresses.erc20_l1_default_bridge
+                l2_bridge_address = self.bridge_addresses.erc20_l2_default_bridge
+                token_contract = self._eth_web3.eth.contract(Web3.to_checksum_address(token), abi=get_erc20_abi())
+                bridge_data = get_custom_bridge_data(token_contract)
+            else:
+                value = amount
+                l1_bridge_address = self.bridge_addresses.weth_bridge_l1
+                l2_bridge_address = self.bridge_addresses.weth_bridge_l2
+                bridge_data = "0x"
 
             return self.estimate_custom_bridge_deposit_l2_gas(l1_bridge_address, l2_bridge_address,
                                                               token, amount, to, bridge_data, from_,
-                                                              gas_per_pubdata_byte)
+                                                              gas_per_pubdata_byte, value)
 
     def estimate_custom_bridge_deposit_l2_gas(self,
                                               l1_bridge_address: HexStr,
@@ -504,7 +527,7 @@ class WalletL1:
                              l2_receiver: HexStr,
                              amount: int,
                              bridge_data: bytes) -> HexStr:
-        l2_bridge = self._eth_web3.eth.contract(abi=_l2_bridge_abi_default())
+        l2_bridge = self._eth_web3.eth.contract(abi=l2_bridge_abi_default())
         return l2_bridge.encodeABI("finalizeDeposit",(
             l1_sender,
             l2_receiver,
@@ -519,34 +542,39 @@ class WalletL1:
         for proof in params["proof"]:
             merkle_proof.append(to_bytes(proof))
 
+        options = TransactionOptions(chain_id=self._eth_web3.eth.chain_id,
+                                     nonce=self._eth_web3.eth.get_transaction_count(self.address))
+
         if is_eth(params["sender"]):
-            tx = self.contract.functions.finalizeEthWithdrawal(params["l1_batch_number"],
-                                                                    params["l2_message_index"],
-                                                                    params["l2_tx_number_in_block"],
-                                                                    params["message"],
-                                                                    merkle_proof).build_transaction(
-                {
-                    "chainId": self._eth_web3.eth.chain_id,
-                    "from": self.address,
-                    'nonce': self._eth_web3.eth.get_transaction_count(self.address)
-                })
+            withdraw_to = HexStr("0x" + params["message"][4:24].hex())
+            if withdraw_to.lower() == self.bridge_addresses.weth_bridge_l1.lower():
+                tx = self.get_l1_bridge_contracts().weth.functions.finalizeEthWithdrawal(params["l1_batch_number"],
+                                                               params["l2_message_index"],
+                                                               params["l2_tx_number_in_block"],
+                                                               params["message"],
+                                                               merkle_proof).build_transaction(
+                    prepare_transaction_options(options, self.address)
+                )
+            else:
+                tx = self.contract.functions.finalizeEthWithdrawal(params["l1_batch_number"],
+                                                                   params["l2_message_index"],
+                                                                   params["l2_tx_number_in_block"],
+                                                                   params["message"],
+                                                                   merkle_proof).build_transaction(
+                    prepare_transaction_options(options, self.address)
+                )
             signed = self._l1_account.sign_transaction(tx)
             tx_hash = self._eth_web3.eth.send_raw_transaction(signed.rawTransaction)
             return tx_hash
         else:
-            # TODO: check should it be different account for L1/L2
+            l2_bridge = self._zksync_web3.zksync.contract(address=params["sender"], abi=l2_bridge_abi_default())
             l1_bridge = self._eth_web3.eth.contract(address=Web3.to_checksum_address(
-                self.bridge_addresses.erc20_l1_default_bridge),
-                abi=_l1_bridge_abi_default())
+                l2_bridge.functions.l1Bridge().call()),
+                abi=l1_bridge_abi_default())
             return l1_bridge.functions.finalizeWithdrawal(params["l1_batch_number"],
                                                           params["l2_message_index"],
                                                           params["message"],
-                                                          merkle_proof).build_transaction(
-                {
-                    "chainId": self._eth_web3.eth.chain_id,
-                    "from": self.address,
-                    "nonce": self._eth_web3.eth.get_transaction_count(self.address)
-                })
+                                                          merkle_proof).build_transaction(prepare_transaction_options(options, self.address))
 
     def is_withdrawal_finalized(self, withdraw_hash, index: int = 0):
         tx_receipt = self._zksync_web3.zksync.get_transaction_receipt(withdraw_hash)
@@ -557,51 +585,32 @@ class WalletL1:
         proof: ZksMessageProof = self._zksync_web3.zksync.zks_get_log_proof(hex_hash, l2_to_l1_log_index)
 
         l2_block_number = log["l1BatchNumber"]
+        options = TransactionOptions(chain_id=self._eth_web3.eth.chain_id,
+                                     nonce=self._eth_web3.eth.get_transaction_count(self.address))
         if is_eth(sender):
             return self.contract.functions.isEthWithdrawalFinalized(l2_block_number,
-                                                                         proof.id).call(
-                {
-                    "chainId": self._eth_web3.eth.chain_id,
-                    "from": self.address,
-                    'nonce': self._eth_web3.eth.get_transaction_count(self.address),
-                })
+                                                                         proof.id).call(prepare_transaction_options(options, self.address))
         else:
             # TODO: check should it be different account for L1/L2
             l1_bridge = self._eth_web3.eth.contract(address=Web3.to_checksum_address(
                 self.bridge_addresses.erc20_l1_default_bridge),
-                abi=_l1_bridge_abi_default())
+                abi=l1_bridge_abi_default())
             return l1_bridge.functions.isWithdrawalFinalized(l2_block_number, proof.id).call()
 
-    def request_execute(self, transaction: RequestExecuteTransaction):
-
-        if transaction.factory_deps is None:
-            transaction.factory_deps = list()
-        if transaction.refund_recipient is None:
-            transaction.refund_recipient = self.address
-        if transaction.gas_price is None:
-            transaction.gas_price = self._eth_web3.eth.gas_price
-        if transaction.gas_limit is None:
-            transaction.gas_limit = RecommendedGasLimit.EXECUTE.value
-
+    def request_execute(self, transaction: RequestExecuteCallMsg):
+        transaction = self.get_request_execute_transaction(transaction)
         tx = self.contract.functions.requestL2Transaction(transaction.contract_address,
                                                           transaction.l2_value,
                                                           transaction.call_data,
                                                           transaction.l2_gas_limit,
                                                           transaction.gas_per_pubdata_byte,
                                                           transaction.factory_deps,
-                                                          transaction.refund_recipient).build_transaction(
-            {
-                "nonce": self._eth_web3.eth.get_transaction_count(self.address),
-                'from': self.address,
-                "gasPrice": transaction.gas_price,
-                "gas": transaction.gas_limit,
-                "value": transaction.l1_value
-            })
+                                                          transaction.refund_recipient).build_transaction(prepare_transaction_options(transaction.options, transaction.from_))
         signed_tx = self._l1_account.sign_transaction(tx)
         tx_hash = self._eth_web3.eth.send_raw_transaction(signed_tx.rawTransaction)
-        tx_receipt = self._eth_web3.eth.wait_for_transaction_receipt(tx_hash)
 
-        return tx_receipt
+        return tx_hash
+
 
     def check_if_l1_chain_is_london_ready(self):
         head = self._eth_web3.eth.get_block("latest")
@@ -609,55 +618,57 @@ class WalletL1:
             return True, head
         return False, head
 
-    def get_request_execute_transaction(self, transaction: RequestExecuteCallMsg) -> RequestExecuteTransaction:
+    def get_request_execute_transaction(self, transaction: RequestExecuteCallMsg) -> RequestExecuteCallMsg:
+        if transaction.options is None:
+            transaction.options = TransactionOptions()
         if transaction.factory_deps is None:
             transaction.factory_deps = list()
         if transaction.refund_recipient is None:
             transaction.refund_recipient = self.address
         if transaction.from_ is None:
             transaction.from_ = self.address
+        if transaction.options.nonce is None:
+            transaction.options.nonce = self._eth_web3.eth.get_transaction_count(self.address)
         if transaction.l2_gas_limit == 0:
             meta = EIP712Meta(gas_per_pub_data=transaction.gas_per_pubdata_byte,
                               factory_deps=transaction.factory_deps)
             transaction.l2_gas_limit = self._zksync_web3.zksync.zks_estimate_l1_to_l2_execute({"from": transaction.from_,
                                                                                    "to": transaction.contract_address,
                                                                                    "eip712Meta": meta})
-        if transaction.gas_price is None and transaction.max_fee_per_gas is None:
+        if transaction.options.gas_price is None and transaction.options.max_fee_per_gas is None:
             isReady, head = self.check_if_l1_chain_is_london_ready()
             if isReady:
-                if transaction.max_priority_fee_per_gas is None:
-                    transaction.max_priority_fee_per_gas = self._zksync_web3.zksync.max_priority_fee
-                transaction.max_fee_per_gas = int(((head["baseFeePerGas"] * 3) / 2) + transaction.max_priority_fee_per_gas)
+                if transaction.options.max_priority_fee_per_gas is None:
+                    transaction.options.max_priority_fee_per_gas = self._zksync_web3.zksync.max_priority_fee
+                transaction.options.max_fee_per_gas = int(((head["baseFeePerGas"] * 3) / 2)
+                                                          + transaction.options.max_priority_fee_per_gas)
         else:
-            transaction.gas_price = self._eth_web3.eth.gas_price
+            transaction.options.gas_price = self._eth_web3.eth.gas_price
 
         gas_price_for_estimation: int
-        if transaction.max_priority_fee_per_gas is not None:
-            gas_price_for_estimation = transaction.max_fee_per_gas
+        if transaction.options.max_priority_fee_per_gas is not None:
+            gas_price_for_estimation = transaction.options.max_fee_per_gas
         else:
-            gas_price_for_estimation = transaction.gas_price
+            gas_price_for_estimation = transaction.options.gas_price
 
         base_cost = self.get_base_cost(transaction.l2_gas_limit, transaction.gas_per_pubdata_byte, gas_price_for_estimation)
 
-        if transaction.value is None:
-            transaction.value = base_cost + transaction.operator_tip + transaction.l2_value
+        if transaction.options.value is None:
+            transaction.options.value = base_cost + transaction.operator_tip + transaction.l2_value
 
-        check_base_cost(base_cost, transaction.value)
+        check_base_cost(base_cost, transaction.options.value)
 
         return transaction
 
     def estimate_gas_request_execute(self, transaction: RequestExecuteCallMsg) -> int:
         transaction = self.get_request_execute_transaction(transaction)
         tx = self.contract.functions.requestL2Transaction(Web3.to_checksum_address(transaction.contract_address),
-                                                               transaction.l2_value,
-                                                               transaction.call_data,
-                                                               transaction.l2_gas_limit,
-                                                               transaction.gas_per_pubdata_byte,
-                                                               transaction.factory_deps,
-                                                               transaction.refund_recipient).build_transaction({
-            "from": self.address,
-            "maxFeePerGas": transaction.max_fee_per_gas,
-            "value": transaction.value})
+                                                          transaction.l2_value,
+                                                          transaction.call_data,
+                                                          transaction.l2_gas_limit,
+                                                          transaction.gas_per_pubdata_byte,
+                                                          transaction.factory_deps,
+                                                          transaction.refund_recipient).build_transaction(prepare_transaction_options(transaction.options, self.address))
 
         return self._eth_web3.eth.estimate_gas(tx)
 

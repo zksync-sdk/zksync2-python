@@ -82,8 +82,7 @@ class LegacyContractFactory:
             gas_price=self.web3.zksync.gas_price,
             bytecode=self.byte_code,
             call_data=call_data,
-            deps=factory_deps,
-            salt=salt,
+            deps=factory_deps
         )
 
         estimate_gas = self.web3.zksync.eth_estimate_gas(create_contract.tx)
