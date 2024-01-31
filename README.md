@@ -1,19 +1,19 @@
-# 🚀 zksync2-python Python SDK 🚀
+# 🚀 zksync2 Python SDK 🚀
 
 ![Era Logo](https://github.com/matter-labs/era-contracts/raw/main/eraLogo.svg)
 
-In order to provide easy access to all the features of zkSync Era, the `zksync2-python` Python SDK was created,
-which is made in a way that has an interface very similar to those of [web3py](https://web3py.readthedocs.io/en/v6.6.1/). In
-fact, `web3py` is a peer dependency of our library and most of the objects exported by `zksync2-python` inherit from the corresponding `web3py` objects and override only the fields that need
+In order to provide easy access to all the features of zkSync Era, the `zksync2` Python SDK was created,
+which is made in a way that has an interface very similar to those of [web3.py](https://web3py.readthedocs.io/en/v6.6.1/). In
+fact, `web3.py` is a peer dependency of our library and most of the objects exported by `zksync2` inherit from the corresponding `web3.py` objects and override only the fields that need
 to be changed.
 
 While most of the existing SDKs functionalities should work out of the box, deploying smart contracts or using unique zkSync features,
 like account abstraction, requires providing additional fields to those that Ethereum transactions have by default.
 
-The library is made in such a way that after replacing `web3py` with `zksync2-python` most client apps will work out of
+The library is made in such a way that after replacing `web3.py` with `zksync2` most client apps will work out of
 box.
 
-🔗 For a detailed walkthrough, refer to the [official documentation](https://era.zksync.io/docs/api/python).
+🔗 For a detailed walkthrough, refer to the [official documentation](https://docs.zksync.io/build/sdks/python/getting-started.html).
 
 ## 📌 Overview
 
@@ -153,7 +153,7 @@ make run-tests
 
 ## 🤝 Contributing
 
-We welcome contributions from the community! If you're interested in contributing to the `zksync2-python` Python SDK,
+We welcome contributions from the community! If you're interested in contributing to the `zksync2` Python SDK,
 please take a look at our [CONTRIBUTING.md](./.github/CONTRIBUTING.md) for guidelines and details on the process.
 
-Thank you for making `zksync2-python` JavaScript SDK better! 🙌
+Thank you for making `zksync2` Python SDK better! 🙌

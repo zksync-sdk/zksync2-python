@@ -2,7 +2,7 @@
 
 ## Welcome! 👋
 
-Hello there, contributor! We're delighted that you're considering contributing to the `zksync2-python` project. This document is here to guide you through the steps and best practices for contributing to this Python-based repository.
+Hello there, contributor! We're delighted that you're considering contributing to the `zksync2` project. This document is here to guide you through the steps and best practices for contributing to this Python-based repository.
 
 Please take a moment to review this document to ensure a smooth and efficient contribution process for everyone involved.
 

@@ -20,7 +20,7 @@ Before initiating the release process, ensure the following prerequisites are me
 
 2. **Manual execution of [Release](workflows/release.yml) Action:**
     - The `Release` GitHub Action automates versioning based on conventional commit messages. Pipeline creates tag, release, 
-   and pushes new commit in which updates `CHANGELOG.md` and version in `zkSync2-swift.podspec`.
+   and pushes new commit in which updates `CHANGELOG.md` and version in `pyproject.toml`.
     - Click on the `Run workflow` button and select the desired branch or run the following command: 
    `gh workflow run --ref <branch|tag> release.yml`.
 
