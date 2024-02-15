@@ -1,0 +1,63 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+
+contract ZkSyncNFTMarketplace is Ownable, ReentrancyGuard {
+    using SafeMath for uint256;
+
+    address public nftContract;
+    address public zkSyncContract;
+    uint256 public listingFee;
+
+    mapping(uint256 => uint256) public nftListingPrices;
+
+    event NFTListed(uint256 indexed tokenId, uint256 price);
+    event NFTSold(uint256 indexed tokenId, address buyer, uint256 price);
+
+    constructor(address _nftContract, address _zkSyncContract, uint256 _listingFee) {
+        nftContract = _nftContract;
+        zkSyncContract = _zkSyncContract;
+        listingFee = _listingFee;
+    }
+
+    function listNFTForSale(uint256 tokenId, uint256 price) external payable nonReentrant {
+        require(msg.sender == IERC721(nftContract).ownerOf(tokenId), "Not the owner of the NFT");
+        require(msg.value == listingFee, "Incorrect listing fee amount");
+
+        nftListingPrices[tokenId] = price;
+        emit NFTListed(tokenId, price);
+    }
+
+    function buyNFT(uint256 tokenId) external payable nonReentrant {
+        require(nftListingPrices[tokenId] > 0, "NFT not listed for sale");
+        require(msg.value == nftListingPrices[tokenId], "Incorrect payment amount");
+
+        address seller = IERC721(nftContract).ownerOf(tokenId);
+        address buyer = msg.sender;
+
+        // Transfer NFT to the buyer
+        IERC721(nftContract).transferFrom(seller, buyer, tokenId);
+
+        // Perform zkSync integration logic here
+        // For example, unlock the NFT in zkSync and update zkSync state
+        // This part would involve interacting with the zkSync contract
+
+        // Transfer payment to the seller
+        (bool success, ) = payable(seller).call{value: msg.value}("");
+        require(success, "Payment transfer failed");
+
+        // Clear the listing information
+        delete nftListingPrices[tokenId];
+
+        emit NFTSold(tokenId, buyer, msg.value);
+    }
+
+    function setListingFee(uint256 _listingFee) external onlyOwner {
+        listingFee = _listingFee;
+    }
+}
