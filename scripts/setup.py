@@ -11,8 +11,6 @@ from web3 import Web3
 
 
 def main():
-    from zksync2.signer.eth_signer import PrivateKeyEthSigner
-
     current_directory = os.path.dirname(os.path.abspath(__file__))
     parent_directory = os.path.join(current_directory, "..")
     sys.path.append(parent_directory)
@@ -21,6 +19,7 @@ def main():
     from zksync2.account.wallet import Wallet
     from zksync2.manage_contracts.utils import zksync_abi_default
     from zksync2.module.module_builder import ZkSyncBuilder
+    from zksync2.signer.eth_signer import PrivateKeyEthSigner
 
     zksync = ZkSyncBuilder.build("http://127.0.0.1:3050")
     eth_web3 = Web3(Web3.HTTPProvider("http://127.0.0.1:8545"))
