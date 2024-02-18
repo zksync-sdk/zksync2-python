@@ -6,12 +6,14 @@ from unittest import TestCase, skip
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
 from eth_typing import HexStr
+from eth_utils import keccak
 from web3 import Web3
 from web3.middleware import geth_poa_middleware
 from web3.types import TxParams
 
 from tests.contracts.utils import contract_path
-from zksync2.core.types import Token, ZkBlockParams, EthBlockParams, ADDRESS_DEFAULT
+from zksync2.core.types import Token, ZkBlockParams, EthBlockParams, ADDRESS_DEFAULT, StorageProof
+from zksync2.core.utils import pad_front_bytes, to_bytes, pad_back_bytes
 from zksync2.manage_contracts.contract_encoder_base import (
     ContractEncoder,
     JsonConfiguration,
@@ -23,6 +25,7 @@ from zksync2.manage_contracts.precompute_contract_deployer import (
 )
 from zksync2.manage_contracts.utils import nonce_holder_abi_default
 from zksync2.module.module_builder import ZkSyncBuilder
+from zksync2.module.request_types import Transaction, EIP712Meta
 from zksync2.signer.eth_signer import PrivateKeyEthSigner
 from zksync2.transaction.transaction_builders import (
     TxFunctionCall,
@@ -83,6 +86,45 @@ class ZkSyncWeb3Tests(TestCase):
         tx_hash = web3.eth.send_transaction(transaction)
         txn_receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
         self.assertEqual(txn_receipt["status"], 1)
+
+    def test_zks_l1_batch_number(self):
+        result = self.web3.zksync.zks_l1_batch_number()
+        self.assertGreater(result, 0)
+
+    def test_zks_get_l1_batch_block_range(self):
+        l1_batch_number = self.web3.zksync.zks_l1_batch_number()
+        result = self.web3.zksync.zks_get_l1_batch_block_range(l1_batch_number)
+        self.assertIsNotNone(result)
+
+    @skip
+    def test_zks_get_l1_batch_details(self):
+        l1_batch_number = self.web3.zksync.zks_l1_batch_number()
+        result = self.web3.zksync.zks_get_l1_batch_details(l1_batch_number)
+        self.assertIsNotNone(result)
+
+    def test_zks_estimate_gas_l1_to_l2(self):
+        meta = EIP712Meta(gas_per_pub_data=800)
+        result = self.web3.zksync.zks_estimate_gas_l1_to_l2({
+            "from": self.account.address,
+            "to": self.web3.zksync.zks_main_contract(),
+            "value": 7_000_000_000,
+            "eip712Meta": meta
+        })
+        self.assertIsNotNone(result)
+
+    def test_zks_get_proof(self):
+        address_padded = pad_front_bytes(to_bytes(self.account.address), 32)
+
+        concatenated = pad_back_bytes(address_padded, 64)
+
+        storage_key = keccak(concatenated).hex()
+
+        l1_batch_number = self.web3.zksync.zks_l1_batch_number()
+        try:
+            result: StorageProof = self.web3.zksync.zks_get_proof(ZkSyncAddresses.NONCE_HOLDER_ADDRESS.value, [storage_key], l1_batch_number)
+            self.assertIsNotNone(result)
+        except:
+            pass
 
     # @skip("Integration test, used for develop purposes only")
     def test_get_l1_balance(self):

@@ -59,6 +59,9 @@ def pad_front_bytes(bs: bytes, needed_length: int):
     padded = b"\0" * (needed_length - len(bs)) + bs
     return padded
 
+def pad_back_bytes(bs: bytes, needed_length: int):
+    padded = bs + b"\0" * (needed_length - len(bs))
+    return padded
 
 def get_custom_bridge_data(token_contract) -> bytes:
     name = token_contract.functions.name().call()
