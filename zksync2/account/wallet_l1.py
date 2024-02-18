@@ -1,17 +1,12 @@
-from pathlib import Path, PosixPath
-from typing import Union, List, Type
+from typing import Union, Type
 
+from eth_account.signers.base import BaseAccount
+from eth_typing import HexStr, Address
+from eth_utils import event_signature_to_log_topic, add_0x_prefix
 from web3 import Web3
 from web3.contract import Contract
-from web3.types import TxReceipt, BlockIdentifier, LatestBlockParam
-from web3._utils.contracts import encode_abi
 from web3.middleware import geth_poa_middleware
-
-from eth_typing import HexStr, Address
-from eth_utils import event_signature_to_log_topic, add_0x_prefix, remove_0x_prefix
-from eth_account import Account
-from eth_account.signers.base import BaseAccount
-from eth_abi import abi
+from web3.types import TxReceipt
 
 from zksync2.account.utils import (
     deposit_to_request_execute,
@@ -19,7 +14,6 @@ from zksync2.account.utils import (
 )
 from zksync2.core.types import (
     BridgeAddresses,
-    Token,
     ZksMessageProof,
     EthBlockParams,
     DepositTransaction,
@@ -40,10 +34,6 @@ from zksync2.core.utils import (
     undo_l1_to_l2_alias,
     DEPOSIT_GAS_PER_PUBDATA_LIMIT,
 )
-from zksync2.manage_contracts.contract_encoder_base import (
-    ContractEncoder,
-    JsonConfiguration,
-)
 from zksync2.manage_contracts.deploy_addresses import ZkSyncAddresses
 from zksync2.manage_contracts.utils import (
     zksync_abi_default,
@@ -52,7 +42,6 @@ from zksync2.manage_contracts.utils import (
     l2_bridge_abi_default,
 )
 from zksync2.module.request_types import EIP712Meta
-from zksync2.transaction.transaction712 import Transaction712
 from zksync2.transaction.transaction_builders import TxFunctionCall
 
 
@@ -88,10 +77,12 @@ class WalletL1:
 
     @property
     def main_contract(self) -> Union[Type[Contract], Contract]:
+        """Returns Contract wrapper of the zkSync smart contract."""
         return self.contract
 
     @property
     def address(self):
+        """Returns the wallet address."""
         return self._l1_account.address
 
     def _get_withdraw_log(self, tx_receipt: TxReceipt, index: int = 0):
@@ -136,6 +127,7 @@ class WalletL1:
         }
 
     def get_l1_bridge_contracts(self) -> L1BridgeContracts:
+        """Returns L1 bridge contract wrappers."""
         return L1BridgeContracts(
             erc20=self._eth_web3.eth.contract(
                 address=Web3.to_checksum_address(
@@ -154,6 +146,11 @@ class WalletL1:
         token: HexStr = ADDRESS_DEFAULT,
         block: EthBlockParams = EthBlockParams.LATEST,
     ) -> int:
+        """
+        Returns the amount of the token the Wallet has on Ethereum.
+        :param token: Token address. ETH by default.
+        :param block: The block the balance should be checked on. committed, i.e. the latest processed one is the default option.
+        """
         if is_eth(token):
             return self._eth_web3.eth.get_balance(self.address, block.value)
         else:
@@ -165,6 +162,12 @@ class WalletL1:
             )
 
     def get_allowance_l1(self, token: HexStr, bridge_address: Address = None):
+        """
+        Returns the amount of approved tokens for a specific L1 bridge.
+
+        :param token: The address of the token on L1.
+        :param bridge_address: The address of the bridge contract to be used. Defaults to the default zkSync bridge (either L1EthBridge or L1Erc20Bridge).
+        """
         token_contract = self._eth_web3.eth.contract(
             address=Web3.to_checksum_address(token), abi=get_erc20_abi()
         )
@@ -190,6 +193,11 @@ class WalletL1:
         )
 
     def l2_token_address(self, address: HexStr) -> HexStr:
+        """
+        Returns the L2 token address equivalent for a L1 token address as they are not equal. ETH's address is set to zero address.
+
+        :param address: The address of the token on L1.
+        """
         if is_eth(address):
             return ADDRESS_DEFAULT
 
@@ -209,6 +217,14 @@ class WalletL1:
         bridge_address: HexStr = None,
         gas_limit: int = None,
     ) -> TxReceipt:
+        """
+        Bridging ERC20 tokens from Ethereum requires approving the tokens to the zkSync Ethereum smart contract.
+
+        :param token: The Ethereum address of the token.
+        :param amount: The amount of the token to be approved.
+        :param bridge_address: The address of the bridge contract to be used. Defaults to the default zkSync bridge (either L1EthBridge or L1Erc20Bridge).
+        :param gas_limit:
+        """
         if is_eth(token):
             raise RuntimeError(
                 "ETH token can't be approved. The address of the token does not exist on L1"
@@ -256,6 +272,13 @@ class WalletL1:
         gas_per_pubdata_byte: int = DEPOSIT_GAS_PER_PUBDATA_LIMIT,
         gas_price: int = None,
     ):
+        """
+        Returns base cost for L2 transaction.
+
+        :param l2_gas_limit: The gasLimit for the L2 contract call.
+        :param gas_per_pubdata_byte: The L2 gas price for each published L1 calldata byte (optional).
+        :param gas_price: The L1 gas price of the L1 transaction that will send the request for an execute call (optional).
+        """
         if gas_price is None:
             gas_price = self._eth_web3.eth.gas_price
         options = TransactionOptions(
@@ -267,6 +290,11 @@ class WalletL1:
         ).call(prepare_transaction_options(options, self.address))
 
     def prepare_deposit_tx(self, transaction: DepositTransaction) -> DepositTransaction:
+        """
+        Returns populated deposit transaction.
+
+        :param transaction: DepositTransaction class. Not optional arguments are token(L1 token address) and amount.
+        """
         if transaction.options is None:
             transaction.options = TransactionOptions()
         if transaction.to is None:
@@ -357,7 +385,11 @@ class WalletL1:
     def get_full_required_deposit_fee(
         self, transaction: DepositTransaction
     ) -> FullDepositFee:
-        # It is assumed that the L2 fee for the transaction does not depend on its value.
+        """
+        Retrieves the full needed ETH fee for the deposit. Returns the L1 fee and the L2 fee FullDepositFee(core/types.py).
+
+        :param transaction: DepositTransaction: DepositTransaction class. Not optional argument is amount.
+        """
         dummy_amount = 1
 
         if transaction.options is None:
@@ -486,6 +518,16 @@ class WalletL1:
         return full_cost
 
     def deposit(self, transaction: DepositTransaction):
+        """
+        Transfers the specified token from the associated account on the L1 network to the target account on the L2 network.
+        The token can be either ETH or any ERC20 token. For ERC20 tokens,
+        enough approved tokens must be associated with the specified L1 bridge (default one or the one defined in transaction.bridgeAddress).
+        In this case, transaction.approveERC20 can be enabled to perform token approval.
+        If there are already enough approved tokens for the L1 bridge, token approval will be skipped.
+        To check the amount of approved tokens for a specific bridge, use the allowanceL1 method.
+
+        :param transaction: DepositTransaction class. Not optional arguments are token(L1 token address) and amount.
+        """
         transaction = self.prepare_deposit_tx(transaction)
 
         if is_eth(transaction.token):
@@ -549,6 +591,12 @@ class WalletL1:
             return txn_hash
 
     def estimate_gas_deposit(self, transaction: DepositTransaction):
+        """
+        Estimates the amount of gas required for a deposit transaction on L1 network.
+        Gas of approving ERC20 token is not included in estimation.
+
+        :param transaction: DepositTransaction class. Not optional arguments are token(L1 token address) and amount.
+        """
         transaction = self.prepare_deposit_tx(transaction)
         if is_eth(transaction.token):
             tx = self.contract.functions.requestL2Transaction(
@@ -587,6 +635,14 @@ class WalletL1:
             return self._eth_web3.eth.estimate_gas(tx)
 
     def claim_failed_deposit(self, deposit_hash: HexStr):
+        """
+        The claimFailedDeposit method withdraws funds from the initiated deposit, which failed when finalizing on L2.
+        If the deposit L2 transaction has failed,
+        it sends an L1 transaction calling claimFailedDeposit method of the L1 bridge,
+        which results in returning L1 tokens back to the depositor, otherwise throws the error.
+
+        :param deposit_hash: The L2 transaction hash of the failed deposit.
+        """
         receipt = self._zksync_web3.zksync.eth_get_transaction_receipt(deposit_hash)
         success_log: L1ToL2Log
         success_log_index: int
@@ -719,6 +775,12 @@ class WalletL1:
         )
 
     def finalize_withdrawal(self, withdraw_hash, index: int = 0):
+        """
+        Proves the inclusion of the L2 -> L1 withdrawal message.
+
+        :param withdraw_hash: Hash of the L2 transaction where the withdrawal was initiated.
+        :param index:nIn case there were multiple withdrawals in one transaction, you may pass an index of the withdrawal you want to finalize (defaults to 0).
+        """
         params = self._finalize_withdrawal_params(withdraw_hash, index)
         merkle_proof = []
         for proof in params["proof"]:
@@ -758,25 +820,41 @@ class WalletL1:
             return tx_hash
         else:
             l2_bridge = self._zksync_web3.zksync.contract(
-                address=params["sender"], abi=l2_bridge_abi_default()
+                address= Web3.to_checksum_address(params["sender"]), abi=l2_bridge_abi_default()
             )
             l1_bridge = self._eth_web3.eth.contract(
                 address=Web3.to_checksum_address(l2_bridge.functions.l1Bridge().call()),
                 abi=l1_bridge_abi_default(),
             )
-            return l1_bridge.functions.finalizeWithdrawal(
+            l1_batch_number = params["l1_batch_number"]
+            l2_message_index = params["l2_message_index"]
+            l2_tx_number_in_block = params["l2_tx_number_in_block"]
+            message = params["message"]
+
+            tx = l1_bridge.functions.finalizeWithdrawal(
                 params["l1_batch_number"],
                 params["l2_message_index"],
+                params["l2_tx_number_in_block"],
                 params["message"],
                 merkle_proof,
             ).build_transaction(prepare_transaction_options(options, self.address))
 
+            signed = self._l1_account.sign_transaction(tx)
+            tx_hash = self._eth_web3.eth.send_raw_transaction(signed.rawTransaction)
+            return tx_hash
+
     def is_withdrawal_finalized(self, withdraw_hash, index: int = 0):
+        """
+        Checks if withdraw is finalized from L2 -> L1
+
+        :param withdraw_hash: Hash of the L2 transaction where the withdrawal was initiated.
+        :param index:nIn case there were multiple withdrawals in one transaction, you may pass an index of the withdrawal you want to finalize (defaults to 0).
+        """
         tx_receipt = self._zksync_web3.zksync.get_transaction_receipt(withdraw_hash)
         log, _ = self._get_withdraw_log(tx_receipt, index)
-        l2_to_l1_log_index = self._get_withdraw_l2_to_l1_log(tx_receipt, index)
-        sender = add_0x_prefix(HexStr(log.topics[1][12:].hex()))
-        hex_hash = withdraw_hash.hex()
+        l2_to_l1_log_index, _ = self._get_withdraw_l2_to_l1_log(tx_receipt, index)
+        sender = add_0x_prefix(HexStr(log["topics"][1][12:].hex()))
+        hex_hash = withdraw_hash
         proof: ZksMessageProof = self._zksync_web3.zksync.zks_get_log_proof(
             hex_hash, l2_to_l1_log_index
         )
@@ -788,10 +866,9 @@ class WalletL1:
         )
         if is_eth(sender):
             return self.contract.functions.isEthWithdrawalFinalized(
-                l2_block_number, proof.id
+                int(l2_block_number, 16), proof.id
             ).call(prepare_transaction_options(options, self.address))
         else:
-            # TODO: check should it be different account for L1/L2
             l1_bridge = self._eth_web3.eth.contract(
                 address=Web3.to_checksum_address(
                     self.bridge_addresses.erc20_l1_default_bridge
@@ -799,10 +876,24 @@ class WalletL1:
                 abi=l1_bridge_abi_default(),
             )
             return l1_bridge.functions.isWithdrawalFinalized(
-                l2_block_number, proof.id
+                int(l2_block_number, 16), proof.id
             ).call()
 
     def request_execute(self, transaction: RequestExecuteCallMsg):
+        """
+        Request execution of L2 transaction from L1.
+
+        :param transaction: RequestExecuteCallMsg class, required parameters are:
+            contract_address(L2 contract to be called) and call_data (the input of the L2 transaction).
+            Example: RequestExecuteCallMsg(
+                contract_address=Web3.to_checksum_address(
+                    zksync.zksync.main_contract_address
+                ),
+                call_data=HexStr("0x"),
+                l2_value=amount,
+                l2_gas_limit=900_000,
+            )
+        """
         transaction = self.get_request_execute_transaction(transaction)
         tx = self.contract.functions.requestL2Transaction(
             transaction.contract_address,
@@ -829,6 +920,12 @@ class WalletL1:
     def get_request_execute_transaction(
         self, transaction: RequestExecuteCallMsg
     ) -> RequestExecuteCallMsg:
+        """
+        Returns populated deposit transaction.
+
+        :param transaction: RequestExecuteCallMsg class, required parameters are:
+            contract_address(L2 contract to be called) and call_data (the input of the L2 transaction).
+        """
         if transaction.options is None:
             transaction.options = TransactionOptions()
         if transaction.factory_deps is None:
@@ -863,7 +960,7 @@ class WalletL1:
             if isReady:
                 if transaction.options.max_priority_fee_per_gas is None:
                     transaction.options.max_priority_fee_per_gas = (
-                        self._zksync_web3.zksync.max_priority_fee
+                        self._eth_web3.eth.max_priority_fee
                     )
                 transaction.options.max_fee_per_gas = int(
                     ((head["baseFeePerGas"] * 3) / 2)
@@ -894,6 +991,12 @@ class WalletL1:
         return transaction
 
     def estimate_gas_request_execute(self, transaction: RequestExecuteCallMsg) -> int:
+        """
+        Estimates the amount of gas required for a request execute transaction.
+
+        :param transaction: RequestExecuteCallMsg class, required parameters are:
+            contract_address(L2 contract to be called) and call_data (the input of the L2 transaction).
+        """
         transaction = self.get_request_execute_transaction(transaction)
         tx = self.contract.functions.requestL2Transaction(
             Web3.to_checksum_address(transaction.contract_address),

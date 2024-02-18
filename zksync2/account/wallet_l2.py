@@ -21,8 +21,10 @@ from zksync2.manage_contracts.utils import (
     l2_bridge_abi_default,
     get_erc20_abi,
 )
+from zksync2.module.request_types import EIP712Meta
 from zksync2.module.response_types import ZksAccountBalances
 from zksync2.signer.eth_signer import PrivateKeyEthSigner
+from zksync2.transaction.transaction712 import Transaction712
 from zksync2.transaction.transaction_builders import TxFunctionCall, TxWithdraw
 
 
@@ -40,16 +42,28 @@ class WalletL2:
     def get_balance(
         self, block_tag=ZkBlockParams.COMMITTED.value, token_address: HexStr = None
     ) -> int:
+        """
+            Returns the balance of the account.
+
+            :param block_tag: The block tag to get the balance at. Defaults to 'committed'.
+            :param token_address: The token address to query balance for. Defaults to the native token.
+        """
         return self._zksync_web3.zksync.zks_get_balance(
             self._l1_account.address, block_tag, token_address
         )
 
     def get_all_balances(self) -> ZksAccountBalances:
+        """
+        Returns the balance of the account.
+        """
         return self._zksync_web3.zksync.zks_get_all_account_balances(
             self._l1_account.address
         )
 
     def get_deployment_nonce(self) -> int:
+        """
+        Returns all token balances of the account.
+        """
         nonce_holder = self._zksync_web3.zksync.contract(
             address=ZkSyncAddresses.NONCE_HOLDER_ADDRESS.value,
             abi=nonce_holder_abi_default(),
@@ -60,6 +74,9 @@ class WalletL2:
         return deployment_nonce
 
     def get_l2_bridge_contracts(self) -> L2BridgeContracts:
+        """
+        Returns L2 bridge contracts.
+        """
         addresses = self._zksync_web3.zksync.zks_get_bridge_contracts()
         return L2BridgeContracts(
             erc20=self._zksync_web3.eth.contract(
@@ -73,6 +90,14 @@ class WalletL2:
         )
 
     def transfer(self, tx: TransferTransaction) -> HexStr:
+        """
+        Transfer ETH or any ERC20 token within the same interface.
+
+        :param tx: TransferTransaction class. Required parameters are to and amount.
+
+        Returns:
+        - Transaction hash.
+        """
         tx_fun_call = self._zksync_web3.zksync.get_transfer_transaction(
             tx, self._l1_account.address
         )
@@ -80,34 +105,24 @@ class WalletL2:
             tx_712 = tx_fun_call.tx712(
                 self._zksync_web3.zksync.zks_estimate_gas_transfer(tx_fun_call.tx)
             )
+        signer = PrivateKeyEthSigner(self._l1_account, tx.options.chain_id)
+        signed_message = signer.sign_typed_data(tx_712.to_eip712_struct())
 
-        if tx.token_address is None or is_eth(tx.token_address):
-            signer = PrivateKeyEthSigner(self._l1_account, tx.options.chain_id)
-            signed_message = signer.sign_typed_data(tx_712.to_eip712_struct())
+        msg = tx_712.encode(signed_message)
+        tx_hash = self._zksync_web3.zksync.send_raw_transaction(msg)
 
-            msg = tx_712.encode(signed_message)
-            tx_hash = self._zksync_web3.zksync.send_raw_transaction(msg)
-
-            return tx_hash
-        else:
-            token_contract = self._zksync_web3.zksync.contract(
-                tx.token_address, abi=get_erc20_abi()
-            )
-            options = options_from_712(tx_712)
-            transaction = token_contract.functions.transfer(
-                tx.to, tx.amount
-            ).build_transaction(
-                prepare_transaction_options(options, self._l1_account.address)
-            )
-
-            signed = self._l1_account.sign_transaction(transaction)
-            tx_hash = self._zksync_web3.zksync.send_raw_transaction(
-                signed.rawTransaction
-            )
-
-            return tx_hash
+        return tx_hash
 
     def withdraw(self, tx: WithdrawTransaction):
+        """
+        Initiates the withdrawal process which withdraws ETH or any ERC20 token
+        from the associated account on L2 network to the target account on L1 network.
+
+        :param tx: WithdrawTransaction class. Required parameters are token(HexStr) and amount(int).
+
+        Returns:
+        - Withdrawal hash.
+        """
         if tx.options is None:
             tx.options = TransactionOptions()
         if tx.options.chain_id is None:
@@ -120,51 +135,40 @@ class WalletL2:
         if tx.options.gas_price is None:
             tx.options.gas_price = self._zksync_web3.zksync.gas_price
 
-        if is_eth(tx.token):
-            transaction = TxWithdraw(
-                web3=self._zksync_web3,
-                account=self._l1_account,
-                chain_id=tx.options.chain_id,
-                nonce=tx.options.nonce,
-                to=tx.to,
-                amount=tx.amount,
-                gas_limit=0 if tx.options.gas_limit is None else tx.options.gas_limit,
-                gas_price=tx.options.gas_price,
-                token=tx.token,
-                bridge_address=tx.bridge_address,
-            )
+        if not is_eth(tx.token):
+            if tx.bridge_address is None:
+                l2_weth_token = ADDRESS_DEFAULT
+                try:
+                    l2_weth_token = (
+                        self.get_l2_bridge_contracts()
+                        .weth.functions.l1TokenAddress(tx.token)
+                        .call()
+                    )
+                except:
+                    pass
+                if l2_weth_token == ADDRESS_DEFAULT:
+                    tx.bridge_address = Web3.to_checksum_address(self.get_l2_bridge_contracts().erc20.address)
+                else:
+                    tx.bridge_address = Web3.to_checksum_address(self.get_l2_bridge_contracts().weth.address)
 
-            estimated_gas = self._zksync_web3.zksync.eth_estimate_gas(transaction.tx)
-            tx = transaction.estimated_gas(estimated_gas)
-            signed = self._l1_account.sign_transaction(tx)
-
-            return self._zksync_web3.zksync.send_raw_transaction(signed.rawTransaction)
-
-        if tx.bridge_address is None:
-            l2_weth_token = ADDRESS_DEFAULT
-            try:
-                l2_weth_token = (
-                    self.get_l2_bridge_contracts()
-                    .weth.functions.l1TokenAddress(tx.token)
-                    .call()
-                )
-            except:
-                pass
-            if l2_weth_token == ADDRESS_DEFAULT:
-                tx.bridge_address = self.get_l2_bridge_contracts().erc20.address
-            else:
-                tx.bridge_address = self.get_l2_bridge_contracts().weth.address
-        bridge = self._zksync_web3.zksync.contract(
-            address=Web3.to_checksum_address(
-                Web3.to_checksum_address(Web3.to_checksum_address(tx.bridge_address))
-            ),
-            abi=l2_bridge_abi_default(),
+        transaction = TxWithdraw(
+            web3=self._zksync_web3,
+            account=self._l1_account,
+            chain_id=tx.options.chain_id,
+            nonce=tx.options.nonce,
+            to=tx.to,
+            amount=tx.amount,
+            gas_limit=0 if tx.options.gas_limit is None else tx.options.gas_limit,
+            gas_price=tx.options.gas_price,
+            token=tx.token,
+            bridge_address=tx.bridge_address,
+            paymaster_params=tx.paymaster_params
         )
-        transaction = bridge.functions.withdraw(
-            self._l1_account.address, tx.token, tx.amount
-        ).build_transaction(
-            prepare_transaction_options(tx.options, self._l1_account.address)
-        )
+        signer = PrivateKeyEthSigner(self._l1_account, tx.options.chain_id)
+        estimated_gas = self._zksync_web3.zksync.eth_estimate_gas(transaction.tx)
+        tx_712 = transaction.tx712(estimated_gas)
+        signed_message = signer.sign_typed_data(tx_712.to_eip712_struct())
 
-        signed_tx = self._l1_account.sign_transaction(transaction)
-        return self._zksync_web3.zksync.send_raw_transaction(signed_tx.rawTransaction)
+        msg = tx_712.encode(signed_message)
+
+        return self._zksync_web3.zksync.send_raw_transaction(msg)
