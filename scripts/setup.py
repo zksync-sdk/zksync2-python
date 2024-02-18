@@ -1,4 +1,5 @@
 # Deposits token to l2 so that tests can run
+# Creates paymaster and crown token
 import json
 import os
 import sys
@@ -8,18 +9,10 @@ from eth_account import Account
 from eth_account.signers.local import LocalAccount
 from web3 import Web3
 
-from zksync2.core.types import EthBlockParams, TransferTransaction
-from zksync2.core.utils import to_bytes
-from zksync2.manage_contracts.contract_encoder_base import (
-    JsonConfiguration,
-    ContractEncoder,
-)
-from zksync2.manage_contracts.deploy_addresses import ZkSyncAddresses
-from zksync2.signer.eth_signer import PrivateKeyEthSigner
-from zksync2.transaction.transaction_builders import TxCreate2Contract
-
 
 def main():
+    from zksync2.signer.eth_signer import PrivateKeyEthSigner
+
     current_directory = os.path.dirname(os.path.abspath(__file__))
     parent_directory = os.path.join(current_directory, "..")
     sys.path.append(parent_directory)
@@ -72,6 +65,13 @@ def deposit_token(wallet, eth_web3: Web3, zksync: Web3, zksync_contract):
 
 
 def setup_paymaster(provider_l1, provider_l2, wallet, signer, salt):
+    from zksync2.core.types import EthBlockParams, TransferTransaction
+    from zksync2.manage_contracts.contract_encoder_base import (
+        JsonConfiguration,
+        ContractEncoder,
+    )
+    from zksync2.manage_contracts.deploy_addresses import ZkSyncAddresses
+
     directory = Path(__file__).parent.parent
     path = directory / "tests/contracts/Token.json"
 
@@ -119,6 +119,10 @@ def setup_paymaster(provider_l1, provider_l2, wallet, signer, salt):
 
 
 def deploy_crown_token(provider_l2, wallet, signer, salt, token_contract):
+    from zksync2.core.types import EthBlockParams
+    from zksync2.core.utils import to_bytes
+    from zksync2.transaction.transaction_builders import TxCreate2Contract
+
     constructor_arguments = {"name_": "Ducat", "symbol_": "Ducat", "decimals_": 18}
     chain_id = provider_l2.zksync.chain_id
     nonce = provider_l2.zksync.get_transaction_count(
@@ -151,6 +155,14 @@ def deploy_crown_token(provider_l2, wallet, signer, salt, token_contract):
 
 
 def deploy_paymaster(provider_l2: Web3, wallet, token_address, signer, salt):
+    from zksync2.core.types import EthBlockParams
+    from zksync2.core.utils import to_bytes
+    from zksync2.manage_contracts.contract_encoder_base import (
+        JsonConfiguration,
+        ContractEncoder,
+    )
+    from zksync2.transaction.transaction_builders import TxCreate2Contract
+
     directory = Path(__file__).parent.parent
     path = directory / "tests/contracts/Paymaster.json"
     token_address = provider_l2.to_checksum_address(token_address)
