@@ -68,7 +68,7 @@ from web3.method import Method, default_root_munger
 from typing import Any, Callable, List, Union
 
 from zksync2.transaction.transaction712 import Transaction712
-from zksync2.transaction.transaction_builders import TxWithdraw, TxFunctionCall
+from zksync2.transaction.transaction_builders import TxWithdraw, TxFunctionCall, TxTransfer
 
 zks_l1_batch_number_rpc = RPCEndpoint("zks_L1BatchNumber")
 zks_get_l1_batch_block_range_rpc = RPCEndpoint("zks_getL1BatchBlockRange")
@@ -690,8 +690,8 @@ class ZkSync(Eth, ABC):
         return transaction
 
     def get_transfer_transaction(
-        self, tx: TransferTransaction, from_: HexStr
-    ) -> TxFunctionCall:
+            self, tx: TransferTransaction, from_: HexStr
+    ) -> TxTransfer:
         if tx.options is None:
             tx.options = TransactionOptions()
         if tx.options.chain_id is None:
@@ -714,7 +714,15 @@ class ZkSync(Eth, ABC):
                 Web3.to_checksum_address(tx.token_address), abi=get_erc20_abi()
             )
             call_data = contract.encodeABI("transfer", transfer_params)
-        transaction = TxFunctionCall(
+        paymaster_params = None
+        if tx.paymaster_params is not None:
+            paymaster_params = PaymasterParams(**{
+                "paymaster": tx.paymaster_params.paymaster,
+                "paymaster_input": tx.paymaster_params.paymaster_input
+            })
+        transaction = TxTransfer(
+            web3=self,
+            token=tx.token_address,
             chain_id=tx.options.chain_id,
             nonce=tx.options.nonce,
             from_=from_,
@@ -725,6 +733,7 @@ class ZkSync(Eth, ABC):
             gas_price=tx.options.gas_price,
             max_priority_fee_per_gas=tx.options.max_priority_fee_per_gas,
             gas_per_pub_data=tx.gas_per_pub_data,
+            paymaster_params=paymaster_params
         )
 
         return transaction
