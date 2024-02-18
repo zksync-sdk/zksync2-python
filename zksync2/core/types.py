@@ -215,6 +215,7 @@ class WithdrawTransaction:
     to: HexStr = None
     bridge_address: HexStr = None
     options: TransactionOptions = None
+    paymaster_params: PaymasterParams = None
 
 
 @dataclass
@@ -239,8 +240,13 @@ class TransferTransaction:
     amount: int = 0
     token_address: HexStr = None
     gas_per_pub_data: int = 50000
+    paymaster_params: PaymasterParams = None
     options: TransactionOptions = None
 
+@dataclass
+class PaymasterParams:
+    paymaster: HexStr
+    paymaster_input: bytes
 
 @dataclass
 class RequestExecuteCallMsg:
@@ -289,3 +295,15 @@ class FullDepositFee:
     max_fee_per_gas: int = None
     max_priority_fee_per_gas: int = None
     gas_price: int = None
+
+@dataclass
+class StorageProofData:
+    key: HexStr
+    value: HexStr
+    index: int
+    proof: List[HexStr]
+
+@dataclass
+class StorageProof:
+    address: HexStr
+    storageProof: StorageProofData
