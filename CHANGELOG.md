@@ -1,3 +1,11 @@
+# [1.1.0](https://github.com/zksync-sdk/zksync2-python/compare/v1.0.0...v1.1.0) (2024-02-18)
+
+
+### Features
+
+* paymster withdraw and transfer support ([66f7761](https://github.com/zksync-sdk/zksync2-python/commit/66f7761bf4a1677ed50a6bf995e0fde6515b76b7))
+* **provider:** add zks_logProof ([6d48dff](https://github.com/zksync-sdk/zksync2-python/commit/6d48dff8e7e81709b637d2117ba6a2c843e9d740))
+
 # [1.0.0](https://github.com/zksync-sdk/zksync2-python/compare/v0.6.0...v1.0.0) (2024-01-19)
 
 
