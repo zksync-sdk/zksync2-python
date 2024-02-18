@@ -243,10 +243,12 @@ class TransferTransaction:
     paymaster_params: PaymasterParams = None
     options: TransactionOptions = None
 
+
 @dataclass
 class PaymasterParams:
     paymaster: HexStr
     paymaster_input: bytes
+
 
 @dataclass
 class RequestExecuteCallMsg:
@@ -296,12 +298,14 @@ class FullDepositFee:
     max_priority_fee_per_gas: int = None
     gas_price: int = None
 
+
 @dataclass
 class StorageProofData:
     key: HexStr
     value: HexStr
     index: int
     proof: List[HexStr]
+
 
 @dataclass
 class StorageProof:

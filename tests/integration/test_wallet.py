@@ -21,7 +21,9 @@ from zksync2.core.types import (
     TransactionOptions,
     TransferTransaction,
     WithdrawTransaction,
-    EthBlockParams, PaymasterParams, ZkBlockParams,
+    EthBlockParams,
+    PaymasterParams,
+    ZkBlockParams,
 )
 from zksync2.manage_contracts.contract_encoder_base import (
     ContractEncoder,
@@ -35,7 +37,11 @@ from zksync2.manage_contracts.precompute_contract_deployer import (
 from zksync2.manage_contracts.utils import zksync_abi_default, get_erc20_abi
 from zksync2.module.module_builder import ZkSyncBuilder
 from zksync2.signer.eth_signer import PrivateKeyEthSigner
-from zksync2.transaction.transaction_builders import TxCreate2Contract, TxCreateContract, TxFunctionCall
+from zksync2.transaction.transaction_builders import (
+    TxCreate2Contract,
+    TxCreateContract,
+    TxFunctionCall,
+)
 
 
 class TestWallet(TestCase):
@@ -255,7 +261,7 @@ class TestWallet(TestCase):
             TransferTransaction(
                 to=Web3.to_checksum_address(self.address2),
                 token_address=ADDRESS_DEFAULT,
-                amount=amount
+                amount=amount,
             )
         )
 
@@ -274,10 +280,14 @@ class TestWallet(TestCase):
         token_address = self.zksync.to_checksum_address(self.token_address)
 
         paymaster_balance_before = self.zksync.zksync.zks_get_balance(paymaster_address)
-        paymaster_token_balance_before = self.zksync.zksync.zks_get_balance(paymaster_address, token_address=token_address)
+        paymaster_token_balance_before = self.zksync.zksync.zks_get_balance(
+            paymaster_address, token_address=token_address
+        )
 
         sender_balance_before = self.wallet.get_balance()
-        sender_approval_token_balance_before = self.wallet.get_balance(token_address=token_address)
+        sender_approval_token_balance_before = self.wallet.get_balance(
+            token_address=token_address
+        )
         reciever_balance_before = self.zksync.zksync.zks_get_balance(self.address2)
 
         paymaster_params = PaymasterParams(
@@ -296,7 +306,7 @@ class TestWallet(TestCase):
                 to=Web3.to_checksum_address(self.address2),
                 token_address=ADDRESS_DEFAULT,
                 amount=amount,
-                paymaster_params=paymaster_params
+                paymaster_params=paymaster_params,
             )
         )
 
@@ -305,15 +315,24 @@ class TestWallet(TestCase):
         )
 
         paymaster_balance_after = self.zksync.zksync.zks_get_balance(paymaster_address)
-        paymaster_token_balance_after = self.zksync.zksync.zks_get_balance(paymaster_address, token_address=token_address)
+        paymaster_token_balance_after = self.zksync.zksync.zks_get_balance(
+            paymaster_address, token_address=token_address
+        )
         sender_balance_after = self.wallet.get_balance()
-        sender_approval_token_balance_after = self.wallet.get_balance(token_address=token_address)
+        sender_approval_token_balance_after = self.wallet.get_balance(
+            token_address=token_address
+        )
         reciever_balance_after = self.zksync.zksync.zks_get_balance(self.address2)
 
         self.assertGreaterEqual(paymaster_balance_before - paymaster_balance_after, 0)
-        self.assertGreaterEqual(paymaster_token_balance_after - paymaster_token_balance_before, 0)
+        self.assertGreaterEqual(
+            paymaster_token_balance_after - paymaster_token_balance_before, 0
+        )
         self.assertGreaterEqual(sender_balance_before - sender_balance_after, 0)
-        self.assertGreater(sender_approval_token_balance_before - sender_approval_token_balance_after, 0)
+        self.assertGreater(
+            sender_approval_token_balance_before - sender_approval_token_balance_after,
+            0,
+        )
         self.assertGreaterEqual(reciever_balance_after - reciever_balance_before, 0)
 
     @skip("Used only for development purpose to refill paymaster")
@@ -325,9 +344,13 @@ class TestWallet(TestCase):
             self.zksync, path.resolve(), JsonConfiguration.STANDARD
         )
         abi = token_contract.abi
-        token_contract = self.zksync.zksync.contract(Web3.to_checksum_address(self.token_address), abi=abi)
+        token_contract = self.zksync.zksync.contract(
+            Web3.to_checksum_address(self.token_address), abi=abi
+        )
 
-        balance_before = self.wallet.get_balance(Web3.to_checksum_address(self.token_address))
+        balance_before = self.wallet.get_balance(
+            Web3.to_checksum_address(self.token_address)
+        )
         mint_tx = token_contract.functions.mint(
             self.wallet.address, 15
         ).build_transaction(
@@ -346,10 +369,11 @@ class TestWallet(TestCase):
         self.zksync.zksync.wait_for_transaction_receipt(
             tx_hash, timeout=240, poll_latency=0.5
         )
-        balance_after = self.wallet.get_balance(Web3.to_checksum_address(self.token_address))
+        balance_after = self.wallet.get_balance(
+            Web3.to_checksum_address(self.token_address)
+        )
 
         self.assertEqual(15, balance_after - balance_before)
-
 
     def test_transfer_token(self):
         amount = 5
@@ -357,7 +381,9 @@ class TestWallet(TestCase):
 
         sender_before = self.wallet.get_balance(token_address=l2_address)
         balance_before = self.zksync.zksync.zks_get_balance(
-            self.address2, token_address=l2_address, block_tag=ZkBlockParams.LATEST.value
+            self.address2,
+            token_address=l2_address,
+            block_tag=ZkBlockParams.LATEST.value,
         )
         tx_hash = self.wallet.transfer(
             TransferTransaction(
@@ -374,11 +400,13 @@ class TestWallet(TestCase):
         sender_after = self.wallet.get_balance(token_address=l2_address)
 
         balance_after = self.zksync.zksync.zks_get_balance(
-            self.address2, token_address=l2_address, block_tag=ZkBlockParams.LATEST.value
+            self.address2,
+            token_address=l2_address,
+            block_tag=ZkBlockParams.LATEST.value,
         )
 
         self.assertEqual(amount, sender_before - sender_after)
-        self.assertEqual(amount ,balance_after - balance_before)
+        self.assertEqual(amount, balance_after - balance_before)
 
     def test_transfer_token_paymaster(self):
         amount = 5
@@ -388,15 +416,23 @@ class TestWallet(TestCase):
         token_address = self.zksync.to_checksum_address(self.token_address)
 
         paymaster_balance_before = self.zksync.zksync.zks_get_balance(paymaster_address)
-        paymaster_token_balance_before = self.zksync.zksync.zks_get_balance(paymaster_address,
-                                                                            token_address=token_address,
-                                                                            block_tag=ZkBlockParams.LATEST.value)
+        paymaster_token_balance_before = self.zksync.zksync.zks_get_balance(
+            paymaster_address,
+            token_address=token_address,
+            block_tag=ZkBlockParams.LATEST.value,
+        )
 
-        sender_balance_before = self.wallet.get_balance(token_address=Web3.to_checksum_address(l2_address))
-        sender_approval_token_balance_before = self.wallet.get_balance(token_address=token_address)
-        reciever_balance_before = self.zksync.zksync.zks_get_balance(self.address2,
-                                                                     token_address=Web3.to_checksum_address(l2_address),
-                                                                     block_tag=ZkBlockParams.LATEST.value)
+        sender_balance_before = self.wallet.get_balance(
+            token_address=Web3.to_checksum_address(l2_address)
+        )
+        sender_approval_token_balance_before = self.wallet.get_balance(
+            token_address=token_address
+        )
+        reciever_balance_before = self.zksync.zksync.zks_get_balance(
+            self.address2,
+            token_address=Web3.to_checksum_address(l2_address),
+            block_tag=ZkBlockParams.LATEST.value,
+        )
 
         paymaster_params = PaymasterParams(
             **{
@@ -414,28 +450,39 @@ class TestWallet(TestCase):
                 to=Web3.to_checksum_address(self.address2),
                 token_address=Web3.to_checksum_address(l2_address),
                 amount=amount,
-                paymaster_params=paymaster_params
+                paymaster_params=paymaster_params,
             )
         )
 
-        self.zksync.zksync.wait_finalized(
-            tx_hash, timeout=240, poll_latency=0.5
-        )
+        self.zksync.zksync.wait_finalized(tx_hash, timeout=240, poll_latency=0.5)
         paymaster_balance_after = self.zksync.zksync.zks_get_balance(paymaster_address)
-        paymaster_token_balance_after = self.zksync.zksync.zks_get_balance(paymaster_address,
-                                                                           token_address=token_address,
-                                                                           block_tag=ZkBlockParams.LATEST.value)
+        paymaster_token_balance_after = self.zksync.zksync.zks_get_balance(
+            paymaster_address,
+            token_address=token_address,
+            block_tag=ZkBlockParams.LATEST.value,
+        )
 
-        sender_balance_after = self.wallet.get_balance(token_address=Web3.to_checksum_address(l2_address))
-        sender_approval_token_balance_after = self.wallet.get_balance(token_address=token_address)
-        reciever_balance_after = self.zksync.zksync.zks_get_balance(self.address2,
-                                                                    token_address=Web3.to_checksum_address(l2_address),
-                                                                    block_tag=ZkBlockParams.LATEST.value)
+        sender_balance_after = self.wallet.get_balance(
+            token_address=Web3.to_checksum_address(l2_address)
+        )
+        sender_approval_token_balance_after = self.wallet.get_balance(
+            token_address=token_address
+        )
+        reciever_balance_after = self.zksync.zksync.zks_get_balance(
+            self.address2,
+            token_address=Web3.to_checksum_address(l2_address),
+            block_tag=ZkBlockParams.LATEST.value,
+        )
 
         self.assertGreaterEqual(paymaster_balance_before - paymaster_balance_after, 0)
-        self.assertEqual(paymaster_token_balance_after - paymaster_token_balance_before, 1)
+        self.assertEqual(
+            paymaster_token_balance_after - paymaster_token_balance_before, 1
+        )
         self.assertEqual(sender_balance_before - sender_balance_after, 5)
-        self.assertEqual(sender_approval_token_balance_before - sender_approval_token_balance_after, 1)
+        self.assertEqual(
+            sender_approval_token_balance_before - sender_approval_token_balance_after,
+            1,
+        )
         self.assertEqual(reciever_balance_after - reciever_balance_before, 5)
 
     def test_withdraw_eth(self):
@@ -467,11 +514,14 @@ class TestWallet(TestCase):
         token_address = self.zksync.to_checksum_address(self.token_address)
 
         paymaster_balance_before = self.zksync.zksync.zks_get_balance(paymaster_address)
-        paymaster_token_balance_before = self.zksync.zksync.zks_get_balance(paymaster_address,
-                                                                             token_address=token_address)
+        paymaster_token_balance_before = self.zksync.zksync.zks_get_balance(
+            paymaster_address, token_address=token_address
+        )
 
         sender_balance_before = self.wallet.get_balance()
-        sender_approval_token_balance_before = self.wallet.get_balance(token_address=token_address)
+        sender_approval_token_balance_before = self.wallet.get_balance(
+            token_address=token_address
+        )
 
         paymaster_params = PaymasterParams(
             **{
@@ -488,29 +538,43 @@ class TestWallet(TestCase):
             WithdrawTransaction(
                 token=Token.create_eth().l1_address,
                 amount=Web3.to_wei(amount, "ether"),
-                paymaster_params=paymaster_params
+                paymaster_params=paymaster_params,
             )
         )
 
         withdraw_receipt = self.zksync.zksync.wait_finalized(
             withdraw_tx_hash, timeout=240, poll_latency=0.5
         )
-        self.assertFalse(self.wallet.is_withdrawal_finalized(withdraw_receipt["transactionHash"]))
+        self.assertFalse(
+            self.wallet.is_withdrawal_finalized(withdraw_receipt["transactionHash"])
+        )
 
-        finalized_hash = self.wallet.finalize_withdrawal(withdraw_receipt["transactionHash"])
+        finalized_hash = self.wallet.finalize_withdrawal(
+            withdraw_receipt["transactionHash"]
+        )
         self.eth_web3.eth.wait_for_transaction_receipt(
             finalized_hash, timeout=240, poll_latency=0.5
         )
         paymaster_balance_after = self.zksync.zksync.zks_get_balance(paymaster_address)
-        paymaster_token_balance_after = self.zksync.zksync.zks_get_balance(paymaster_address,
-                                                                           token_address=token_address)
+        paymaster_token_balance_after = self.zksync.zksync.zks_get_balance(
+            paymaster_address, token_address=token_address
+        )
         sender_balance_after = self.wallet.get_balance()
-        sender_approval_token_balance_after = self.wallet.get_balance(token_address=token_address)
+        sender_approval_token_balance_after = self.wallet.get_balance(
+            token_address=token_address
+        )
 
         self.assertGreater(paymaster_balance_before - paymaster_balance_after, 0)
-        self.assertEqual(paymaster_token_balance_after - paymaster_token_balance_before, 1)
-        self.assertEqual(sender_balance_before - sender_balance_after, Web3.to_wei(amount, "ether"))
-        self.assertEqual(sender_approval_token_balance_after, sender_approval_token_balance_before - 1)
+        self.assertEqual(
+            paymaster_token_balance_after - paymaster_token_balance_before, 1
+        )
+        self.assertEqual(
+            sender_balance_before - sender_balance_after, Web3.to_wei(amount, "ether")
+        )
+        self.assertEqual(
+            sender_approval_token_balance_after,
+            sender_approval_token_balance_before - 1,
+        )
 
     def test_withdraw_token_paymaster(self):
         l1_address, l2_address = self.load_token()
@@ -518,11 +582,17 @@ class TestWallet(TestCase):
         token_address = self.zksync.to_checksum_address(self.token_address)
 
         paymaster_balance_before = self.zksync.zksync.zks_get_balance(paymaster_address)
-        paymaster_token_balance_before = self.zksync.zksync.zks_get_balance(paymaster_address,
-                                                                            token_address=token_address,
-                                                                            block_tag=ZkBlockParams.LATEST.value)
-        l2_balance_before = self.wallet.get_balance(token_address=Web3.to_checksum_address(l2_address))
-        l2_approval_token_balance_before = self.wallet.get_balance(token_address=token_address)
+        paymaster_token_balance_before = self.zksync.zksync.zks_get_balance(
+            paymaster_address,
+            token_address=token_address,
+            block_tag=ZkBlockParams.LATEST.value,
+        )
+        l2_balance_before = self.wallet.get_balance(
+            token_address=Web3.to_checksum_address(l2_address)
+        )
+        l2_approval_token_balance_before = self.wallet.get_balance(
+            token_address=token_address
+        )
 
         paymaster_params = PaymasterParams(
             **{
@@ -536,7 +606,11 @@ class TestWallet(TestCase):
         )
 
         withdraw_tx_hash = self.wallet.withdraw(
-            WithdrawTransaction(Web3.to_checksum_address(l2_address), 5, paymaster_params=paymaster_params)
+            WithdrawTransaction(
+                Web3.to_checksum_address(l2_address),
+                5,
+                paymaster_params=paymaster_params,
+            )
         )
 
         receipt = self.zksync.zksync.wait_finalized(
@@ -546,18 +620,26 @@ class TestWallet(TestCase):
         finalized_hash = self.wallet.finalize_withdrawal(withdraw_tx_hash)
         self.eth_web3.eth.wait_for_transaction_receipt(finalized_hash)
         paymaster_balance_after = self.zksync.zksync.zks_get_balance(paymaster_address)
-        paymaster_token_balance_after = self.zksync.zksync.zks_get_balance(paymaster_address,
-                                                                            token_address=token_address,
-                                                                            block_tag=ZkBlockParams.LATEST.value)
+        paymaster_token_balance_after = self.zksync.zksync.zks_get_balance(
+            paymaster_address,
+            token_address=token_address,
+            block_tag=ZkBlockParams.LATEST.value,
+        )
         l2_balance_after = self.wallet.get_balance(
             token_address=Web3.to_checksum_address(l2_address)
         )
-        l2_approval_token_balance_after = self.wallet.get_balance(token_address=token_address)
+        l2_approval_token_balance_after = self.wallet.get_balance(
+            token_address=token_address
+        )
 
         self.assertGreaterEqual(paymaster_balance_before - paymaster_balance_after, 0)
-        self.assertEqual(paymaster_token_balance_after - paymaster_token_balance_before, 1)
+        self.assertEqual(
+            paymaster_token_balance_after - paymaster_token_balance_before, 1
+        )
         self.assertIsNotNone(receipt)
-        self.assertEqual(l2_approval_token_balance_before - l2_approval_token_balance_after, 1)
+        self.assertEqual(
+            l2_approval_token_balance_before - l2_approval_token_balance_after, 1
+        )
         self.assertEqual(l2_balance_before - l2_balance_after, 5)
 
     def test_withdraw_token(self):

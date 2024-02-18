@@ -43,10 +43,10 @@ class WalletL2:
         self, block_tag=ZkBlockParams.COMMITTED.value, token_address: HexStr = None
     ) -> int:
         """
-            Returns the balance of the account.
+        Returns the balance of the account.
 
-            :param block_tag: The block tag to get the balance at. Defaults to 'committed'.
-            :param token_address: The token address to query balance for. Defaults to the native token.
+        :param block_tag: The block tag to get the balance at. Defaults to 'committed'.
+        :param token_address: The token address to query balance for. Defaults to the native token.
         """
         return self._zksync_web3.zksync.zks_get_balance(
             self._l1_account.address, block_tag, token_address
@@ -147,9 +147,13 @@ class WalletL2:
                 except:
                     pass
                 if l2_weth_token == ADDRESS_DEFAULT:
-                    tx.bridge_address = Web3.to_checksum_address(self.get_l2_bridge_contracts().erc20.address)
+                    tx.bridge_address = Web3.to_checksum_address(
+                        self.get_l2_bridge_contracts().erc20.address
+                    )
                 else:
-                    tx.bridge_address = Web3.to_checksum_address(self.get_l2_bridge_contracts().weth.address)
+                    tx.bridge_address = Web3.to_checksum_address(
+                        self.get_l2_bridge_contracts().weth.address
+                    )
 
         transaction = TxWithdraw(
             web3=self._zksync_web3,
@@ -162,7 +166,7 @@ class WalletL2:
             gas_price=tx.options.gas_price,
             token=tx.token,
             bridge_address=tx.bridge_address,
-            paymaster_params=tx.paymaster_params
+            paymaster_params=tx.paymaster_params,
         )
         signer = PrivateKeyEthSigner(self._l1_account, tx.options.chain_id)
         estimated_gas = self._zksync_web3.zksync.eth_estimate_gas(transaction.tx)
