@@ -820,7 +820,8 @@ class WalletL1:
             return tx_hash
         else:
             l2_bridge = self._zksync_web3.zksync.contract(
-                address= Web3.to_checksum_address(params["sender"]), abi=l2_bridge_abi_default()
+                address=Web3.to_checksum_address(params["sender"]),
+                abi=l2_bridge_abi_default(),
             )
             l1_bridge = self._eth_web3.eth.contract(
                 address=Web3.to_checksum_address(l2_bridge.functions.l1Bridge().call()),

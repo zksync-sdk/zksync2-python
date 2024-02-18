@@ -12,7 +12,11 @@ from zksync2.manage_contracts.deploy_addresses import ZkSyncAddresses
 from zksync2.manage_contracts.precompute_contract_deployer import (
     PrecomputeContractDeployer,
 )
-from zksync2.manage_contracts.utils import l2_bridge_abi_default, eth_token_abi_default, get_erc20_abi
+from zksync2.manage_contracts.utils import (
+    l2_bridge_abi_default,
+    eth_token_abi_default,
+    get_erc20_abi,
+)
 from zksync2.module.request_types import (
     EIP712Meta,
     TransactionType,
@@ -301,7 +305,7 @@ class TxWithdraw(TxBase, ABC):
         bridge_address: HexStr = None,
         chain_id: int = None,
         nonce: int = None,
-        paymaster_params = None
+        paymaster_params=None,
     ):
         # INFO: send to self
         if to is None:
@@ -350,7 +354,7 @@ class TxWithdraw(TxBase, ABC):
                     "from": account.address,
                 }
             )
-        tx['eip712Meta'] = eip712_meta
+        tx["eip712Meta"] = eip712_meta
         super(TxWithdraw, self).__init__(trans=tx)
 
     def tx712(self, estimated_gas: int) -> Transaction712:
@@ -375,12 +379,13 @@ class TxWithdraw(TxBase, ABC):
         self.tx_["gas"] = estimated_gas
         return self.tx_
 
+
 class TxTransfer(TxBase, ABC):
     def __init__(
         self,
         from_: HexStr,
         to: HexStr,
-        web3 = None,
+        web3=None,
         token: HexStr = None,
         value: int = 0,
         chain_id: int = None,
@@ -429,7 +434,7 @@ class TxTransfer(TxBase, ABC):
                     "from": from_,
                 }
             )
-            tx['eip712Meta'] = eip712_meta
+            tx["eip712Meta"] = eip712_meta
             super(TxTransfer, self).__init__(trans=tx)
 
     def tx712(self, estimated_gas: int) -> Transaction712:

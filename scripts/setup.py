@@ -10,7 +10,10 @@ from web3 import Web3
 
 from zksync2.core.types import EthBlockParams, TransferTransaction
 from zksync2.core.utils import to_bytes
-from zksync2.manage_contracts.contract_encoder_base import JsonConfiguration, ContractEncoder
+from zksync2.manage_contracts.contract_encoder_base import (
+    JsonConfiguration,
+    ContractEncoder,
+)
 from zksync2.manage_contracts.deploy_addresses import ZkSyncAddresses
 from zksync2.signer.eth_signer import PrivateKeyEthSigner
 from zksync2.transaction.transaction_builders import TxCreate2Contract
@@ -77,12 +80,12 @@ def setup_paymaster(provider_l1, provider_l2, wallet, signer, salt):
     )
     abi = token_contract.abi
 
-    token_address = deploy_crown_token(provider_l2, wallet, signer, salt, token_contract)
+    token_address = deploy_crown_token(
+        provider_l2, wallet, signer, salt, token_contract
+    )
     token_contract = provider_l2.zksync.contract(token_address, abi=abi)
 
-    mint_tx = token_contract.functions.mint(
-        wallet.address, 15
-    ).build_transaction(
+    mint_tx = token_contract.functions.mint(wallet.address, 15).build_transaction(
         {
             "nonce": provider_l2.zksync.get_transaction_count(
                 wallet.address, EthBlockParams.LATEST.value
@@ -99,12 +102,21 @@ def setup_paymaster(provider_l1, provider_l2, wallet, signer, salt):
         tx_hash, timeout=240, poll_latency=0.5
     )
 
-    paymaster_address = deploy_paymaster(provider_l2, wallet, token_address, signer, salt)
-    faucet_hash = wallet.transfer(TransferTransaction(to=paymaster_address, amount=provider_l2.to_wei(1, "ether"), token_address=ZkSyncAddresses.ETH_ADDRESS.value))
+    paymaster_address = deploy_paymaster(
+        provider_l2, wallet, token_address, signer, salt
+    )
+    faucet_hash = wallet.transfer(
+        TransferTransaction(
+            to=paymaster_address,
+            amount=provider_l2.to_wei(1, "ether"),
+            token_address=ZkSyncAddresses.ETH_ADDRESS.value,
+        )
+    )
 
     provider_l2.zksync.wait_for_transaction_receipt(
         faucet_hash, timeout=240, poll_latency=0.5
     )
+
 
 def deploy_crown_token(provider_l2, wallet, signer, salt, token_contract):
     constructor_arguments = {"name_": "Ducat", "symbol_": "Ducat", "decimals_": 18}
@@ -162,7 +174,7 @@ def deploy_paymaster(provider_l2: Web3, wallet, token_address, signer, salt):
         gas_price=gas_price,
         bytecode=token_contract.bytecode,
         call_data=encoded_constructor,
-        salt=to_bytes(salt)
+        salt=to_bytes(salt),
     )
     estimate_gas = provider_l2.zksync.eth_estimate_gas(create_account.tx)
     tx_712 = create_account.tx712(estimate_gas)
@@ -173,6 +185,7 @@ def deploy_paymaster(provider_l2: Web3, wallet, token_address, signer, salt):
         tx_hash, timeout=240, poll_latency=0.5
     )
     return tx_receipt["contractAddress"]
+
 
 def load_token():
     directory = Path(__file__).parent.parent
