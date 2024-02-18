@@ -49,6 +49,7 @@ from zksync2.core.types import (
     TransactionOptions,
     WithdrawTransaction,
     ContractAccountInfo,
+    StorageProof,
 )
 from zksync2.core.utils import is_eth, MAX_PRIORITY_FEE_PER_GAS
 from zksync2.manage_contracts.deploy_addresses import ZkSyncAddresses
@@ -89,6 +90,7 @@ zks_get_all_account_balances_rpc = RPCEndpoint("zks_getAllAccountBalances")
 zks_get_bridge_contracts_rpc = RPCEndpoint("zks_getBridgeContracts")
 zks_get_l2_to_l1_msg_proof_prc = RPCEndpoint("zks_getL2ToL1MsgProof")
 zks_get_l2_to_l1_log_proof_prc = RPCEndpoint("zks_getL2ToL1LogProof")
+zks_get_proof_rpc = RPCEndpoint("zks_getProof")
 eth_estimate_gas_rpc = RPCEndpoint("eth_estimateGas")
 eth_get_transaction_receipt_rpc = RPCEndpoint("eth_getTransactionReceipt")
 eth_get_transaction_by_hash_rpc = RPCEndpoint("eth_getTransactionByHash")
@@ -367,6 +369,13 @@ class ZkSync(Eth, ABC):
         request_formatters=zksync_get_request_formatters,
         result_formatters=zksync_get_result_formatters,
     )
+    _zks_get_proof: Method[
+        Callable[[HexStr, List[HexStr], int], StorageProof]
+    ] = Method(
+        zks_get_proof_rpc,
+        mungers=[default_root_munger],
+        request_formatters=zksync_get_request_formatters,
+    )
     _zks_estimate_gas_l1_to_l2: Method[Callable[[Transaction], int]] = Method(
         zks_estimate_gas_l1_to_l2_rpc,
         mungers=[default_root_munger],
@@ -462,7 +471,7 @@ class ZkSync(Eth, ABC):
         self.bridge_addresses = None
 
     def zks_l1_batch_number(self) -> int:
-        return self._zks_l1_batch_number()
+        return int(self._zks_l1_batch_number(), 16)
 
     def zks_get_l1_batch_block_range(self, l1_batch_number: int) -> BlockRange:
         return self._zks_get_l1_batch_block_range(l1_batch_number)
@@ -478,6 +487,9 @@ class ZkSync(Eth, ABC):
 
     def zks_estimate_gas_l1_to_l2(self, transaction: Transaction) -> int:
         return int(self._zks_estimate_gas_l1_to_l2(transaction), 16)
+
+    def zks_get_proof(self, address: HexStr, key: List[HexStr], l1_batch_number: int):
+        return self._zks_get_proof(address, key, l1_batch_number)
 
     def zks_estimate_gas_transfer(
         self, transaction: Transaction, token_address: HexStr = ADDRESS_DEFAULT
@@ -718,14 +730,7 @@ class ZkSync(Eth, ABC):
                 Web3.to_checksum_address(tx.token_address), abi=get_erc20_abi()
             )
             call_data = contract.encodeABI("transfer", transfer_params)
-        paymaster_params = None
-        if tx.paymaster_params is not None:
-            paymaster_params = PaymasterParams(
-                **{
-                    "paymaster": tx.paymaster_params.paymaster,
-                    "paymaster_input": tx.paymaster_params.paymaster_input,
-                }
-            )
+
         transaction = TxTransfer(
             web3=self,
             token=tx.token_address,
@@ -739,7 +744,7 @@ class ZkSync(Eth, ABC):
             gas_price=tx.options.gas_price,
             max_priority_fee_per_gas=tx.options.max_priority_fee_per_gas,
             gas_per_pub_data=tx.gas_per_pub_data,
-            paymaster_params=paymaster_params,
+            paymaster_params=tx.paymaster_params,
         )
 
         return transaction

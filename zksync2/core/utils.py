@@ -80,6 +80,11 @@ def apply_l1_to_l2_alias(address: HexStr):
     return add_0x_prefix(result)
 
 
+def pad_back_bytes(bs: bytes, needed_length: int):
+    padded = bs + b"\0" * (needed_length - len(bs))
+    return padded
+
+
 def undo_l1_to_l2_alias(address: HexStr):
     result = int(address, 16) - int(L1_TO_L2_ALIAS_OFFSET, 16)
     if result < 0:
