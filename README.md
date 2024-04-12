@@ -147,7 +147,7 @@ transfer = wallet.deposit(
 In order to run test you need to run local-setup on your machine. For running tests, use:
 ```console
 make wait
-make prepare-tests
+make prepare-environment
 make run-tests
 ```
 
