@@ -271,6 +271,34 @@ class TestWallet(TestCase):
 
         self.assertEqual(balance_after_transfer - balance_before_transfer, amount)
 
+    def test_transfer_eth_with_non_zero_gas_limit(self):
+        gas_limit = 500_000
+        options = TransactionOptions(gas_limit=gas_limit)
+        amount = 7_000_000_000
+        balance_before_transfer = self.zksync.zksync.get_balance(
+            Web3.to_checksum_address(self.address2)
+        )
+        tx_hash = self.wallet.transfer(
+            TransferTransaction(
+                to=Web3.to_checksum_address(self.address2),
+                token_address=ADDRESS_DEFAULT,
+                amount=amount,
+                options=options,
+            )
+        )
+
+        receipt = self.zksync.zksync.wait_for_transaction_receipt(
+            tx_hash, timeout=240, poll_latency=0.5
+        )
+        self.assertNotEqual(receipt["gasUsed"], gas_limit)
+        tx = self.zksync.eth.get_transaction(tx_hash)
+        self.assertEqual(tx["gas"], gas_limit)
+        balance_after_transfer = self.zksync.zksync.get_balance(
+            Web3.to_checksum_address(self.address2)
+        )
+
+        self.assertEqual(balance_after_transfer - balance_before_transfer, amount)
+
     def test_transfer_eth_paymaster(self):
         amount = 1
         paymaster_address = self.zksync.to_checksum_address(self.paymaster_address)
@@ -394,6 +422,45 @@ class TestWallet(TestCase):
             tx_hash, timeout=240, poll_latency=0.5
         )
         self.assertIsNotNone(result)
+        sender_after = self.wallet.get_balance(token_address=l2_address)
+
+        balance_after = self.zksync.zksync.zks_get_balance(
+            self.address2,
+            token_address=l2_address,
+            block_tag=ZkBlockParams.LATEST.value,
+        )
+
+        self.assertEqual(amount, sender_before - sender_after)
+        self.assertEqual(amount, balance_after - balance_before)
+
+    def test_transfer_token_with_non_zero_gas_limit(self):
+        gas_limit = 500_000
+        options = TransactionOptions(gas_limit=gas_limit)
+        amount = 5
+        _, l2_address = self.load_token()
+
+        sender_before = self.wallet.get_balance(token_address=l2_address)
+        balance_before = self.zksync.zksync.zks_get_balance(
+            self.address2,
+            token_address=l2_address,
+            block_tag=ZkBlockParams.LATEST.value,
+        )
+        tx_hash = self.wallet.transfer(
+            TransferTransaction(
+                to=Web3.to_checksum_address(self.address2),
+                token_address=Web3.to_checksum_address(l2_address),
+                amount=amount,
+                options=options,
+            )
+        )
+
+        result = self.zksync.zksync.wait_for_transaction_receipt(
+            tx_hash, timeout=240, poll_latency=0.5
+        )
+        self.assertIsNotNone(result)
+        self.assertNotEqual(result["gasUsed"], gas_limit)
+        tx = self.zksync.eth.get_transaction(tx_hash)
+        self.assertEqual(tx["gas"], gas_limit)
         sender_after = self.wallet.get_balance(token_address=l2_address)
 
         balance_after = self.zksync.zksync.zks_get_balance(
