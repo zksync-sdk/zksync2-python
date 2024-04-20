@@ -101,10 +101,12 @@ class WalletL2:
         tx_fun_call = self._zksync_web3.zksync.get_transfer_transaction(
             tx, self._l1_account.address
         )
-        if tx.options.gas_limit == 0:
-            tx_712 = tx_fun_call.tx712(
-                self._zksync_web3.zksync.zks_estimate_gas_transfer(tx_fun_call.tx)
-            )
+        estimated_gas = self._zksync_web3.zksync.zks_estimate_gas_transfer(
+            tx_fun_call.tx
+        )
+        tx_712 = tx_fun_call.tx712(
+            estimated_gas if tx.options.gas_limit == 0 else tx.options.gas_limit
+        )
         signer = PrivateKeyEthSigner(self._l1_account, tx.options.chain_id)
         signed_message = signer.sign_typed_data(tx_712.to_eip712_struct())
 
