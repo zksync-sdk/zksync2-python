@@ -369,12 +369,12 @@ class ZkSync(Eth, ABC):
         request_formatters=zksync_get_request_formatters,
         result_formatters=zksync_get_result_formatters,
     )
-    _zks_get_proof: Method[
-        Callable[[HexStr, List[HexStr], int], StorageProof]
-    ] = Method(
-        zks_get_proof_rpc,
-        mungers=[default_root_munger],
-        request_formatters=zksync_get_request_formatters,
+    _zks_get_proof: Method[Callable[[HexStr, List[HexStr], int], StorageProof]] = (
+        Method(
+            zks_get_proof_rpc,
+            mungers=[default_root_munger],
+            request_formatters=zksync_get_request_formatters,
+        )
     )
     _zks_estimate_gas_l1_to_l2: Method[Callable[[Transaction], int]] = Method(
         zks_estimate_gas_l1_to_l2_rpc,
@@ -400,12 +400,12 @@ class ZkSync(Eth, ABC):
         zks_l1_chain_id_rpc, mungers=None
     )
 
-    _zks_get_all_account_balances: Method[
-        Callable[[Address], ZksAccountBalances]
-    ] = Method(
-        zks_get_all_account_balances_rpc,
-        mungers=[default_root_munger],
-        result_formatters=zksync_get_result_formatters,
+    _zks_get_all_account_balances: Method[Callable[[Address], ZksAccountBalances]] = (
+        Method(
+            zks_get_all_account_balances_rpc,
+            mungers=[default_root_munger],
+            result_formatters=zksync_get_result_formatters,
+        )
     )
 
     _zks_get_bridge_contracts: Method[Callable[[], ZksBridgeAddresses]] = Method(
@@ -437,12 +437,12 @@ class ZkSync(Eth, ABC):
         mungers=[default_root_munger],
         request_formatters=zksync_get_request_formatters,
     )
-    _eth_get_transaction_receipt: Method[
-        Callable[[HexStr], ZksTransactionReceipt]
-    ] = Method(
-        eth_get_transaction_receipt_rpc,
-        mungers=[default_root_munger],
-        result_formatters=zksync_get_result_formatters,
+    _eth_get_transaction_receipt: Method[Callable[[HexStr], ZksTransactionReceipt]] = (
+        Method(
+            eth_get_transaction_receipt_rpc,
+            mungers=[default_root_munger],
+            result_formatters=zksync_get_result_formatters,
+        )
     )
     _eth_get_transaction_by_hash: Method[Callable[[HexStr], ZksTransactions]] = Method(
         eth_get_transaction_by_hash_rpc,
@@ -457,9 +457,9 @@ class ZkSync(Eth, ABC):
         Callable[[Address], ContractSourceDebugInfo]
     ] = Method(zks_get_contract_debug_info_rpc, mungers=[default_root_munger])
 
-    _zks_get_transaction_trace: Method[
-        Callable[[Address], ZksTransactionTrace]
-    ] = Method(zks_get_transaction_trace_rpc, mungers=[default_root_munger])
+    _zks_get_transaction_trace: Method[Callable[[Address], ZksTransactionTrace]] = (
+        Method(zks_get_transaction_trace_rpc, mungers=[default_root_munger])
+    )
 
     _zks_get_testnet_paymaster_address: Method[Callable[[], HexStr]] = Method(
         zks_get_testnet_paymaster_address, mungers=[default_root_munger]
