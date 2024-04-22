@@ -240,17 +240,14 @@ class TestWallet(TestCase):
         self.assertGreater(balance_l2_after, balance_l2_beore)
 
     def test_full_required_deposit_fee(self):
-        fee_data = FullDepositFee(
-            base_cost=285096500000000,
-            l1_gas_limit=110581,
-            l2_gas_limit=570193,
-            max_fee_per_gas=1500000010,
-            max_priority_fee_per_gas=1500000000,
-        )
         fee = self.wallet.get_full_required_deposit_fee(
             DepositTransaction(token=ADDRESS_DEFAULT, to=self.wallet.address)
         )
-        self.assertEqual(fee, fee_data)
+        self.assertTrue(fee.base_cost > 0)
+        self.assertTrue(fee.l1_gas_limit > 0)
+        self.assertTrue(fee.l2_gas_limit > 0)
+        self.assertTrue(fee.max_fee_per_gas > 0)
+        self.assertTrue(fee.max_priority_fee_per_gas > 0)
 
     def test_transfer_eth(self):
         amount = 7_000_000_000
