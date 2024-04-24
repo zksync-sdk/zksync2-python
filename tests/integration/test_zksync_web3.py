@@ -770,7 +770,7 @@ class ZkSyncWeb3Tests(TestCase):
 
     # @skip("Integration test, used for develop purposes only")
     def test_get_l1_chain_id(self):
-        l1_chain_id = self.web3.zksync.zks_l1_chain_id()
+        self.assertIsInstance(self.web3.zksync.zks_l1_chain_id(), int)
 
     # @skip("Integration test, used for develop purposes only")
     def test_get_bridge_addresses(self):
