@@ -769,10 +769,6 @@ class ZkSyncWeb3Tests(TestCase):
         balances = self.web3.zksync.zks_get_all_account_balances(self.account.address)
 
     # @skip("Integration test, used for develop purposes only")
-    def test_get_token_price(self):
-        price = self.web3.zksync.zks_get_token_price(self.ETH_TOKEN.l2_address)
-
-    # @skip("Integration test, used for develop purposes only")
     def test_get_l1_chain_id(self):
         l1_chain_id = self.web3.zksync.zks_l1_chain_id()
 
