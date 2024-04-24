@@ -525,7 +525,7 @@ class ZkSync(Eth, ABC):
         return self._zks_get_token_price(token_address)
 
     def zks_l1_chain_id(self) -> int:
-        return self._zks_l1_chain_id()
+        return int(self._zks_l1_chain_id(), 16)
 
     def zks_get_balance(
         self,
