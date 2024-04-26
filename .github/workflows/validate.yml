@@ -22,9 +22,13 @@ jobs:
           python-version: '3.8'
           cache: 'pip' # caching pip dependencies
       - name: Install dependencies
-        run: pip install black
+        run: pip install pre-commit==3.5.0
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-3-5-0|${{ env.pythonLocation }}|${{ hashFiles('.pre-commit-config.yaml') }}
       - name: Check code format
-        run: make check-code-format
+        run: pre-commit run
   commits:
     name: Check commits
     runs-on: ubuntu-latest
@@ -43,7 +47,7 @@ jobs:
           echo 'module.exports = {"extends": ["@commitlint/config-conventional"]}' > commitlint.config.js
       - name: Validate
         run: |
-          git fetch 
+          git fetch
           npx commitlint \
             --from ${{ github.event.pull_request.head.sha }}~${{ github.event.pull_request.commits }} \
             --to ${{ github.event.pull_request.head.sha }} \
