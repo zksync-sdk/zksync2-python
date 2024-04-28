@@ -1,8 +1,10 @@
 name: Run tests
 on:
+  push:
+    branches: [ main, beta ]
   workflow_dispatch:
   pull_request:
-    branch: main
+    branches: [ main, beta ]
     types: [ opened, reopened, synchronize ]
 
 permissions:
@@ -28,10 +30,8 @@ jobs:
         run: |
           git clone https://github.com/matter-labs/local-setup.git
           pushd local-setup
-          docker-compose up -d
+          ./start.sh
           popd
-      - name: Wait for local-setup to be ready
-        run: make wait
       - name: Prepare environment
         run: make prepare-environment
       - name: Run tests
