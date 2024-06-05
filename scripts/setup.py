@@ -21,8 +21,8 @@ def main():
     from zksync2.module.module_builder import ZkSyncBuilder
     from zksync2.signer.eth_signer import PrivateKeyEthSigner
 
-    zksync = ZkSyncBuilder.build("http://127.0.0.1:15100")
-    eth_web3 = Web3(Web3.HTTPProvider("http://127.0.0.1:15045"))
+    zksync = ZkSyncBuilder.build("http://127.0.0.1:3050")
+    eth_web3 = Web3(Web3.HTTPProvider("http://127.0.0.1:8545"))
     account: LocalAccount = Account.from_key(
         "0x7726827caac94a7f9e1b160f7ea819f172f7b6f9d2a97f992c38edeab82d4110"
     )
