@@ -20,6 +20,7 @@ class RecommendedGasLimit(IntEnum):
 
 
 ADDRESS_DEFAULT = HexStr("0x" + "0" * 40)
+ETH_ADDRESS_IN_CONTRACTS = HexStr("0x0000000000000000000000000000000000000001")
 L2_ETH_TOKEN_ADDRESS = HexStr("0x000000000000000000000000000000000000800a")
 
 TokenAddress = NewType("token_address", HexStr)
@@ -82,6 +83,8 @@ class Fee:
 @dataclass
 class BridgeAddresses:
     erc20_l1_default_bridge: HexStr
+    shared_l1_default_bridge: HexStr
+    shared_l2_default_bridge: HexStr
     erc20_l2_default_bridge: HexStr
     weth_bridge_l1: HexStr
     weth_bridge_l2: HexStr
@@ -90,13 +93,14 @@ class BridgeAddresses:
 @dataclass
 class L1BridgeContracts:
     erc20: Contract
+    shared: Contract
     weth: Contract
 
 
 @dataclass
 class L2BridgeContracts:
     erc20: Contract
-    weth: Contract
+    shared: Contract
 
 
 @dataclass
@@ -226,12 +230,15 @@ class DepositTransaction:
     operator_tip: int = 0
     bridge_address: HexStr = None
     approve_erc20: bool = False
+    approve_base_erc20: bool = False
     l2_gas_limit: int = None
     gas_per_pubdata_byte: int = DEPOSIT_GAS_PER_PUBDATA_LIMIT
     custom_bridge_data: bytes = None
     refund_recipient: HexStr = None
     l2_value: int = 0
     options: TransactionOptions = None
+    approve_options: TransactionOptions = None
+    approve_base_options: TransactionOptions = None
 
 
 @dataclass
@@ -256,6 +263,7 @@ class RequestExecuteCallMsg:
     call_data: Union[bytes, HexStr]
     from_: HexStr = None
     l2_gas_limit: int = 0
+    mint_value: int = 0
     l2_value: int = 0
     factory_deps: List[bytes] = None
     operator_tip: int = 0

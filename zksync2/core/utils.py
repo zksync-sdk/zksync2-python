@@ -1,3 +1,4 @@
+import math
 import sys
 from enum import IntEnum
 from hashlib import sha256
@@ -12,12 +13,19 @@ from web3 import Web3
 ADDRESS_MODULO = pow(2, 160)
 L1_TO_L2_ALIAS_OFFSET = "0x1111000000000000000000000000000000001111"
 
+ETH_ADDRESS_IN_CONTRACTS = "0x0000000000000000000000000000000000000001"
+
+LEGACY_ETH_ADDRESS = HexStr("0x" + "0" * 40)
 ADDRESS_DEFAULT = HexStr("0x" + "0" * 40)
+L2_BASE_TOKEN_ADDRESS = HexStr("0x000000000000000000000000000000000000800a")
 L2_ETH_TOKEN_ADDRESS = HexStr("0x000000000000000000000000000000000000800a")
 BOOTLOADER_FORMAL_ADDRESS = HexStr("0x0000000000000000000000000000000000008001")
 
 DEPOSIT_GAS_PER_PUBDATA_LIMIT = 800
 MAX_PRIORITY_FEE_PER_GAS = 100_000_000
+
+L1_FEE_ESTIMATION_COEF_NUMERATOR = 12
+L1_FEE_ESTIMATION_COEF_DENOMINATOR = 10
 
 
 def int_to_bytes(x: int) -> bytes:
@@ -31,7 +39,15 @@ def to_bytes(data: Union[bytes, HexStr]) -> bytes:
 
 
 def is_eth(address: HexStr) -> bool:
-    return address.lower() == ADDRESS_DEFAULT or address.lower() == L2_ETH_TOKEN_ADDRESS
+    return (
+        address.lower() == LEGACY_ETH_ADDRESS
+        or address.lower() == L2_BASE_TOKEN_ADDRESS
+        or address.lower() == ETH_ADDRESS_IN_CONTRACTS
+    )
+
+
+def is_address_eq(a: HexStr, b: HexStr) -> bool:
+    return a.lower() == b.lower()
 
 
 def encode_address(addr: Union[Address, ChecksumAddress, str]) -> bytes:
@@ -61,9 +77,23 @@ def pad_front_bytes(bs: bytes, needed_length: int):
 
 
 def get_custom_bridge_data(token_contract) -> bytes:
-    name = token_contract.functions.name().call()
-    symbol = token_contract.functions.symbol().call()
-    decimals = token_contract.functions.decimals().call()
+    address = token_contract.address
+    name = (
+        "Ether"
+        if address.lower() == ETH_ADDRESS_IN_CONTRACTS.lower()
+        else token_contract.functions.name().call()
+    )
+    symbol = (
+        "ETH"
+        if address.lower() == ETH_ADDRESS_IN_CONTRACTS.lower()
+        else token_contract.functions.symbol().call()
+    )
+    decimals = (
+        18
+        if address.lower() == ETH_ADDRESS_IN_CONTRACTS.lower()
+        else token_contract.functions.decimals().call()
+    )
+
     name_encoded = encode(["string"], [name])
     symbol_encoded = encode(["string"], [symbol])
     decimals_encoded = encode(["uint256"], [decimals])
@@ -93,8 +123,11 @@ def undo_l1_to_l2_alias(address: HexStr):
     return Web3.to_hex(result)
 
 
-class RequestExecuteTransaction:
-    pass
+def scale_gas_limit(base_gas: int):
+    return math.trunc(
+        (base_gas * L1_FEE_ESTIMATION_COEF_NUMERATOR)
+        / L1_FEE_ESTIMATION_COEF_DENOMINATOR
+    )
 
 
 class RecommendedGasLimit(IntEnum):

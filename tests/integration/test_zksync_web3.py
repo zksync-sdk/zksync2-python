@@ -19,7 +19,7 @@ from zksync2.core.types import (
     ADDRESS_DEFAULT,
     StorageProof,
 )
-from zksync2.core.utils import pad_front_bytes, to_bytes, pad_back_bytes
+from zksync2.core.utils import pad_front_bytes, to_bytes, pad_back_bytes, L2_BASE_TOKEN_ADDRESS
 from zksync2.manage_contracts.contract_encoder_base import (
     ContractEncoder,
     JsonConfiguration,
@@ -768,13 +768,15 @@ class ZkSyncWeb3Tests(TestCase):
     def test_get_all_account_balances(self):
         balances = self.web3.zksync.zks_get_all_account_balances(self.account.address)
 
+
     # @skip("Integration test, used for develop purposes only")
     def test_get_l1_chain_id(self):
         self.assertIsInstance(self.web3.zksync.zks_l1_chain_id(), int)
 
     # @skip("Integration test, used for develop purposes only")
     def test_get_bridge_addresses(self):
-        addresses = self.web3.zksync.zks_get_bridge_contracts()
+        result = self.web3.zksync.zks_get_bridge_contracts()
+        self.assertIsNotNone(result)
 
     def test_get_account_info(self):
         TESTNET_PAYMASTER = "0x0f9acdb01827403765458b4685de6d9007580d15"
@@ -788,4 +790,12 @@ class ZkSyncWeb3Tests(TestCase):
 
     def test_get_l2_token_address(self):
         result = self.web3.zksync.l2_token_address(ADDRESS_DEFAULT)
-        self.assertEqual(result, ADDRESS_DEFAULT)
+        self.assertEqual(result, L2_BASE_TOKEN_ADDRESS)
+
+    def test_get_bridgehub_contract(self):
+        result = self.web3.zksync.zks_get_bridgehub_contract_address()
+        self.assertIsNotNone(result)
+
+    def test_zks_get_base_token_contract_address(self):
+        result = self.web3.zksync.zks_get_base_token_contract_address()
+        self.assertIsNotNone(result)

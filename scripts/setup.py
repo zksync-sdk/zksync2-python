@@ -21,8 +21,8 @@ def main():
     from zksync2.module.module_builder import ZkSyncBuilder
     from zksync2.signer.eth_signer import PrivateKeyEthSigner
 
-    zksync = ZkSyncBuilder.build("http://127.0.0.1:3050")
-    eth_web3 = Web3(Web3.HTTPProvider("http://127.0.0.1:8545"))
+    zksync = ZkSyncBuilder.build("http://127.0.0.1:15100")
+    eth_web3 = Web3(Web3.HTTPProvider("http://127.0.0.1:15045"))
     account: LocalAccount = Account.from_key(
         "0x7726827caac94a7f9e1b160f7ea819f172f7b6f9d2a97f992c38edeab82d4110"
     )
@@ -41,9 +41,29 @@ def main():
 
 def deposit_token(wallet, eth_web3: Web3, zksync: Web3, zksync_contract):
     from zksync2.core.types import DepositTransaction
+    from zksync2.manage_contracts.utils import get_test_net_erc20_token
+    from zksync2.core.types import EthBlockParams
 
-    amount = 50
+    amount = 100
     l1_address = load_token()
+
+    token_contract = eth_web3.eth.contract(
+        Web3.to_checksum_address(l1_address), abi=get_test_net_erc20_token()
+    )
+    mint_tx = token_contract.functions.mint(wallet.address, 10000).build_transaction(
+        {
+            "nonce": eth_web3.eth.get_transaction_count(
+                wallet.address, EthBlockParams.LATEST.value
+            ),
+            "from": wallet.address,
+            "maxPriorityFeePerGas": 1_000_000,
+            "maxFeePerGas": eth_web3.eth.gas_price,
+        }
+    )
+
+    signed = wallet.sign_transaction(mint_tx)
+    tx_hash = eth_web3.eth.send_raw_transaction(signed.rawTransaction)
+    eth_web3.eth.wait_for_transaction_receipt(tx_hash, timeout=240, poll_latency=0.5)
 
     tx_hash = wallet.deposit(
         DepositTransaction(
