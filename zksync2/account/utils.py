@@ -1,4 +1,6 @@
+import web3
 from eth_typing import HexStr
+from web3 import Web3
 from web3.types import Nonce
 
 from zksync2.core.types import (
@@ -35,7 +37,9 @@ def options_from_712(tx: Transaction712) -> TransactionOptions:
     )
 
 
-def prepare_transaction_options(options: TransactionOptions, from_: HexStr = None):
+def prepare_transaction_options(
+    options: TransactionOptions, from_: HexStr = None, provider: Web3 = None
+):
     opt = {}
     if options.value is not None:
         opt["value"] = options.value
@@ -55,6 +59,10 @@ def prepare_transaction_options(options: TransactionOptions, from_: HexStr = Non
         opt["gas"] = options.gas_limit
     if options.nonce is not None:
         opt["nonce"] = options.nonce
+    elif provider is not None:
+        opt["nonce"] = provider.eth.get_transaction_count(
+            Web3.to_checksum_address(from_)
+        )
     if options.chain_id is not None:
         opt["chainId"] = options.chain_id
     if from_ is not None:

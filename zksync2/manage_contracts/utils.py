@@ -15,6 +15,8 @@ l2_bridge_abi_cache = None
 l1_bridge_abi_cache = None
 eth_token_abi_cache = None
 erc_20_abi_cache = None
+eth_token_abi_cache = None
+test_net_erc_20_abi_cache = None
 
 
 def zksync_abi_default():
@@ -32,7 +34,7 @@ def icontract_deployer_abi_default():
     global icontract_deployer_abi_cache
 
     if icontract_deployer_abi_cache is None:
-        with pkg_resources.path(contract_abi, "ContractDeployer.json") as p:
+        with pkg_resources.path(contract_abi, "IContractDeployer.json") as p:
             with p.open(mode="r") as json_file:
                 data = json.load(json_file)
                 icontract_deployer_abi_cache = data["abi"]
@@ -82,6 +84,28 @@ def l1_bridge_abi_default():
     return l1_bridge_abi_cache
 
 
+def bridgehub_abi_default():
+    global l1_bridge_abi_cache
+
+    if l1_bridge_abi_cache is None:
+        with pkg_resources.path(contract_abi, "IBridgehub.json") as p:
+            with p.open(mode="r") as json_file:
+                data = json.load(json_file)
+                l1_bridge_abi_cache = data["abi"]
+    return l1_bridge_abi_cache
+
+
+def l1_shared_bridge_abi_default():
+    global l1_bridge_abi_cache
+
+    if l1_bridge_abi_cache is None:
+        with pkg_resources.path(contract_abi, "IL1SharedBridge.json") as p:
+            with p.open(mode="r") as json_file:
+                data = json.load(json_file)
+                l1_bridge_abi_cache = data["abi"]
+    return l1_bridge_abi_cache
+
+
 def eth_token_abi_default():
     global eth_token_abi_cache
 
@@ -89,8 +113,8 @@ def eth_token_abi_default():
         with pkg_resources.path(contract_abi, "IEthToken.json") as p:
             with p.open(mode="r") as json_file:
                 data = json.load(json_file)
-                erc_20_abi_cache = data["abi"]
-    return erc_20_abi_cache
+                eth_token_abi_cache = data["abi"]
+    return eth_token_abi_cache
 
 
 def get_erc20_abi():
@@ -102,6 +126,17 @@ def get_erc20_abi():
                 data = json.load(json_file)
                 erc_20_abi_cache = data["abi"]
     return erc_20_abi_cache
+
+
+def get_test_net_erc20_token():
+    global test_net_erc_20_abi_cache
+
+    if test_net_erc_20_abi_cache is None:
+        with pkg_resources.path(contract_abi, "ITestnetERC20Token.json") as p:
+            with p.open(mode="r") as json_file:
+                data = json.load(json_file)
+                test_net_erc_20_abi_cache = data["abi"]
+    return test_net_erc_20_abi_cache
 
 
 class ERC20Encoder(BaseContractEncoder):

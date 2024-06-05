@@ -50,8 +50,16 @@ from zksync2.core.types import (
     WithdrawTransaction,
     ContractAccountInfo,
     StorageProof,
+    ETH_ADDRESS_IN_CONTRACTS,
 )
-from zksync2.core.utils import is_eth, MAX_PRIORITY_FEE_PER_GAS
+from zksync2.core.utils import (
+    is_eth,
+    MAX_PRIORITY_FEE_PER_GAS,
+    LEGACY_ETH_ADDRESS,
+    L2_BASE_TOKEN_ADDRESS,
+    is_address_eq,
+    BOOTLOADER_FORMAL_ADDRESS,
+)
 from zksync2.manage_contracts.deploy_addresses import ZkSyncAddresses
 from zksync2.manage_contracts.utils import (
     ERC20Encoder,
@@ -91,6 +99,8 @@ zks_get_bridge_contracts_rpc = RPCEndpoint("zks_getBridgeContracts")
 zks_get_l2_to_l1_msg_proof_prc = RPCEndpoint("zks_getL2ToL1MsgProof")
 zks_get_l2_to_l1_log_proof_prc = RPCEndpoint("zks_getL2ToL1LogProof")
 zks_get_proof_rpc = RPCEndpoint("zks_getProof")
+zks_get_base_token_l1_address_rpc = RPCEndpoint("zks_getBaseTokenL1Address")
+zks_get_bridgehub_contract_rpc = RPCEndpoint("zks_getBridgehubContract")
 eth_estimate_gas_rpc = RPCEndpoint("eth_estimateGas")
 eth_get_transaction_receipt_rpc = RPCEndpoint("eth_getTransactionReceipt")
 eth_get_transaction_by_hash_rpc = RPCEndpoint("eth_getTransactionByHash")
@@ -167,6 +177,12 @@ def to_token(t: dict) -> Token:
 def to_bridge_address(t: dict) -> BridgeAddresses:
     return BridgeAddresses(
         erc20_l1_default_bridge=HexStr(to_checksum_address(t["l1Erc20DefaultBridge"])),
+        shared_l1_default_bridge=HexStr(
+            to_checksum_address(t["l1SharedDefaultBridge"])
+        ),
+        shared_l2_default_bridge=HexStr(
+            to_checksum_address(t["l2SharedDefaultBridge"])
+        ),
         erc20_l2_default_bridge=HexStr(to_checksum_address(t["l2Erc20DefaultBridge"])),
         weth_bridge_l1=HexStr(to_checksum_address(t["l1WethBridge"])),
         weth_bridge_l2=HexStr(to_checksum_address(t["l2WethBridge"])),
@@ -392,6 +408,10 @@ class ZkSync(Eth, ABC):
         zks_main_contract_rpc, mungers=None
     )
 
+    _zks_get_base_token_contract_address: Method[Callable[[], ZksBaseToken]] = Method(
+        zks_get_base_token_l1_address_rpc, mungers=None
+    )
+
     _zks_get_token_price: Method[Callable[[TokenAddress], ZksTokenPrice]] = Method(
         zks_get_token_price_rpc, mungers=[default_root_munger]
     )
@@ -421,6 +441,13 @@ class ZkSync(Eth, ABC):
         mungers=[default_root_munger],
         request_formatters=zksync_get_request_formatters,
         result_formatters=zksync_get_result_formatters,
+    )
+
+    _zks_get_bridgehub_contract_address: Method[
+        Callable[[int, Address, str, Optional[int]], ZksMessageProof]
+    ] = Method(
+        zks_get_bridgehub_contract_rpc,
+        mungers=[default_root_munger],
     )
 
     _zks_get_l2_to_l1_log_proof: Method[
@@ -468,7 +495,9 @@ class ZkSync(Eth, ABC):
     def __init__(self, web3: "Web3"):
         super(ZkSync, self).__init__(web3)
         self.main_contract_address = None
+        self.bridgehub_contract_address = None
         self.bridge_addresses = None
+        self.base_token = None
 
     def zks_l1_batch_number(self) -> int:
         return int(self._zks_l1_batch_number(), 16)
@@ -521,6 +550,22 @@ class ZkSync(Eth, ABC):
             self.main_contract_address = self._zks_main_contract()
         return self.main_contract_address
 
+    def zks_get_base_token_contract_address(self):
+        """Returns the L1 base token address."""
+        if self.base_token is None:
+            self.base_token = self._zks_get_base_token_contract_address()
+        return self.base_token
+
+    def is_eth_based_chain(self) -> bool:
+        return is_address_eq(
+            self.zks_get_base_token_contract_address(), ETH_ADDRESS_IN_CONTRACTS
+        )
+
+    def zks_get_bridgehub_contract_address(self) -> HexStr:
+        if self.bridgehub_contract_address is None:
+            self.bridgehub_contract_address = self._zks_get_bridgehub_contract_address()
+        return self.bridgehub_contract_address
+
     def zks_get_token_price(self, token_address: TokenAddress) -> Decimal:
         return self._zks_get_token_price(token_address)
 
@@ -544,49 +589,49 @@ class ZkSync(Eth, ABC):
         except:
             return 0
 
+    def is_base_token(self, token: HexStr):
+        return is_address_eq(
+            token, self.zks_get_base_token_contract_address()
+        ) or is_address_eq(token, L2_BASE_TOKEN_ADDRESS)
+
     def l1_token_address(self, token: HexStr) -> HexStr:
-        if is_eth(token):
-            return ADDRESS_DEFAULT
+        """
+        Returns the L1 token address equivalent for a L2 token address as they are not equal.
+        ETH address is set to zero address.
+
+        :param token: The address of the token on L2.
+        """
+        if token == LEGACY_ETH_ADDRESS:
+            return LEGACY_ETH_ADDRESS
+
         bridge_address = self.zks_get_bridge_contracts()
-        l2_weth_bridge = self.contract(
-            Web3.to_checksum_address(bridge_address.weth_bridge_l2),
-            abi=l2_bridge_abi_default(),
-        )
-        try:
-            l1_weth_token = l2_weth_bridge.functions.l1TokenAddress(token).call()
-            if not is_eth(l1_weth_token):
-                return l1_weth_token
-        except:
-            pass
-
-        erc20_bridge = self.contract(
-            Web3.to_checksum_address(bridge_address.erc20_l2_default_bridge),
+        shared_bridge = self.contract(
+            Web3.to_checksum_address(bridge_address.shared_l2_default_bridge),
             abi=l2_bridge_abi_default(),
         )
 
-        return erc20_bridge.functions.l1TokenAddress(token).call()
+        return shared_bridge.functions.l1TokenAddress(token).call()
 
     def l2_token_address(self, token: HexStr) -> HexStr:
-        if is_eth(token):
-            return ADDRESS_DEFAULT
+        """
+        Returns the L2 token address equivalent for a L1 token address as they are not equal.
+        ETH address is set to zero address.
+
+        :param token: The address of the token on L1.
+        """
+        if token == ADDRESS_DEFAULT:
+            token = ETH_ADDRESS_IN_CONTRACTS
+        base_token = self.zks_get_base_token_contract_address()
+        if token == base_token:
+            return L2_BASE_TOKEN_ADDRESS
+
         bridge_address = self.zks_get_bridge_contracts()
-        l2_weth_bridge = self.contract(
-            Web3.to_checksum_address(bridge_address.weth_bridge_l2),
-            abi=l2_bridge_abi_default(),
-        )
-        try:
-            l1_weth_token = l2_weth_bridge.functions.l2TokenAddress(token).call()
-            if not is_eth(l1_weth_token):
-                return l1_weth_token
-        except:
-            pass
-
-        erc20_bridge = self.contract(
-            Web3.to_checksum_address(bridge_address.erc20_l2_default_bridge),
+        l2_shared_bridge = self.contract(
+            Web3.to_checksum_address(bridge_address.shared_l2_default_bridge),
             abi=l2_bridge_abi_default(),
         )
 
-        return erc20_bridge.functions.l2TokenAddress(token).call()
+        return l2_shared_bridge.functions.l2TokenAddress(token).call()
 
     def zks_get_all_account_balances(self, addr: Address) -> ZksAccountBalances:
         return self._zks_get_all_account_balances(addr)
@@ -628,6 +673,27 @@ class ZkSync(Eth, ABC):
         l2_hash = self.get_l2_hash_from_priority_op(tx_receipt, main_contract)
         self.wait_for_transaction_receipt(l2_hash)
         return self.get_transaction(l2_hash)
+
+    def _get_priority_op_confirmation_l2_to_l1_log(
+        self, tx_hash: HexStr, index: int = 0
+    ):
+        receipt = self.eth_get_transaction_receipt(tx_hash)
+        msgs = []
+        for i, e in enumerate(receipt.l2_to_l1_logs):
+            if e.sender.lower() == BOOTLOADER_FORMAL_ADDRESS:
+                msgs.append((i, e))
+
+        l2_to_l1_log_index, log = msgs[index]
+
+        return l2_to_l1_log_index, log, receipt.l1_batch_tx_index
+
+    def get_priority_op_confirmation(self, tx_hash: HexStr, index: int = 0):
+        l2_to_l1_log_index, log, l1_batch_tx_index = (
+            self._get_priority_op_confirmation_l2_to_l1_log(tx_hash, index)
+        )
+        proof = self.zks_get_log_proof(tx_hash, l2_to_l1_log_index)
+
+        return log.l1_batch_number, proof.id, l1_batch_tx_index, proof.proof
 
     def wait_for_transaction_receipt(
         self, transaction_hash: _Hash32, timeout: float = 120, poll_latency: float = 0.1
@@ -679,28 +745,32 @@ class ZkSync(Eth, ABC):
         tx: WithdrawTransaction,
         from_: HexStr,
     ) -> TxWithdraw:
+        is_eth_based_chain = self.is_eth_based_chain()
+
+        if (
+            tx.token is not None
+            and is_address_eq(tx.token, LEGACY_ETH_ADDRESS)
+            and not is_eth_based_chain
+        ):
+            tx.token = self.l2_token_address(ETH_ADDRESS_IN_CONTRACTS)
+        elif tx.token is None or self.is_base_token(tx.token):
+            tx.token = L2_BASE_TOKEN_ADDRESS
         if tx.options is None:
             tx.options = TransactionOptions()
-        if tx.options.chain_id is None:
-            tx.options.chain_id = self.chain_id
-        if tx.options.nonce is None:
-            tx.options.nonce = self.get_transaction_count(
-                Web3.to_checksum_address(from_), ZkBlockParams.LATEST.value
-            )
-        if tx.options.gas_price is None:
-            tx.options.gas_price = self.gas_price
-        if tx.options.gas_limit is None:
-            tx.options.gas_limit = 0
 
         transaction = TxWithdraw(
+            web3=self,
             chain_id=tx.options.chain_id,
             nonce=tx.options.nonce,
             to=tx.to,
             amount=tx.amount,
             gas_limit=tx.options.gas_limit,
-            gas_price=tx.options.gas_price,
+            max_fee_per_gas=tx.options.max_fee_per_gas,
+            max_priority_fee_per_gas=tx.options.max_priority_fee_per_gas,
             token=tx.token,
             bridge_address=tx.bridge_address,
+            from_=from_,
+            paymaster_params=tx.paymaster_params
         )
 
         return transaction
@@ -708,6 +778,17 @@ class ZkSync(Eth, ABC):
     def get_transfer_transaction(
         self, tx: TransferTransaction, from_: HexStr
     ) -> TxTransfer:
+        is_eth_based_chain = self.is_eth_based_chain()
+
+        if (
+            tx.token_address is not None
+            and is_address_eq(tx.token_address, LEGACY_ETH_ADDRESS)
+            and not is_eth_based_chain
+        ):
+            tx.token_address = self.l2_token_address(ETH_ADDRESS_IN_CONTRACTS)
+        elif tx.token_address is None or self.is_base_token(tx.token_address):
+            tx.token_address = L2_BASE_TOKEN_ADDRESS
+
         if tx.options is None:
             tx.options = TransactionOptions()
         if tx.options.chain_id is None:

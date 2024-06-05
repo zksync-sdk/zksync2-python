@@ -113,6 +113,7 @@ ZksIsTokenLiquid = NewType("ZksIsTokenLiquid", bool)
 ZksL1ChainId = NewType("ZksL1ChainId", int)
 ZksL1BatchNumber = NewType("ZksL1BatchNumber", int)
 ZksMainContract = HexStr
+ZksBaseToken = HexStr
 ZksSetContractDebugInfoResult = NewType("ZksSetContractDebugInfoResult", bool)
 ZksTokenPrice = NewType("ZksTokenPrice", Decimal)
 ZksTokens = NewType("ZksTokens", List[Token])

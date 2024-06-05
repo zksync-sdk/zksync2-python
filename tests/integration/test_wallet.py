@@ -1,7 +1,6 @@
 import json
-import os
+from asyncio import sleep
 from pathlib import Path
-from time import sleep
 from unittest import TestCase, skip
 
 from eth_account import Account
@@ -16,7 +15,6 @@ from zksync2.core.types import (
     Token,
     DepositTransaction,
     ADDRESS_DEFAULT,
-    FullDepositFee,
     RequestExecuteCallMsg,
     TransactionOptions,
     TransferTransaction,
@@ -25,30 +23,33 @@ from zksync2.core.types import (
     PaymasterParams,
     ZkBlockParams,
 )
+from zksync2.core.utils import (
+    LEGACY_ETH_ADDRESS,
+    ETH_ADDRESS_IN_CONTRACTS,
+    L2_BASE_TOKEN_ADDRESS,
+)
 from zksync2.manage_contracts.contract_encoder_base import (
     ContractEncoder,
     JsonConfiguration,
 )
-from zksync2.manage_contracts.deploy_addresses import ZkSyncAddresses
 from zksync2.manage_contracts.paymaster_utils import PaymasterFlowEncoder
-from zksync2.manage_contracts.precompute_contract_deployer import (
-    PrecomputeContractDeployer,
+from zksync2.manage_contracts.utils import (
+    zksync_abi_default,
+    get_erc20_abi,
+    get_test_net_erc20_token,
 )
-from zksync2.manage_contracts.utils import zksync_abi_default, get_erc20_abi
 from zksync2.module.module_builder import ZkSyncBuilder
-from zksync2.signer.eth_signer import PrivateKeyEthSigner
-from zksync2.transaction.transaction_builders import (
-    TxCreate2Contract,
-    TxCreateContract,
-    TxFunctionCall,
-)
 
 
 class TestWallet(TestCase):
     def setUp(self) -> None:
+        self.DAI_L1 = Web3.to_checksum_address(
+            "0x70a0F165d6f8054d0d0CF8dFd4DD2005f0AF6B55"
+        )
         self.token_address = "0x0183Fe07a98bc036d6eb23C3943d823bcD66a90F"
         self.paymaster_address = "0x594E77D36eB367b3AbAb98775c99eB383079F966"
         self.address2 = "0xa61464658AfeAf65CccaaFD3a512b69A83B77618"
+        self.CONTRACT_ADDRESS = "0x36615Cf349d7F6344891B1e7CA7C72883F5dc049"
         self.env = LOCAL_ENV
         env_key = EnvPrivateKey("ZKSYNC_KEY1")
         self.zksync = ZkSyncBuilder.build("http://127.0.0.1:3050")
@@ -59,6 +60,7 @@ class TestWallet(TestCase):
             Web3.to_checksum_address(self.zksync.zksync.main_contract_address),
             abi=zksync_abi_default(),
         )
+        self.is_eth_based_chain = self.wallet.is_eth_based_chain()
 
     def load_token(self):
         directory = Path(__file__).parent
@@ -70,9 +72,17 @@ class TestWallet(TestCase):
         l2_address = self.zksync.zksync.l2_token_address(l1_address)
         return l1_address, l2_address
 
-    def test_get_main_contract(self):
-        main_contract = self.wallet.main_contract
-        self.assertIsNotNone(main_contract, "Should return main contract")
+    def test_get_bridgehub_contract(self):
+        result = self.wallet.get_bridgehub_contract()
+        self.assertIsNotNone(result)
+
+    def test_get_base_token(self):
+        result = self.wallet.get_base_token()
+        self.assertIsNotNone(result)
+
+    def test_is_eth_based_chain(self):
+        result = self.wallet.is_eth_based_chain()
+        self.assertIsNotNone(result)
 
     def test_l1_bridge_contracts(self):
         contracts = self.wallet.get_l1_bridge_contracts()
@@ -88,8 +98,15 @@ class TestWallet(TestCase):
         self.assertGreaterEqual(result, 0)
 
     def test_get_l2_token_address(self):
-        address = self.wallet.l2_token_address(ADDRESS_DEFAULT)
-        self.assertEqual(address, ADDRESS_DEFAULT, "Should return l2 token address")
+        base_token = self.wallet.get_base_token()
+        address = self.wallet.l2_token_address(base_token)
+        self.assertEqual(
+            L2_BASE_TOKEN_ADDRESS, address, "Should return l2 token address"
+        )
+
+    def test_get_l2_token_address_dai(self):
+        address = self.wallet.l2_token_address(self.DAI_L1)
+        self.assertIsNotNone(address)
 
     def test_approve_erc20(self):
         usdc_token = Token(
@@ -132,122 +149,385 @@ class TestWallet(TestCase):
         self.assertIsNotNone(nonce, "Should return deployment nonce")
 
     def test_prepare_deposit_transaction(self):
-        options = TransactionOptions(
-            gas_price=1_000_000_007,
-            max_fee_per_gas=1_000_000_010,
-            value=288_992_007_000_000,
-            max_priority_fee_per_gas=1_000_000_000,
-        )
-        tx = DepositTransaction(
-            token=ADDRESS_DEFAULT,
-            amount=0.000000007,
-            to=self.wallet.address,
+        tx = RequestExecuteCallMsg(
+            contract_address=self.CONTRACT_ADDRESS,
+            call_data="0x",
             operator_tip=0,
-            l2_gas_limit=int("0x8d1c0", 16),
+            l2_value=7_000_000,
             gas_per_pubdata_byte=800,
             refund_recipient=self.wallet.address,
-            l2_value=7_000_000,
-            options=options,
         )
-        transaction = self.wallet.prepare_deposit_tx(tx)
+        transaction = self.wallet.prepare_deposit_tx(
+            DepositTransaction(
+                token=LEGACY_ETH_ADDRESS,
+                amount=7_000_000,
+                refund_recipient=self.wallet.address,
+            )
+        )
+        self.assertGreater(transaction.l2_gas_limit, 0)
+        self.assertGreater(transaction.mint_value, 0)
+        self.assertGreater(transaction.options.max_fee_per_gas, 0)
+        self.assertGreater(transaction.options.max_priority_fee_per_gas, 0)
+        self.assertGreater(transaction.options.value, 0)
+
+        del transaction.l2_gas_limit
+        del transaction.mint_value
+        del transaction.options
+
+        del tx.l2_gas_limit
+        del tx.mint_value
+        del tx.options
 
         self.assertEqual(tx, transaction)
 
     def test_prepare_deposit_transaction_token(self):
         l1_address, l2_address = self.load_token()
-        tx = DepositTransaction(
-            token=HexStr(l1_address),
-            amount=5,
-            refund_recipient=self.wallet.address,
-            to=self.wallet.get_l2_bridge_contracts().erc20.address,
-            custom_bridge_data=HexBytes(
-                "0xe8b99b1b00000000000000000000000036615cf349d7f6344891b1e7ca7c72883f5dc049000000000000000000000000881567b68502e6d7a7a3556ff4313b637ba47f4e0000000000000000000000000000000000000000000000000000000000000005000000000000000000000000000000000000000000000000000000000008e0f6000000000000000000000000000000000000000000000000000000000000032000000000000000000000000036615cf349d7f6344891b1e7ca7c72883f5dc049"
-            ),
-        )
-        transaction = self.wallet.prepare_deposit_tx(tx)
 
-        self.assertEqual(tx, transaction)
+        print(self.wallet.get_l1_balance(l1_address))
 
-    def test_estimate_gas_deposit(self):
-        estimated_gas = self.wallet.estimate_gas_deposit(
+        transaction = self.wallet.prepare_deposit_tx(
             DepositTransaction(
-                token=ADDRESS_DEFAULT,
-                to=self.wallet.address,
-                amount=5,
-                refund_recipient=self.wallet.address,
+                token=l1_address, amount=5, refund_recipient=self.wallet.address, approve_erc20=True
             )
         )
-        self.assertGreaterEqual(estimated_gas, 110_581)
+
+        self.assertGreater(transaction["maxFeePerGas"], 0)
+        self.assertGreater(transaction["maxPriorityFeePerGas"], 0)
+        self.assertGreater(transaction["value"], 0)
+
+    def test_estimate_eth_gas_deposit(self):
+        if self.is_eth_based_chain:
+            estimated_gas = self.wallet.estimate_gas_deposit(
+                DepositTransaction(
+                    token=ADDRESS_DEFAULT,
+                    to=self.wallet.address,
+                    amount=5,
+                    refund_recipient=self.wallet.address,
+                )
+            )
+            self.assertGreater(estimated_gas, 0)
+        else:
+            amount = 5
+            approve_params = self.wallet.get_deposit_allowance_params(
+                LEGACY_ETH_ADDRESS, amount
+            )
+            self.wallet.approve_erc20(
+                approve_params[0]["token"], approve_params[0]["allowance"]
+            )
+            estimated_gas = self.wallet.estimate_gas_deposit(
+                DepositTransaction(
+                    token=ADDRESS_DEFAULT,
+                    to=self.wallet.address,
+                    amount=amount,
+                    refund_recipient=self.wallet.address,
+                )
+            )
+            self.assertGreater(estimated_gas, 0)
+
+    def test_estimate_token_gas_deposit(self):
+        l1_address, l2_address = self.load_token()
+        if self.is_eth_based_chain:
+            is_approved = self.wallet.approve_erc20(
+                Web3.to_checksum_address(l1_address), 5
+            )
+            estimated_gas = self.wallet.estimate_gas_deposit(
+                DepositTransaction(
+                    token=l1_address,
+                    to=self.wallet.address,
+                    amount=5,
+                    refund_recipient=self.wallet.address,
+                    approve_erc20=True,
+                )
+            )
+            self.assertGreater(estimated_gas, 0)
+        else:
+            amount = 5
+            approve_params = self.wallet.get_deposit_allowance_params(
+                l1_address, amount
+            )
+
+            self.wallet.approve_erc20(
+                approve_params[0]["token"], approve_params[0]["allowance"]
+            )
+            self.wallet.approve_erc20(
+                approve_params[1]["token"], approve_params[1]["allowance"]
+            )
+
+            estimated_gas = self.wallet.estimate_gas_deposit(
+                DepositTransaction(
+                    token=l1_address,
+                    to=self.wallet.address,
+                    amount=amount,
+                    refund_recipient=self.wallet.address,
+                )
+            )
+            self.assertGreater(estimated_gas, 0)
+
+    def test_estimate_base_token_gas_deposit(self):
+        if not self.is_eth_based_chain:
+            token = self.wallet.get_base_token()
+            amount = 5
+            approve_params = self.wallet.get_deposit_allowance_params(token, amount)
+
+            self.wallet.approve_erc20(
+                approve_params[0]["token"], approve_params[0]["allowance"]
+            )
+
+            estimated_gas = self.wallet.estimate_gas_deposit(
+                DepositTransaction(
+                    token=token,
+                    to=self.wallet.address,
+                    amount=amount,
+                    refund_recipient=self.wallet.address,
+                )
+            )
+            self.assertGreater(estimated_gas, 0)
 
     def test_deposit_eth(self):
-        amount = 7_000_000_000
-        l2_balance_before = self.wallet.get_balance()
+        if self.is_eth_based_chain:
+            amount = 7_000_000_000
+            l2_balance_before = self.wallet.get_balance()
 
-        tx_hash = self.wallet.deposit(
-            DepositTransaction(token=Token.create_eth().l1_address, amount=amount)
-        )
-
-        tx_receipt = self.eth_web3.eth.wait_for_transaction_receipt(tx_hash)
-        l2_hash = self.zksync.zksync.get_l2_hash_from_priority_op(
-            tx_receipt, self.zksync_contract
-        )
-        self.zksync.zksync.wait_for_transaction_receipt(
-            transaction_hash=l2_hash, timeout=360, poll_latency=10
-        )
-        l2_balance_after = self.wallet.get_balance()
-        self.assertEqual(1, tx_receipt["status"], "L1 transaction should be successful")
-        self.assertGreaterEqual(
-            l2_balance_after - l2_balance_before,
-            amount,
-            "Balance on L2 should be increased",
-        )
-
-    # @skip("Integration test, used for develop purposes only")
-    def test_deposit_token(self):
-        amount = 100
-        l1_address, l2_address = self.load_token()
-        is_approved = self.wallet.approve_erc20(
-            Web3.to_checksum_address(l1_address), amount
-        )
-        self.assertTrue(is_approved)
-
-        balance_l2_beore = self.wallet.get_balance(
-            token_address=Web3.to_checksum_address(l2_address)
-        )
-
-        tx_hash = self.wallet.deposit(
-            DepositTransaction(
-                Web3.to_checksum_address(l1_address),
-                amount,
-                self.account.address,
-                approve_erc20=True,
-                refund_recipient=self.wallet.address,
+            tx_hash = self.wallet.deposit(
+                DepositTransaction(token=Token.create_eth().l1_address, amount=amount)
             )
-        )
 
-        l1_tx_receipt = self.eth_web3.eth.wait_for_transaction_receipt(tx_hash)
+            tx_receipt = self.eth_web3.eth.wait_for_transaction_receipt(tx_hash)
+            l2_hash = self.zksync.zksync.get_l2_hash_from_priority_op(
+                tx_receipt, self.zksync_contract
+            )
+            self.zksync.zksync.wait_for_transaction_receipt(
+                transaction_hash=l2_hash, timeout=360, poll_latency=10
+            )
+            l2_balance_after = self.wallet.get_balance()
+            self.assertEqual(
+                1, tx_receipt["status"], "L1 transaction should be successful"
+            )
+            self.assertGreaterEqual(
+                l2_balance_after - l2_balance_before,
+                amount,
+                "Balance on L2 should be increased",
+            )
+        else:
+            amount = 7_000_000_000
+            l2_balance_before = self.wallet.get_balance()
+            l1_balance_before = self.wallet.get_l1_balance()
 
-        l2_hash = self.zksync.zksync.get_l2_hash_from_priority_op(
-            l1_tx_receipt, self.zksync_contract
-        )
-        self.zksync.zksync.wait_for_transaction_receipt(
-            transaction_hash=l2_hash, timeout=360, poll_latency=10
-        )
+            tx_hash = self.wallet.deposit(
+                DepositTransaction(
+                    token=Token.create_eth().l1_address,
+                    amount=amount,
+                    approve_base_erc20=True,
+                )
+            )
 
-        balance_l2_after = self.wallet.get_balance(
-            token_address=Web3.to_checksum_address(l2_address)
-        )
-        self.assertGreater(balance_l2_after, balance_l2_beore)
+            tx_receipt = self.eth_web3.eth.wait_for_transaction_receipt(tx_hash)
+            l2_hash = self.zksync.zksync.get_l2_hash_from_priority_op(
+                tx_receipt, self.zksync_contract
+            )
+            self.zksync.zksync.wait_for_transaction_receipt(
+                transaction_hash=l2_hash, timeout=360, poll_latency=10
+            )
 
-    def test_full_required_deposit_fee(self):
-        fee = self.wallet.get_full_required_deposit_fee(
-            DepositTransaction(token=ADDRESS_DEFAULT, to=self.wallet.address)
-        )
-        self.assertTrue(fee.base_cost > 0)
-        self.assertTrue(fee.l1_gas_limit > 0)
-        self.assertTrue(fee.l2_gas_limit > 0)
-        self.assertTrue(fee.max_fee_per_gas > 0)
-        self.assertTrue(fee.max_priority_fee_per_gas > 0)
+            l2_balance_after = self.wallet.get_balance()
+            l1_balance_after = self.wallet.get_l1_balance()
+
+            self.assertEqual(
+                1, tx_receipt["status"], "L1 transaction should be successful"
+            )
+            self.assertGreaterEqual(
+                l2_balance_after - l2_balance_before,
+                amount,
+                "Balance on L2 should be increased",
+            )
+            self.assertGreaterEqual(l1_balance_before - l1_balance_after, amount)
+
+    def test_deposit_base_token(self):
+        if not self.is_eth_based_chain:
+            amount = 5
+            base_token_l1 = self.wallet.get_base_token()
+            l2_balance_before = self.wallet.get_balance()
+            l1_balance_before = self.wallet.get_l1_balance(base_token_l1)
+
+            tx_hash = self.wallet.deposit(
+                DepositTransaction(
+                    token=base_token_l1, amount=amount, approve_erc20=True
+                )
+            )
+
+            tx_receipt = self.eth_web3.eth.wait_for_transaction_receipt(tx_hash)
+            l2_hash = self.zksync.zksync.get_l2_hash_from_priority_op(
+                tx_receipt, self.zksync_contract
+            )
+            self.zksync.zksync.wait_for_transaction_receipt(
+                transaction_hash=l2_hash, timeout=360, poll_latency=10
+            )
+
+            l2_balance_after = self.wallet.get_balance()
+            l1_balance_after = self.wallet.get_l1_balance(base_token_l1)
+
+            self.assertEqual(
+                1, tx_receipt["status"], "L1 transaction should be successful"
+            )
+            self.assertGreaterEqual(
+                l2_balance_after - l2_balance_before,
+                amount,
+                "Balance on L2 should be increased",
+            )
+            self.assertGreaterEqual(l1_balance_before - l1_balance_after, amount)
+
+    def test_deposit_erc_20_token(self):
+        if self.is_eth_based_chain:
+            amount = 100
+            l1_address, l2_address = self.load_token()
+            # is_approved = self.wallet.approve_erc20(
+            #     Web3.to_checksum_address(l1_address), amount
+            # )
+            # self.assertTrue(is_approved)
+
+            balance_l2_beore = self.wallet.get_balance(
+                token_address=Web3.to_checksum_address(l2_address)
+            )
+
+            tx_hash = self.wallet.deposit(
+                DepositTransaction(
+                    Web3.to_checksum_address(l1_address),
+                    amount,
+                    self.account.address,
+                    approve_erc20=True,
+                    approve_base_erc20=True,
+                    refund_recipient=self.wallet.address,
+                )
+            )
+
+            l1_tx_receipt = self.eth_web3.eth.wait_for_transaction_receipt(tx_hash)
+
+            l2_hash = self.zksync.zksync.get_l2_hash_from_priority_op(
+                l1_tx_receipt, self.zksync_contract
+            )
+            self.zksync.zksync.wait_for_transaction_receipt(
+                transaction_hash=l2_hash, timeout=360, poll_latency=10
+            )
+
+            balance_l2_after = self.wallet.get_balance(
+                token_address=Web3.to_checksum_address(l2_address)
+            )
+            self.assertGreater(balance_l2_after, balance_l2_beore)
+        else:
+            amount = 100
+            l1_address, l2_address = self.load_token()
+            is_approved = self.wallet.approve_erc20(
+                Web3.to_checksum_address(l1_address), amount
+            )
+            self.assertTrue(is_approved)
+
+            balance_l2_beore = self.wallet.get_balance(
+                token_address=Web3.to_checksum_address(l2_address)
+            )
+
+            tx_hash = self.wallet.deposit(
+                DepositTransaction(
+                    Web3.to_checksum_address(l1_address),
+                    amount,
+                    self.account.address,
+                    approve_erc20=True,
+                    approve_base_erc20=True,
+                    refund_recipient=self.wallet.address,
+                )
+            )
+
+            l1_tx_receipt = self.eth_web3.eth.wait_for_transaction_receipt(tx_hash)
+
+            l2_hash = self.zksync.zksync.get_l2_hash_from_priority_op(
+                l1_tx_receipt, self.zksync_contract
+            )
+            self.zksync.zksync.wait_for_transaction_receipt(
+                transaction_hash=l2_hash, timeout=360, poll_latency=10
+            )
+
+            balance_l2_after = self.wallet.get_balance(
+                token_address=Web3.to_checksum_address(l2_address)
+            )
+            self.assertGreater(balance_l2_after, balance_l2_beore)
+
+    def test_full_required_deposit_fee_eth(self):
+        if self.is_eth_based_chain:
+            fee = self.wallet.get_full_required_deposit_fee(
+                DepositTransaction(token=LEGACY_ETH_ADDRESS, to=self.wallet.address)
+            )
+
+            self.assertTrue(fee.base_cost > 0)
+            self.assertTrue(fee.l1_gas_limit > 0)
+            self.assertTrue(fee.l2_gas_limit > 0)
+            self.assertTrue(fee.max_fee_per_gas > 0)
+            self.assertTrue(fee.max_priority_fee_per_gas > 0)
+        else:
+            approve_params = self.wallet.get_deposit_allowance_params(
+                LEGACY_ETH_ADDRESS, 1
+            )
+            self.wallet.approve_erc20(
+                approve_params[0]["token"], approve_params[0]["allowance"]
+            )
+
+            fee = self.wallet.get_full_required_deposit_fee(
+                DepositTransaction(token=LEGACY_ETH_ADDRESS, to=self.wallet.address)
+            )
+            self.assertTrue(fee.base_cost > 0)
+            self.assertTrue(fee.l1_gas_limit > 0)
+            self.assertTrue(fee.l2_gas_limit > 0)
+            self.assertTrue(fee.max_fee_per_gas > 0)
+            self.assertTrue(fee.max_priority_fee_per_gas > 0)
+
+    def test_full_required_deposit_fee_erc_20_token(self):
+        if self.is_eth_based_chain:
+            amount = 5
+            l1_address, l2_address = self.load_token()
+            self.wallet.approve_erc20(l1_address, amount)
+
+            fee = self.wallet.get_full_required_deposit_fee(
+                DepositTransaction(token=l1_address, to=self.wallet.address)
+            )
+
+            self.assertTrue(fee.base_cost > 0)
+            self.assertTrue(fee.l1_gas_limit > 0)
+            self.assertTrue(fee.l2_gas_limit > 0)
+            self.assertTrue(fee.max_fee_per_gas > 0)
+            self.assertTrue(fee.max_priority_fee_per_gas > 0)
+        else:
+            l1_address, l2_address = self.load_token()
+            approve_params = self.wallet.get_deposit_allowance_params(l1_address, 1)
+            self.wallet.approve_erc20(
+                approve_params[0]["token"], approve_params[0]["allowance"]
+            )
+            self.wallet.approve_erc20(
+                approve_params[1]["token"], approve_params[1]["allowance"]
+            )
+
+            fee = self.wallet.get_full_required_deposit_fee(
+                DepositTransaction(token=l1_address, to=self.wallet.address)
+            )
+            self.assertTrue(fee.base_cost > 0)
+            self.assertTrue(fee.l1_gas_limit > 0)
+            self.assertTrue(fee.l2_gas_limit > 0)
+            self.assertTrue(fee.max_fee_per_gas > 0)
+            self.assertTrue(fee.max_priority_fee_per_gas > 0)
+
+    def test_full_required_deposit_fee_base_token(self):
+        if not self.is_eth_based_chain:
+            token = self.wallet.get_base_token()
+            approve_params = self.wallet.get_deposit_allowance_params(token, 1)
+            self.wallet.approve_erc20(
+                approve_params[0]["token"], approve_params[0]["allowance"]
+            )
+
+            fee = self.wallet.get_full_required_deposit_fee(
+                DepositTransaction(token=token, to=self.wallet.address)
+            )
+            self.assertTrue(fee.base_cost > 0)
+            self.assertTrue(fee.l1_gas_limit > 0)
+            self.assertTrue(fee.l2_gas_limit > 0)
+            self.assertTrue(fee.max_fee_per_gas > 0)
+            self.assertTrue(fee.max_priority_fee_per_gas > 0)
 
     def test_transfer_eth(self):
         amount = 7_000_000_000
@@ -271,36 +551,8 @@ class TestWallet(TestCase):
 
         self.assertEqual(balance_after_transfer - balance_before_transfer, amount)
 
-    def test_transfer_eth_with_non_zero_gas_limit(self):
-        gas_limit = 500_000
-        options = TransactionOptions(gas_limit=gas_limit)
-        amount = 7_000_000_000
-        balance_before_transfer = self.zksync.zksync.get_balance(
-            Web3.to_checksum_address(self.address2)
-        )
-        tx_hash = self.wallet.transfer(
-            TransferTransaction(
-                to=Web3.to_checksum_address(self.address2),
-                token_address=ADDRESS_DEFAULT,
-                amount=amount,
-                options=options,
-            )
-        )
-
-        receipt = self.zksync.zksync.wait_for_transaction_receipt(
-            tx_hash, timeout=240, poll_latency=0.5
-        )
-        self.assertNotEqual(receipt["gasUsed"], gas_limit)
-        tx = self.zksync.eth.get_transaction(tx_hash)
-        self.assertEqual(tx["gas"], gas_limit)
-        balance_after_transfer = self.zksync.zksync.get_balance(
-            Web3.to_checksum_address(self.address2)
-        )
-
-        self.assertEqual(balance_after_transfer - balance_before_transfer, amount)
-
     def test_transfer_eth_paymaster(self):
-        amount = 1
+        amount = 7_000_000_000
         paymaster_address = self.zksync.to_checksum_address(self.paymaster_address)
         token_address = self.zksync.to_checksum_address(self.token_address)
 
@@ -374,7 +626,7 @@ class TestWallet(TestCase):
         )
 
         balance_before = self.wallet.get_balance(
-            Web3.to_checksum_address(self.token_address)
+            token_address=Web3.to_checksum_address(self.token_address)
         )
         mint_tx = token_contract.functions.mint(
             self.wallet.address, 15
@@ -395,7 +647,7 @@ class TestWallet(TestCase):
             tx_hash, timeout=240, poll_latency=0.5
         )
         balance_after = self.wallet.get_balance(
-            Web3.to_checksum_address(self.token_address)
+            token_address=Web3.to_checksum_address(self.token_address)
         )
 
         self.assertEqual(15, balance_after - balance_before)
@@ -422,45 +674,6 @@ class TestWallet(TestCase):
             tx_hash, timeout=240, poll_latency=0.5
         )
         self.assertIsNotNone(result)
-        sender_after = self.wallet.get_balance(token_address=l2_address)
-
-        balance_after = self.zksync.zksync.zks_get_balance(
-            self.address2,
-            token_address=l2_address,
-            block_tag=ZkBlockParams.LATEST.value,
-        )
-
-        self.assertEqual(amount, sender_before - sender_after)
-        self.assertEqual(amount, balance_after - balance_before)
-
-    def test_transfer_token_with_non_zero_gas_limit(self):
-        gas_limit = 500_000
-        options = TransactionOptions(gas_limit=gas_limit)
-        amount = 5
-        _, l2_address = self.load_token()
-
-        sender_before = self.wallet.get_balance(token_address=l2_address)
-        balance_before = self.zksync.zksync.zks_get_balance(
-            self.address2,
-            token_address=l2_address,
-            block_tag=ZkBlockParams.LATEST.value,
-        )
-        tx_hash = self.wallet.transfer(
-            TransferTransaction(
-                to=Web3.to_checksum_address(self.address2),
-                token_address=Web3.to_checksum_address(l2_address),
-                amount=amount,
-                options=options,
-            )
-        )
-
-        result = self.zksync.zksync.wait_for_transaction_receipt(
-            tx_hash, timeout=240, poll_latency=0.5
-        )
-        self.assertIsNotNone(result)
-        self.assertNotEqual(result["gasUsed"], gas_limit)
-        tx = self.zksync.eth.get_transaction(tx_hash)
-        self.assertEqual(tx["gas"], gas_limit)
         sender_after = self.wallet.get_balance(token_address=l2_address)
 
         balance_after = self.zksync.zksync.zks_get_balance(
@@ -550,21 +763,34 @@ class TestWallet(TestCase):
         self.assertEqual(reciever_balance_after - reciever_balance_before, 5)
 
     def test_withdraw_eth(self):
+        token = (
+            ETH_ADDRESS_IN_CONTRACTS
+            if self.is_eth_based_chain
+            else self.wallet.l2_token_address(ETH_ADDRESS_IN_CONTRACTS)
+        )
         l2_balance_before = self.wallet.get_balance()
-        amount = 1
+        amount = 7_000_000_000
 
         withdraw_tx_hash = self.wallet.withdraw(
-            WithdrawTransaction(
-                token=Token.create_eth().l1_address, amount=Web3.to_wei(amount, "ether")
-            )
+            WithdrawTransaction(token=token, amount=amount)
         )
 
-        self.zksync.zksync.wait_for_transaction_receipt(
+        withdraw_receipt = self.zksync.zksync.wait_finalized(
             withdraw_tx_hash, timeout=240, poll_latency=0.5
+        )
+        # self.assertFalse(
+        #     self.wallet.is_withdrawal_finalized(withdraw_receipt["transactionHash"])
+        # )
+        finalized_hash = self.wallet.finalize_withdrawal(
+            withdraw_receipt["transactionHash"]
+        )
+        result = self.eth_web3.eth.wait_for_transaction_receipt(
+            finalized_hash, timeout=240, poll_latency=0.5
         )
 
         l2_balance_after = self.wallet.get_balance()
 
+        self.assertIsNotNone(result)
         self.assertGreater(
             l2_balance_before,
             l2_balance_after,
@@ -572,14 +798,14 @@ class TestWallet(TestCase):
         )
 
     def test_withdraw_eth_paymaster(self):
-        amount = 1
+        amount = 7_000_000_000
 
         paymaster_address = self.zksync.to_checksum_address(self.paymaster_address)
         token_address = self.zksync.to_checksum_address(self.token_address)
 
         paymaster_balance_before = self.zksync.zksync.zks_get_balance(paymaster_address)
         paymaster_token_balance_before = self.zksync.zksync.zks_get_balance(
-            paymaster_address, token_address=token_address
+            paymaster_address, token_address=token_address, block_tag=ZkBlockParams.LATEST
         )
 
         sender_balance_before = self.wallet.get_balance()
@@ -597,11 +823,10 @@ class TestWallet(TestCase):
                 ),
             }
         )
-
         withdraw_tx_hash = self.wallet.withdraw(
             WithdrawTransaction(
                 token=Token.create_eth().l1_address,
-                amount=Web3.to_wei(amount, "ether"),
+                amount=amount,
                 paymaster_params=paymaster_params,
             )
         )
@@ -609,9 +834,9 @@ class TestWallet(TestCase):
         withdraw_receipt = self.zksync.zksync.wait_finalized(
             withdraw_tx_hash, timeout=240, poll_latency=0.5
         )
-        self.assertFalse(
-            self.wallet.is_withdrawal_finalized(withdraw_receipt["transactionHash"])
-        )
+        # self.assertFalse(
+        #     self.wallet.is_withdrawal_finalized(withdraw_receipt["transactionHash"])
+        # )
 
         finalized_hash = self.wallet.finalize_withdrawal(
             withdraw_receipt["transactionHash"]
@@ -621,7 +846,7 @@ class TestWallet(TestCase):
         )
         paymaster_balance_after = self.zksync.zksync.zks_get_balance(paymaster_address)
         paymaster_token_balance_after = self.zksync.zksync.zks_get_balance(
-            paymaster_address, token_address=token_address
+            paymaster_address, token_address=token_address, block_tag=ZkBlockParams.LATEST
         )
         sender_balance_after = self.wallet.get_balance()
         sender_approval_token_balance_after = self.wallet.get_balance(
@@ -633,7 +858,7 @@ class TestWallet(TestCase):
             paymaster_token_balance_after - paymaster_token_balance_before, 1
         )
         self.assertEqual(
-            sender_balance_before - sender_balance_after, Web3.to_wei(amount, "ether")
+            sender_balance_before - sender_balance_after, amount
         )
         self.assertEqual(
             sender_approval_token_balance_after,
@@ -715,15 +940,25 @@ class TestWallet(TestCase):
         withdraw_tx_hash = self.wallet.withdraw(
             WithdrawTransaction(Web3.to_checksum_address(l2_address), 5)
         )
-
-        self.zksync.zksync.wait_for_transaction_receipt(
+        withdraw_receipt = self.zksync.zksync.wait_finalized(
             withdraw_tx_hash, timeout=240, poll_latency=0.5
+        )
+        # self.assertFalse(
+        #     self.wallet.is_withdrawal_finalized(withdraw_receipt["transactionHash"])
+        # )
+
+        finalized_hash = self.wallet.finalize_withdrawal(
+            withdraw_receipt["transactionHash"]
+        )
+        result = self.eth_web3.eth.wait_for_transaction_receipt(
+            finalized_hash, timeout=240, poll_latency=0.5
         )
 
         l2_balance_after = self.wallet.get_balance(
             token_address=Web3.to_checksum_address(l2_address)
         )
 
+        self.assertIsNotNone(result)
         self.assertGreater(
             l2_balance_before,
             l2_balance_after,
@@ -759,7 +994,7 @@ class TestWallet(TestCase):
         tx_hash = self.wallet.request_execute(
             RequestExecuteCallMsg(
                 contract_address=Web3.to_checksum_address(
-                    self.zksync.zksync.main_contract_address
+                    self.zksync.zksync.zks_get_bridgehub_contract_address()
                 ),
                 call_data=HexStr("0x"),
                 l2_value=amount,

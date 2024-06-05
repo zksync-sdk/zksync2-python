@@ -48,15 +48,6 @@ class ZkSyncWeb3Tests(TestCase):
             }
         )
 
-    def test_get_governor(self):
-        governor = self.zksync_contract.functions.getGovernor().call(
-            {
-                "chainId": self.eth_web3.eth.chain_id,
-                "from": self.account.address,
-                "nonce": self.eth_web3.eth.get_transaction_count(self.account.address),
-            }
-        )
-
     def test_get_l2_bootloader_bytecode_hash(self):
         bytecode_hash = (
             self.zksync_contract.functions.getL2BootloaderBytecodeHash().call(
@@ -81,15 +72,6 @@ class ZkSyncWeb3Tests(TestCase):
                     ),
                 }
             )
-        )
-
-    def test_get_proposed_upgrade_hash(self):
-        upgrade_hash = self.zksync_contract.functions.getPendingGovernor().call(
-            {
-                "chainId": self.eth_web3.eth.chain_id,
-                "from": self.account.address,
-                "nonce": self.eth_web3.eth.get_transaction_count(self.account.address),
-            }
         )
 
     def test_get_proposed_upgrade_timestamp(self):
