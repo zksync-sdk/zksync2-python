@@ -1,10 +1,10 @@
 name: Run tests
 on:
   push:
-    branches: [ main, beta ]
+    branches: [ master, beta ]
   workflow_dispatch:
   pull_request:
-    branches: [ main, beta ]
+    branches: [ master, beta ]
     types: [ opened, reopened, synchronize ]
 
 permissions:
