@@ -9,6 +9,3 @@ check-code-format:
 
 format-code:
 	black zksync2 scripts tests
-
-wait:
-	python scripts/wait.py
