@@ -1192,7 +1192,7 @@ class WalletL1:
                 Web3.to_checksum_address(sender), abi=l2_shared_bridge_abi_default()
             )
             l1_bridge = self._eth_web3.eth.contract(
-                Web3.to_checksum_address(l2_bridge.functions.l1Bridge().call()),
+                Web3.to_checksum_address(l2_bridge.functions.l1SharedBridge().call()),
                 abi=l1_shared_bridge_abi_default(),
             )
 
