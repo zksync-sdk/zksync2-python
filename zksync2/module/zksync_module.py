@@ -580,7 +580,10 @@ class ZkSync(Eth, ABC):
     ) -> int:
         if token_address is None:
             token_address = L2_BASE_TOKEN_ADDRESS
-        elif token_address == LEGACY_ETH_ADDRESS or token_address == ETH_ADDRESS_IN_CONTRACTS:
+        elif (
+            token_address == LEGACY_ETH_ADDRESS
+            or token_address == ETH_ADDRESS_IN_CONTRACTS
+        ):
             token_address = self.l2_token_address(ETH_ADDRESS_IN_CONTRACTS)
         if token_address == L2_BASE_TOKEN_ADDRESS:
             return self.get_balance(to_checksum_address(address), block_tag)
@@ -759,7 +762,7 @@ class ZkSync(Eth, ABC):
 
         return TxWithdraw(
             web3=self,
-            chain_id=tx.options.chain_id ,
+            chain_id=tx.options.chain_id,
             nonce=tx.options.nonce,
             to=tx.to,
             amount=tx.amount,
