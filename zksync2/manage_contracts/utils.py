@@ -17,6 +17,8 @@ eth_token_abi_cache = None
 erc_20_abi_cache = None
 eth_token_abi_cache = None
 test_net_erc_20_abi_cache = None
+l1_shared_bridge_abi_cache = None
+bridgehub_abi_cache = None
 
 
 def zksync_abi_default():
@@ -85,25 +87,25 @@ def l1_bridge_abi_default():
 
 
 def bridgehub_abi_default():
-    global l1_bridge_abi_cache
+    global bridgehub_abi_cache
 
-    if l1_bridge_abi_cache is None:
+    if bridgehub_abi_cache is None:
         with pkg_resources.path(contract_abi, "IBridgehub.json") as p:
             with p.open(mode="r") as json_file:
                 data = json.load(json_file)
-                l1_bridge_abi_cache = data["abi"]
-    return l1_bridge_abi_cache
+                bridgehub_abi_cache = data["abi"]
+    return bridgehub_abi_cache
 
 
 def l1_shared_bridge_abi_default():
-    global l1_bridge_abi_cache
+    global l1_shared_bridge_abi_cache
 
-    if l1_bridge_abi_cache is None:
+    if l1_shared_bridge_abi_cache is None:
         with pkg_resources.path(contract_abi, "IL1SharedBridge.json") as p:
             with p.open(mode="r") as json_file:
                 data = json.load(json_file)
-                l1_bridge_abi_cache = data["abi"]
-    return l1_bridge_abi_cache
+                l1_shared_bridge_abi_cache = data["abi"]
+    return l1_shared_bridge_abi_cache
 
 
 def eth_token_abi_default():
