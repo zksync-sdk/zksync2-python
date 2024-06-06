@@ -776,7 +776,7 @@ class TestWallet(TestCase):
         withdraw_receipt = self.zksync.zksync.wait_finalized(
             withdraw_tx_hash, timeout=240, poll_latency=0.5
         )
-        print (withdraw_receipt["transactionHash"])
+        print(withdraw_receipt["transactionHash"])
         self.assertFalse(
             self.wallet.is_withdrawal_finalized(withdraw_receipt["transactionHash"])
         )

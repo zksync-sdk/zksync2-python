@@ -46,7 +46,9 @@ from zksync2.manage_contracts.utils import (
     get_erc20_abi,
     l2_bridge_abi_default,
     l1_shared_bridge_abi_default,
-    bridgehub_abi_default, get_zksync_hyperchain, l2_shared_bridge_abi_default,
+    bridgehub_abi_default,
+    get_zksync_hyperchain,
+    l2_shared_bridge_abi_default,
 )
 from zksync2.module.request_types import EIP712Meta
 from zksync2.transaction.transaction_builders import TxFunctionCall
