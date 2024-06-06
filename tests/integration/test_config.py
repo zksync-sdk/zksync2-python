@@ -31,5 +31,5 @@ class TestEnvironment:
 
 
 LOCAL_ENV = TestEnvironment(
-    EnvType.LOCAL_HOST, "http://localhost:15100", "http://127.0.0.1:15045"
+    EnvType.LOCAL_HOST, "http://localhost:3050", "http://127.0.0.1:8545"
 )
