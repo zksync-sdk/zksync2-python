@@ -12,7 +12,8 @@ from zksync2.manage_contracts.deploy_addresses import ZkSyncAddresses
 from zksync2.manage_contracts.utils import (
     zksync_abi_default,
     nonce_holder_abi_default,
-    l2_bridge_abi_default, l2_shared_bridge_abi_default,
+    l2_bridge_abi_default,
+    l2_shared_bridge_abi_default,
 )
 from zksync2.module.response_types import ZksAccountBalances
 from zksync2.signer.eth_signer import PrivateKeyEthSigner
