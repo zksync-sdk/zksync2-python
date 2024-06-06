@@ -187,7 +187,10 @@ class TestWallet(TestCase):
 
         transaction = self.wallet.prepare_deposit_tx(
             DepositTransaction(
-                token=l1_address, amount=5, refund_recipient=self.wallet.address, approve_erc20=True
+                token=l1_address,
+                amount=5,
+                refund_recipient=self.wallet.address,
+                approve_erc20=True,
             )
         )
 
@@ -805,7 +808,9 @@ class TestWallet(TestCase):
 
         paymaster_balance_before = self.zksync.zksync.zks_get_balance(paymaster_address)
         paymaster_token_balance_before = self.zksync.zksync.zks_get_balance(
-            paymaster_address, token_address=token_address, block_tag=ZkBlockParams.LATEST
+            paymaster_address,
+            token_address=token_address,
+            block_tag=ZkBlockParams.LATEST,
         )
 
         sender_balance_before = self.wallet.get_balance()
@@ -846,7 +851,9 @@ class TestWallet(TestCase):
         )
         paymaster_balance_after = self.zksync.zksync.zks_get_balance(paymaster_address)
         paymaster_token_balance_after = self.zksync.zksync.zks_get_balance(
-            paymaster_address, token_address=token_address, block_tag=ZkBlockParams.LATEST
+            paymaster_address,
+            token_address=token_address,
+            block_tag=ZkBlockParams.LATEST,
         )
         sender_balance_after = self.wallet.get_balance()
         sender_approval_token_balance_after = self.wallet.get_balance(
@@ -857,9 +864,7 @@ class TestWallet(TestCase):
         self.assertEqual(
             paymaster_token_balance_after - paymaster_token_balance_before, 1
         )
-        self.assertEqual(
-            sender_balance_before - sender_balance_after, amount
-        )
+        self.assertEqual(sender_balance_before - sender_balance_after, amount)
         self.assertEqual(
             sender_approval_token_balance_after,
             sender_approval_token_balance_before - 1,

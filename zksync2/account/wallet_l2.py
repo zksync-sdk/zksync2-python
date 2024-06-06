@@ -94,7 +94,9 @@ class WalletL2:
         )
 
         if tx.options.gas_limit is None or tx.options.gas_limit == 0:
-            tx.options.gas_limit = self._zksync_web3.zksync.eth_estimate_gas(tx_fun_call.tx)
+            tx.options.gas_limit = self._zksync_web3.zksync.eth_estimate_gas(
+                tx_fun_call.tx
+            )
 
         tx_712 = tx_fun_call.tx712(tx.options.gas_limit)
         signer = PrivateKeyEthSigner(self._l1_account, tx.options.chain_id)
@@ -119,9 +121,11 @@ class WalletL2:
             tx, from_=self._l1_account.address
         )
         if tx.options.gas_limit is None:
-            transaction.tx['gas'] = self._zksync_web3.zksync.eth_estimate_gas(transaction.tx)
+            transaction.tx["gas"] = self._zksync_web3.zksync.eth_estimate_gas(
+                transaction.tx
+            )
         else:
-            transaction.tx['gas'] = tx.options.gas_limit
+            transaction.tx["gas"] = tx.options.gas_limit
         tx_712 = transaction.tx712()
         signer = PrivateKeyEthSigner(self._l1_account, self._zksync_web3.eth.chain_id)
         signed_message = signer.sign_typed_data(tx_712.to_eip712_struct())

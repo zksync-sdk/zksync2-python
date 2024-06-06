@@ -19,7 +19,12 @@ from zksync2.core.types import (
     ADDRESS_DEFAULT,
     StorageProof,
 )
-from zksync2.core.utils import pad_front_bytes, to_bytes, pad_back_bytes, L2_BASE_TOKEN_ADDRESS
+from zksync2.core.utils import (
+    pad_front_bytes,
+    to_bytes,
+    pad_back_bytes,
+    L2_BASE_TOKEN_ADDRESS,
+)
 from zksync2.manage_contracts.contract_encoder_base import (
     ContractEncoder,
     JsonConfiguration,
@@ -767,7 +772,6 @@ class ZkSyncWeb3Tests(TestCase):
     # @skip("Integration test, used for develop purposes only")
     def test_get_all_account_balances(self):
         balances = self.web3.zksync.zks_get_all_account_balances(self.account.address)
-
 
     # @skip("Integration test, used for develop purposes only")
     def test_get_l1_chain_id(self):

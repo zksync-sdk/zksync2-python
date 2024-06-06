@@ -1147,8 +1147,12 @@ class WalletL1:
             nonce=self._eth_web3.eth.get_transaction_count(self.address),
         )
 
-        shared_bridge_address = self._zksync_web3.zksync.zks_get_bridge_contracts().shared_l1_default_bridge
-        shared_bridge = self._eth_web3.eth.contract(address=shared_bridge_address, abi=l1_shared_bridge_abi_default())
+        shared_bridge_address = (
+            self._zksync_web3.zksync.zks_get_bridge_contracts().shared_l1_default_bridge
+        )
+        shared_bridge = self._eth_web3.eth.contract(
+            address=shared_bridge_address, abi=l1_shared_bridge_abi_default()
+        )
         tx = shared_bridge.functions.finalizeWithdrawal(
             self._zksync_web3.eth.chain_id,
             params["l1_batch_number"],
@@ -1190,7 +1194,7 @@ class WalletL1:
                 abi=l1_shared_bridge_abi_default(),
             )
 
-        return  l1_bridge.functions.isWithdrawalFinalizedShared(
+        return l1_bridge.functions.isWithdrawalFinalizedShared(
             self._zksync_web3.eth.chain_id, int(log["l1BatchNumber"], 16), proof.id
         ).call()
 
