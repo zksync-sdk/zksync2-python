@@ -71,6 +71,7 @@ def deposit_token(wallet, eth_web3: Web3, zksync: Web3, zksync_contract):
             amount,
             wallet.address,
             approve_erc20=True,
+            approve_base_erc20=True,
             refund_recipient=wallet.address,
         )
     )

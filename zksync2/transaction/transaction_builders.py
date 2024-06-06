@@ -5,6 +5,7 @@ from eth_account.signers.base import BaseAccount
 from eth_typing import HexStr
 from web3 import Web3
 from web3.types import Nonce
+from zksync2.account.utils import prepare_transaction_options
 
 from zksync2.core.types import Token, BridgeAddresses, TransactionOptions
 from zksync2.core.utils import is_eth, MAX_PRIORITY_FEE_PER_GAS, L2_BASE_TOKEN_ADDRESS
@@ -330,7 +331,7 @@ class TxWithdraw(TxBase, ABC):
             paymaster_params=paymaster_params,
         )
 
-        if is_eth(token):
+        if token == L2_BASE_TOKEN_ADDRESS:
             contract = web3.contract(
                 Web3.to_checksum_address(L2_BASE_TOKEN_ADDRESS),
                 abi=eth_token_abi_default(),
@@ -357,18 +358,12 @@ class TxWithdraw(TxBase, ABC):
             options = TransactionOptions(
                 nonce=nonce,
                 chain_id=chain_id,
-                gas_limit=gas_limit,
                 max_fee_per_gas=max_fee_per_gas,
                 max_priority_fee_per_gas=max_priority_fee_per_gas,
                 value=0,
             )
             tx = l2_bridge.functions.withdraw(to, token, amount).build_transaction(
-                {
-                    "nonce": nonce,
-                    "chainId": chain_id,
-                    "value": 0,
-                    "from": from_,
-                }
+                prepare_transaction_options(from_=from_, options=options)
             )
         tx["eip712Meta"] = eip712_meta
         super(TxWithdraw, self).__init__(trans=tx)

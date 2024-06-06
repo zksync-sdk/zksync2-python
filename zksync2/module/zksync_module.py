@@ -578,7 +578,11 @@ class ZkSync(Eth, ABC):
         block_tag=ZkBlockParams.COMMITTED.value,
         token_address: HexStr = None,
     ) -> int:
-        if token_address is None or is_eth(token_address):
+        if token_address is None:
+            token_address = L2_BASE_TOKEN_ADDRESS
+        elif token_address == LEGACY_ETH_ADDRESS or token_address == ETH_ADDRESS_IN_CONTRACTS:
+            token_address = self.l2_token_address(ETH_ADDRESS_IN_CONTRACTS)
+        if token_address == L2_BASE_TOKEN_ADDRESS:
             return self.get_balance(to_checksum_address(address), block_tag)
 
         try:
@@ -745,49 +749,37 @@ class ZkSync(Eth, ABC):
         tx: WithdrawTransaction,
         from_: HexStr,
     ) -> TxWithdraw:
-        is_eth_based_chain = self.is_eth_based_chain()
-
-        if (
-            tx.token is not None
-            and is_address_eq(tx.token, LEGACY_ETH_ADDRESS)
-            and not is_eth_based_chain
-        ):
-            tx.token = self.l2_token_address(ETH_ADDRESS_IN_CONTRACTS)
-        elif tx.token is None or self.is_base_token(tx.token):
-            tx.token = L2_BASE_TOKEN_ADDRESS
+        token = tx.token
+        if token is None:
+            token = L2_BASE_TOKEN_ADDRESS
+        if token == LEGACY_ETH_ADDRESS or token == ETH_ADDRESS_IN_CONTRACTS:
+            token = self.l2_token_address(ETH_ADDRESS_IN_CONTRACTS)
         if tx.options is None:
             tx.options = TransactionOptions()
 
-        transaction = TxWithdraw(
+        return TxWithdraw(
             web3=self,
-            chain_id=tx.options.chain_id,
+            chain_id=tx.options.chain_id ,
             nonce=tx.options.nonce,
             to=tx.to,
             amount=tx.amount,
             gas_limit=tx.options.gas_limit,
             max_fee_per_gas=tx.options.max_fee_per_gas,
             max_priority_fee_per_gas=tx.options.max_priority_fee_per_gas,
-            token=tx.token,
+            token=token,
             bridge_address=tx.bridge_address,
             from_=from_,
             paymaster_params=tx.paymaster_params,
         )
 
-        return transaction
-
     def get_transfer_transaction(
         self, tx: TransferTransaction, from_: HexStr
     ) -> TxTransfer:
-        is_eth_based_chain = self.is_eth_based_chain()
-
-        if (
-            tx.token_address is not None
-            and is_address_eq(tx.token_address, LEGACY_ETH_ADDRESS)
-            and not is_eth_based_chain
-        ):
-            tx.token_address = self.l2_token_address(ETH_ADDRESS_IN_CONTRACTS)
-        elif tx.token_address is None or self.is_base_token(tx.token_address):
-            tx.token_address = L2_BASE_TOKEN_ADDRESS
+        token = tx.token_address
+        if token is None:
+            token = L2_BASE_TOKEN_ADDRESS
+        elif token == LEGACY_ETH_ADDRESS or token == ETH_ADDRESS_IN_CONTRACTS:
+            token = self.l2_token_address(ETH_ADDRESS_IN_CONTRACTS)
 
         if tx.options is None:
             tx.options = TransactionOptions()
@@ -805,7 +797,7 @@ class ZkSync(Eth, ABC):
             tx.options.gas_limit = 0
 
         call_data = "0x"
-        if tx.token_address is not None and not is_eth(tx.token_address):
+        if not is_eth(token):
             transfer_params = (tx.to, tx.amount)
             contract = self.contract(
                 Web3.to_checksum_address(tx.token_address), abi=get_erc20_abi()
@@ -814,7 +806,7 @@ class ZkSync(Eth, ABC):
 
         transaction = TxTransfer(
             web3=self,
-            token=tx.token_address,
+            token=token,
             chain_id=tx.options.chain_id,
             nonce=tx.options.nonce,
             from_=from_,
