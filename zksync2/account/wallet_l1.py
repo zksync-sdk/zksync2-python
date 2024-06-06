@@ -46,7 +46,7 @@ from zksync2.manage_contracts.utils import (
     get_erc20_abi,
     l2_bridge_abi_default,
     l1_shared_bridge_abi_default,
-    bridgehub_abi_default,
+    bridgehub_abi_default, get_zksync_hyperchain, l2_shared_bridge_abi_default,
 )
 from zksync2.module.request_types import EIP712Meta
 from zksync2.transaction.transaction_builders import TxFunctionCall
@@ -75,7 +75,7 @@ class WalletL1:
             self._zksync_web3.zksync.zks_main_contract()
         )
         self.contract = self._eth_web3.eth.contract(
-            self._main_contract_address, abi=zksync_abi_default()
+            self._main_contract_address, abi=get_zksync_hyperchain()
         )
         self._l1_account = l1_account
         self.bridge_addresses: BridgeAddresses = (
@@ -1187,14 +1187,14 @@ class WalletL1:
             l1_bridge = self.get_l1_bridge_contracts().shared
         else:
             l2_bridge = self._zksync_web3.eth.contract(
-                Web3.to_checksum_address(sender), abi=l2_bridge_abi_default()
+                Web3.to_checksum_address(sender), abi=l2_shared_bridge_abi_default()
             )
             l1_bridge = self._eth_web3.eth.contract(
                 Web3.to_checksum_address(l2_bridge.functions.l1Bridge().call()),
                 abi=l1_shared_bridge_abi_default(),
             )
 
-        return l1_bridge.functions.isWithdrawalFinalizedShared(
+        return l1_bridge.functions.isWithdrawalFinalized(
             self._zksync_web3.eth.chain_id, int(log["l1BatchNumber"], 16), proof.id
         ).call()
 

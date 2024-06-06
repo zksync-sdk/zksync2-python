@@ -52,8 +52,8 @@ class TestWallet(TestCase):
         self.CONTRACT_ADDRESS = "0x36615Cf349d7F6344891B1e7CA7C72883F5dc049"
         self.env = LOCAL_ENV
         env_key = EnvPrivateKey("ZKSYNC_KEY1")
-        self.zksync = ZkSyncBuilder.build("http://127.0.0.1:3050")
-        self.eth_web3 = Web3(Web3.HTTPProvider("http://127.0.0.1:8545"))
+        self.zksync = ZkSyncBuilder.build("http://127.0.0.1:15100")
+        self.eth_web3 = Web3(Web3.HTTPProvider("http://127.0.0.1:15045"))
         self.account: LocalAccount = Account.from_key(env_key.key)
         self.wallet = Wallet(self.zksync, self.eth_web3, self.account)
         self.zksync_contract = self.eth_web3.eth.contract(
@@ -534,8 +534,8 @@ class TestWallet(TestCase):
 
     def test_transfer_eth(self):
         amount = 7_000_000_000
-        balance_before_transfer = self.zksync.zksync.get_balance(
-            Web3.to_checksum_address(self.address2)
+        balance_before_transfer = self.zksync.zksync.zks_get_balance(
+            Web3.to_checksum_address(self.address2), token_address=LEGACY_ETH_ADDRESS
         )
         tx_hash = self.wallet.transfer(
             TransferTransaction(
@@ -548,8 +548,8 @@ class TestWallet(TestCase):
         self.zksync.zksync.wait_for_transaction_receipt(
             tx_hash, timeout=240, poll_latency=0.5
         )
-        balance_after_transfer = self.zksync.zksync.get_balance(
-            Web3.to_checksum_address(self.address2)
+        balance_after_transfer = self.zksync.zksync.zks_get_balance(
+            Web3.to_checksum_address(self.address2), token_address=LEGACY_ETH_ADDRESS
         )
 
         self.assertEqual(balance_after_transfer - balance_before_transfer, amount)
@@ -766,24 +766,20 @@ class TestWallet(TestCase):
         self.assertEqual(reciever_balance_after - reciever_balance_before, 5)
 
     def test_withdraw_eth(self):
-        token = (
-            ETH_ADDRESS_IN_CONTRACTS
-            if self.is_eth_based_chain
-            else self.wallet.l2_token_address(ETH_ADDRESS_IN_CONTRACTS)
-        )
-        l2_balance_before = self.wallet.get_balance()
+        l2_balance_before = self.wallet.get_balance(token_address=LEGACY_ETH_ADDRESS)
         amount = 7_000_000_000
 
         withdraw_tx_hash = self.wallet.withdraw(
-            WithdrawTransaction(token=token, amount=amount)
+            WithdrawTransaction(token=LEGACY_ETH_ADDRESS, amount=amount)
         )
 
         withdraw_receipt = self.zksync.zksync.wait_finalized(
             withdraw_tx_hash, timeout=240, poll_latency=0.5
         )
-        # self.assertFalse(
-        #     self.wallet.is_withdrawal_finalized(withdraw_receipt["transactionHash"])
-        # )
+        print (withdraw_receipt["transactionHash"])
+        self.assertFalse(
+            self.wallet.is_withdrawal_finalized(withdraw_receipt["transactionHash"])
+        )
         finalized_hash = self.wallet.finalize_withdrawal(
             withdraw_receipt["transactionHash"]
         )
@@ -791,7 +787,7 @@ class TestWallet(TestCase):
             finalized_hash, timeout=240, poll_latency=0.5
         )
 
-        l2_balance_after = self.wallet.get_balance()
+        l2_balance_after = self.wallet.get_balance(token_address=LEGACY_ETH_ADDRESS)
 
         self.assertIsNotNone(result)
         self.assertGreater(
@@ -839,9 +835,9 @@ class TestWallet(TestCase):
         withdraw_receipt = self.zksync.zksync.wait_finalized(
             withdraw_tx_hash, timeout=240, poll_latency=0.5
         )
-        # self.assertFalse(
-        #     self.wallet.is_withdrawal_finalized(withdraw_receipt["transactionHash"])
-        # )
+        self.assertFalse(
+            self.wallet.is_withdrawal_finalized(withdraw_receipt["transactionHash"])
+        )
 
         finalized_hash = self.wallet.finalize_withdrawal(
             withdraw_receipt["transactionHash"]
@@ -948,9 +944,9 @@ class TestWallet(TestCase):
         withdraw_receipt = self.zksync.zksync.wait_finalized(
             withdraw_tx_hash, timeout=240, poll_latency=0.5
         )
-        # self.assertFalse(
-        #     self.wallet.is_withdrawal_finalized(withdraw_receipt["transactionHash"])
-        # )
+        self.assertFalse(
+            self.wallet.is_withdrawal_finalized(withdraw_receipt["transactionHash"])
+        )
 
         finalized_hash = self.wallet.finalize_withdrawal(
             withdraw_receipt["transactionHash"]
