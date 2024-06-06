@@ -1,17 +1,6 @@
 {
   "abi": [
   {
-    "inputs": [
-      {
-        "internalType": "contract IL1SharedBridge",
-        "name": "_sharedBridge",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "nonpayable",
-    "type": "constructor"
-  },
-  {
     "anonymous": false,
     "inputs": [
       {
@@ -99,6 +88,19 @@
     "type": "event"
   },
   {
+    "inputs": [],
+    "name": "SHARED_BRIDGE",
+    "outputs": [
+      {
+        "internalType": "contract IL1SharedBridge",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "address",
@@ -173,7 +175,7 @@
     "outputs": [
       {
         "internalType": "bytes32",
-        "name": "l2TxHash",
+        "name": "txHash",
         "type": "bytes32"
       }
     ],
@@ -217,7 +219,7 @@
     "outputs": [
       {
         "internalType": "bytes32",
-        "name": "l2TxHash",
+        "name": "txHash",
         "type": "bytes32"
       }
     ],
@@ -228,17 +230,17 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "account",
+        "name": "_account",
         "type": "address"
       },
       {
         "internalType": "address",
-        "name": "l1Token",
+        "name": "_l1Token",
         "type": "address"
       },
       {
         "internalType": "bytes32",
-        "name": "depositL2TxHash",
+        "name": "_depositL2TxHash",
         "type": "bytes32"
       }
     ],
@@ -250,7 +252,7 @@
         "type": "uint256"
       }
     ],
-    "stateMutability": "view",
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -287,22 +289,15 @@
     "type": "function"
   },
   {
-    "inputs": [],
-    "name": "initialize",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "l2BatchNumber",
+        "name": "_l2BatchNumber",
         "type": "uint256"
       },
       {
         "internalType": "uint256",
-        "name": "l2ToL1MessageNumber",
+        "name": "_l2MessageIndex",
         "type": "uint256"
       }
     ],
@@ -310,7 +305,7 @@
     "outputs": [
       {
         "internalType": "bool",
-        "name": "isFinalized",
+        "name": "",
         "type": "bool"
       }
     ],
@@ -363,29 +358,16 @@
     "type": "function"
   },
   {
-    "inputs": [],
-    "name": "l2TokenProxyBytecodeHash",
-    "outputs": [
+    "inputs": [
       {
-        "internalType": "bytes32",
-        "name": "",
-        "type": "bytes32"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "sharedBridge",
-    "outputs": [
-      {
-        "internalType": "contract IL1SharedBridge",
-        "name": "",
+        "internalType": "address",
+        "name": "_token",
         "type": "address"
       }
     ],
-    "stateMutability": "view",
+    "name": "transferTokenToSharedBridge",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   }
 ]

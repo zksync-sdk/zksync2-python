@@ -1,5 +1,4 @@
-{
-  "abi": [
+[
   {
     "anonymous": false,
     "inputs": [
@@ -92,25 +91,6 @@
       }
     ],
     "name": "BlocksVerification",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "to",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      }
-    ],
-    "name": "EthWithdrawalFinalized",
     "type": "event"
   },
   {
@@ -691,7 +671,7 @@
         "type": "bytes32"
       }
     ],
-    "stateMutability": "payable",
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -1441,6 +1421,29 @@
         "internalType": "enum PubdataPricingMode",
         "name": "",
         "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getSemverProtocolVersion",
+    "outputs": [
+      {
+        "internalType": "uint32",
+        "name": "",
+        "type": "uint32"
+      },
+      {
+        "internalType": "uint32",
+        "name": "",
+        "type": "uint32"
+      },
+      {
+        "internalType": "uint32",
+        "name": "",
+        "type": "uint32"
       }
     ],
     "stateMutability": "view",
@@ -2252,6 +2255,19 @@
   {
     "inputs": [
       {
+        "internalType": "enum PubdataPricingMode",
+        "name": "_pricingMode",
+        "type": "uint8"
+      }
+    ],
+    "name": "setPubdataPricingMode",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "uint128",
         "name": "_nominator",
         "type": "uint128"
@@ -2294,19 +2310,6 @@
       }
     ],
     "name": "setValidator",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "enum PubdataPricingMode",
-        "name": "_validiumMode",
-        "type": "uint8"
-      }
-    ],
-    "name": "setValidiumMode",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -2402,5 +2405,3 @@
     "type": "function"
   }
 ]
-
-}
