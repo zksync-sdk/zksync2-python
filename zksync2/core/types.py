@@ -100,6 +100,7 @@ class L1BridgeContracts:
 @dataclass
 class L2BridgeContracts:
     erc20: Contract
+    weth: Contract
     shared: Contract
 
 

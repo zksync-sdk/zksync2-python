@@ -12,7 +12,7 @@ from zksync2.manage_contracts.deploy_addresses import ZkSyncAddresses
 from zksync2.manage_contracts.utils import (
     zksync_abi_default,
     nonce_holder_abi_default,
-    l2_bridge_abi_default,
+    l2_bridge_abi_default, l2_shared_bridge_abi_default,
 )
 from zksync2.module.response_types import ZksAccountBalances
 from zksync2.signer.eth_signer import PrivateKeyEthSigner
@@ -74,9 +74,13 @@ class WalletL2:
                 address=Web3.to_checksum_address(addresses.erc20_l2_default_bridge),
                 abi=l2_bridge_abi_default(),
             ),
+            weth=self._zksync_web3.eth.contract(
+                address=Web3.to_checksum_address(addresses.weth_bridge_l2),
+                abi=l2_bridge_abi_default(),
+            ),
             shared=self._zksync_web3.eth.contract(
                 address=Web3.to_checksum_address(addresses.shared_l2_default_bridge),
-                abi=l2_bridge_abi_default(),
+                abi=l2_shared_bridge_abi_default(),
             ),
         )
 
