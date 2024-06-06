@@ -30,7 +30,7 @@ jobs:
         run: |
           git clone https://github.com/matter-labs/local-setup.git
           pushd local-setup
-          ./start.sh
+          ./start-zk-chains.sh
           popd
       - name: Prepare environment
         run: make prepare-environment

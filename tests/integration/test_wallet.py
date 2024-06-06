@@ -52,8 +52,8 @@ class TestWallet(TestCase):
         self.CONTRACT_ADDRESS = "0x36615Cf349d7F6344891B1e7CA7C72883F5dc049"
         self.env = LOCAL_ENV
         env_key = EnvPrivateKey("ZKSYNC_KEY1")
-        self.zksync = ZkSyncBuilder.build("http://127.0.0.1:3050")
-        self.eth_web3 = Web3(Web3.HTTPProvider("http://127.0.0.1:8545"))
+        self.zksync = ZkSyncBuilder.build("http://127.0.0.1:15100")
+        self.eth_web3 = Web3(Web3.HTTPProvider("http://127.0.0.1:15045"))
         self.account: LocalAccount = Account.from_key(env_key.key)
         self.wallet = Wallet(self.zksync, self.eth_web3, self.account)
         self.zksync_contract = self.eth_web3.eth.contract(

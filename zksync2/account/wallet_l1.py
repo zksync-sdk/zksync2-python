@@ -1177,11 +1177,6 @@ class WalletL1:
             hex_hash, l2_to_l1_log_index
         )
 
-        options = TransactionOptions(
-            chain_id=self._eth_web3.eth.chain_id,
-            nonce=self._eth_web3.eth.get_transaction_count(self.address),
-        )
-
         l1_bridge: Contract
         if self._zksync_web3.zksync.is_base_token(sender):
             l1_bridge = self.get_l1_bridge_contracts().shared
@@ -1194,10 +1189,9 @@ class WalletL1:
                 abi=l1_shared_bridge_abi_default(),
             )
 
-        a = l1_bridge.functions.isWithdrawalFinalized(
+        return  l1_bridge.functions.isWithdrawalFinalizedShared(
             self._zksync_web3.eth.chain_id, int(log["l1BatchNumber"], 16), proof.id
         ).call()
-        return a
 
     def request_execute(self, transaction: RequestExecuteCallMsg):
         """
