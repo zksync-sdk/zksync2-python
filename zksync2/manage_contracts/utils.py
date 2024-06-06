@@ -15,10 +15,11 @@ l2_bridge_abi_cache = None
 l1_bridge_abi_cache = None
 eth_token_abi_cache = None
 erc_20_abi_cache = None
-eth_token_abi_cache = None
 test_net_erc_20_abi_cache = None
 l1_shared_bridge_abi_cache = None
+l2_shared_bridge_abi_cache = None
 bridgehub_abi_cache = None
+zksync_hyperchain_cache = None
 
 
 def zksync_abi_default():
@@ -108,6 +109,17 @@ def l1_shared_bridge_abi_default():
     return l1_shared_bridge_abi_cache
 
 
+def l2_shared_bridge_abi_default():
+    global l2_shared_bridge_abi_cache
+
+    if l2_shared_bridge_abi_cache is None:
+        with pkg_resources.path(contract_abi, "IL2SharedBridge.json") as p:
+            with p.open(mode="r") as json_file:
+                data = json.load(json_file)
+                l2_shared_bridge_abi_cache = data["abi"]
+    return l2_shared_bridge_abi_cache
+
+
 def eth_token_abi_default():
     global eth_token_abi_cache
 
@@ -139,6 +151,17 @@ def get_test_net_erc20_token():
                 data = json.load(json_file)
                 test_net_erc_20_abi_cache = data["abi"]
     return test_net_erc_20_abi_cache
+
+
+def get_zksync_hyperchain():
+    global zksync_hyperchain_cache
+
+    if zksync_hyperchain_cache is None:
+        with pkg_resources.path(contract_abi, "IZkSyncHyperchain.json") as p:
+            with p.open(mode="r") as json_file:
+                data = json.load(json_file)
+                zksync_hyperchain_cache = data["abi"]
+    return zksync_hyperchain_cache
 
 
 class ERC20Encoder(BaseContractEncoder):
