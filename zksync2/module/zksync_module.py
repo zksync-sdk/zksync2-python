@@ -770,7 +770,7 @@ class ZkSync(Eth, ABC):
             token=tx.token,
             bridge_address=tx.bridge_address,
             from_=from_,
-            paymaster_params=tx.paymaster_params
+            paymaster_params=tx.paymaster_params,
         )
 
         return transaction
