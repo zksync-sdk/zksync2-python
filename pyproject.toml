@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "zksync2"
 version = "1.1.0"
 authors = [
-  { name="Matter Labs", url= "https://matter-labs.io/", email= "hello@matterlabs.io" },
+  { name="Matter Labs", email= "hello@matterlabs.io" },
 ]
 description = "zkSync2 python client sdk"
 readme = "README.md"
