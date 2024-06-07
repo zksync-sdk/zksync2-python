@@ -17,7 +17,7 @@ def main():
     SALT = "0x293328ad84b118194c65a0dc0defdb6483740d3163fd99b260907e15f2e2f642"
 
     from zksync2.account.wallet import Wallet
-    from zksync2.manage_contracts.utils import zksync_abi_default
+    from zksync2.manage_contracts.utils import get_zksync_hyperchain
     from zksync2.module.module_builder import ZkSyncBuilder
     from zksync2.signer.eth_signer import PrivateKeyEthSigner
 
@@ -32,7 +32,7 @@ def main():
     wallet = Wallet(zksync, eth_web3, account)
     zksync_contract = eth_web3.eth.contract(
         Web3.to_checksum_address(zksync.zksync.main_contract_address),
-        abi=zksync_abi_default(),
+        abi=get_zksync_hyperchain(),
     )
 
     deposit_token(wallet, eth_web3, zksync, zksync_contract)

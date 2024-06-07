@@ -7,7 +7,7 @@ from web3 import Web3
 
 from tests.unit.test_config import LOCAL_ENV, EnvPrivateKey
 from zksync2.core.utils import RecommendedGasLimit
-from zksync2.manage_contracts.utils import zksync_abi_default
+from zksync2.manage_contracts.utils import get_zksync_hyperchain
 from zksync2.module.module_builder import ZkSyncBuilder
 from zksync2.signer.eth_signer import PrivateKeyEthSigner
 
@@ -27,7 +27,7 @@ class ZkSyncWeb3Tests(TestCase):
         self.signer = PrivateKeyEthSigner(self.account, self.chain_id)
         self.zksync_contract = self.eth_web3.eth.contract(
             Web3.to_checksum_address(self.zksync.zksync.zks_main_contract()),
-            abi=zksync_abi_default(),
+            abi=get_zksync_hyperchain(),
         )
 
     def test_facet_addresses_call(self):
@@ -154,7 +154,7 @@ class ZkSyncWeb3Tests(TestCase):
         l2_value = 0
         contract = self.eth_web3.eth.contract(
             Web3.to_checksum_address(self.zksync.zksync.zks_main_contract()),
-            abi=zksync_abi_default(),
+            abi=get_zksync_hyperchain(),
         )
         tx = contract.functions.requestL2Transaction(
             Web3.to_checksum_address(self.zksync.zksync.zks_main_contract()),

@@ -41,7 +41,6 @@ from zksync2.core.utils import (
 )
 from zksync2.manage_contracts.deploy_addresses import ZkSyncAddresses
 from zksync2.manage_contracts.utils import (
-    zksync_abi_default,
     l1_bridge_abi_default,
     get_erc20_abi,
     l2_bridge_abi_default,

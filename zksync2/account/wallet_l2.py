@@ -10,7 +10,7 @@ from zksync2.core.types import (
 )
 from zksync2.manage_contracts.deploy_addresses import ZkSyncAddresses
 from zksync2.manage_contracts.utils import (
-    zksync_abi_default,
+    get_zksync_hyperchain,
     nonce_holder_abi_default,
     l2_bridge_abi_default,
     l2_shared_bridge_abi_default,
@@ -28,7 +28,7 @@ class WalletL2:
         self._l1_account = l1_account
         self.contract = self._eth_web3.eth.contract(
             Web3.to_checksum_address(self._main_contract_address),
-            abi=zksync_abi_default(),
+            abi=get_zksync_hyperchain(),
         )
 
     def get_balance(
