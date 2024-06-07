@@ -34,7 +34,7 @@ from zksync2.manage_contracts.contract_encoder_base import (
 )
 from zksync2.manage_contracts.paymaster_utils import PaymasterFlowEncoder
 from zksync2.manage_contracts.utils import (
-    zksync_abi_default,
+    get_zksync_hyperchain,
     get_erc20_abi,
     get_test_net_erc20_token,
 )
@@ -58,7 +58,7 @@ class TestWallet(TestCase):
         self.wallet = Wallet(self.zksync, self.eth_web3, self.account)
         self.zksync_contract = self.eth_web3.eth.contract(
             Web3.to_checksum_address(self.zksync.zksync.main_contract_address),
-            abi=zksync_abi_default(),
+            abi=get_zksync_hyperchain(),
         )
         self.is_eth_based_chain = self.wallet.is_eth_based_chain()
 
