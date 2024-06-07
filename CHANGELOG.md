@@ -12,6 +12,20 @@
 
 * provide support for Bridgehub ([dabbfc0](https://github.com/zksync-sdk/zksync2-python/commit/dabbfc0c95f11e79e6683101b20fae3c851506e8))
 
+# [1.2.0](https://github.com/zksync-sdk/zksync2-python/compare/v1.1.0...v1.2.0) (2024-06-07)
+
+
+### Bug Fixes
+
+* fix abi contract cache ([81b9e4c](https://github.com/zksync-sdk/zksync2-python/commit/81b9e4c8bec9cd2fc258669edeb8012ccafa0c80))
+* non zero gas limit in options breaks transfer function ([d739a60](https://github.com/zksync-sdk/zksync2-python/commit/d739a604f7ff43bc372586377d861d66745980b4))
+* zks_l1_chain_id not returning int type ([0ebd1b8](https://github.com/zksync-sdk/zksync2-python/commit/0ebd1b8499d22b1c83a1051b77a461841e1a4f0d))
+
+
+### Features
+
+* provide support for Bridgehub ([dabbfc0](https://github.com/zksync-sdk/zksync2-python/commit/dabbfc0c95f11e79e6683101b20fae3c851506e8))
+
 # [1.1.0](https://github.com/zksync-sdk/zksync2-python/compare/v1.0.0...v1.1.0) (2024-02-18)
 
 
