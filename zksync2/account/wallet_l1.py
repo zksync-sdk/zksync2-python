@@ -834,11 +834,11 @@ class WalletL1:
         if transaction.options.chain_id is None:
             transaction.options.chain_id = self._eth_web3.eth.chain_id
 
-        l2_address = bridge.functions.l2TokenAddress(transaction.token).call()
+        l2_bridge_address = bridge.functions.l2BridgeAddress(transaction.options.chain_id).call()
 
         return self.estimate_custom_bridge_deposit_l2_gas(
             transaction.bridge_address,
-            l2_address,
+            l2_bridge_address,
             transaction.token,
             transaction.amount,
             transaction.to,
