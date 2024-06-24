@@ -1,13 +1,20 @@
 # 🚀 zksync2 Python SDK 🚀
 
+[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE-MIT)
+[![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-orange)](LICENSE-APACHE)
+[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](https://www.contributor-covenant.org/)
+[![Contributions Welcome](https://img.shields.io/badge/contributions-welcome-orange)](.github/CONTRIBUTING.md)
+[![X (formerly Twitter) Follow](https://badgen.net/badge/twitter/@zksyncDevs/1DA1F2?icon&label)](https://x.com/zksyncDevs)
+[![Code Style: Google](https://img.shields.io/badge/code%20style-google-blueviolet.svg)](https://github.com/google/gts)
+
 ![Era Logo](https://github.com/matter-labs/era-contracts/raw/main/eraLogo.svg)
 
-In order to provide easy access to all the features of zkSync Era, the `zksync2` Python SDK was created,
+In order to provide easy access to all the features of ZKsync Era, the `zksync2` Python SDK was created,
 which is made in a way that has an interface very similar to those of [web3.py](https://web3py.readthedocs.io/en/v6.6.1/). In
 fact, `web3.py` is a peer dependency of our library and most of the objects exported by `zksync2` inherit from the corresponding `web3.py` objects and override only the fields that need
 to be changed.
 
-While most of the existing SDKs functionalities should work out of the box, deploying smart contracts or using unique zkSync features,
+While most of the existing SDKs functionalities should work out of the box, deploying smart contracts or using unique ZKsync Era features,
 like account abstraction, requires providing additional fields to those that Ethereum transactions have by default.
 
 The library is made in such a way that after replacing `web3.py` with `zksync2` most client apps will work out of
@@ -19,7 +26,7 @@ box.
 
 To begin, it is useful to have a basic understanding of the types of objects available and what they are responsible for, at a high level:
 
--   `Provider` provides connection to the zkSync Era blockchain, which allows querying the blockchain state, such as account, block or transaction details,
+-   `Provider` provides connection to the ZKsync Era blockchain, which allows querying the blockchain state, such as account, block or transaction details,
     querying event logs or evaluating read-only code using call. Additionally, the client facilitates writing to the blockchain by sending
     transactions.
 -   `Wallet` wraps all operations that interact with an account. An account generally has a private key, which can be used to sign a variety of
@@ -40,7 +47,7 @@ pip install zksync2
 
 The complete examples with various use cases are available [here](https://github.com/zksync-sdk/zksync2-examples/tree/main/python).
 
-### Connect to the zkSync Era network:
+### Connect to the ZKsync Era network:
 
 ```python
 from zksync2.module.module_builder import ZkSyncBuilder
@@ -104,7 +111,7 @@ wallet = Wallet(zk_sync, eth_web3, account)
 ### Check account balances
 
 ```python
-eth_balance = wallet.getBalance() # balance on zkSync Era network
+eth_balance = wallet.getBalance() # balance on ZKsync Era network
 
 eth_balance_l1 = wallet.getBalanceL1() # balance on goerli network
 ```
