@@ -21,7 +21,7 @@ ZksContractDebugInfo = TypedDict(
     "ZksContractDebugInfo", {"assemblyCode": HexStr, "pcLineMapping": Dict[int, int]}
 )
 
-ZksBlockRange = TypedDict("ZksBlockRange", {"begining": int, "end": int})
+ZksBlockRange = TypedDict("ZksBlockRange", {"beginning": int, "end": int})
 
 ZksBaseSystemContractsHashes = TypedDict(
     "ZksBaseSystemContractsHashes", {"bootloader": str, "defaultAa": str}
