@@ -22,3 +22,11 @@ dynamic = ["dependencies", "license", "optional-dependencies"]
 [project.urls]
 "Homepage" = "https://github.com/zksync-sdk/zksync2-python"
 "Bug Tracker" = "https://github.com/zksync-sdk/zksync2-python/issues"
+
+[tool.black]
+line-length = 99
+target-version = ['py311']
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"

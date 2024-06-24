@@ -1,0 +1,69 @@
+default_language_version:
+  python: python3.8
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.1.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: |
+          (?x)^(
+            .* |
+            tests/.*|
+            scripts/.*|
+            zksync2/.*|
+            .github/.*
+          )$
+      - id: end-of-file-fixer
+        exclude: |
+          (?x)^(
+            .* |
+            tests/.*|
+            scripts/.*|
+            zksync2/.*|
+            .github/.*
+          )$
+
+  - repo: https://github.com/pycqa/isort
+    rev: 5.11.5
+    hooks:
+      - id: isort
+        exclude: |
+          (?x)^(
+            tests/.*|
+            scripts/.*|
+            zksync2/.*
+          )$
+
+  - repo: https://github.com/pycqa/flake8
+    rev: 6.0.0
+    hooks:
+      - id: flake8
+        exclude: |
+          (?x)^(
+            tests/.*|
+            scripts/.*|
+            zksync2/.*
+          )$
+
+  - repo: https://github.com/psf/black
+    rev: 24.3.0
+    hooks:
+      - id: black
+        exclude: |
+          (?x)^(
+            tests/.*|
+            scripts/.*|
+            zksync2/.*
+          )$
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.0.0
+    hooks:
+      - id: mypy
+        exclude: |
+          (?x)^(
+            tests/.*|
+            scripts/.*|
+            zksync2/.*
+          )$
