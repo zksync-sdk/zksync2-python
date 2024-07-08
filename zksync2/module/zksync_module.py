@@ -464,6 +464,34 @@ class ZkSync(Eth, ABC):
         result_formatters=zksync_get_result_formatters,
     )
 
+    _zks_get_protocol_version: Method[
+        Callable[[Optional[int]], ProtocolVersion]
+    ] = Method(
+        zks_get_protocol_version_rpc,
+        mungers=[default_root_munger],
+    )
+
+    _zks_get_confirmed_tokens: Method[
+        Callable[[int, int], List[Token]]
+    ] = Method(
+        zks_get_confirmed_tokens_rpc,
+        mungers=[default_root_munger],
+    )
+
+    _zks_send_raw_transaction_with_detailed_output: Method[
+        Callable[[Union[HexStr, bytes]], TransactionWithDetailedOutput]
+    ] = Method(
+        zks_send_raw_transaction_with_detailed_output_rpc,
+        mungers=[default_root_munger],
+    )
+
+    _zks_get_fee_params: Method[
+        Callable[[], FeeParams]
+    ] = Method(
+        zks_get_fee_params_rpc,
+        mungers=[default_root_munger],
+    )
+
     _eth_estimate_gas: Method[Callable[[Transaction], int]] = Method(
         eth_estimate_gas_rpc,
         mungers=[default_root_munger],
@@ -524,6 +552,18 @@ class ZkSync(Eth, ABC):
 
     def zks_get_proof(self, address: HexStr, key: List[HexStr], l1_batch_number: int):
         return self._zks_get_proof(address, key, l1_batch_number)
+
+    def zks_get_protocol_version(self, id: int = None) -> ProtocolVersion:
+        """
+        Returns the protocol version.
+
+        Calls the zks_getProtocolVersion JSON-RPC method.
+        (Refer to: https://docs.zksync.io/build/api.html#zks_getprotocolversion)
+
+        :param id: Specific version ID (optional).
+        """
+
+        return self._zks_get_protocol_version(id)
 
     def zks_estimate_gas_transfer(
         self, transaction: Transaction, token_address: HexStr = ADDRESS_DEFAULT
