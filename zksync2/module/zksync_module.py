@@ -50,7 +50,7 @@ from zksync2.core.types import (
     WithdrawTransaction,
     ContractAccountInfo,
     StorageProof,
-    ETH_ADDRESS_IN_CONTRACTS,
+    ETH_ADDRESS_IN_CONTRACTS, ProtocolVersion, TransactionWithDetailedOutput, FeeParams,
 )
 from zksync2.core.utils import (
     is_eth,
@@ -65,7 +65,7 @@ from zksync2.manage_contracts.utils import (
     ERC20Encoder,
     get_erc20_abi,
     icontract_deployer_abi_default,
-    l2_bridge_abi_default,
+    l2_bridge_abi_default, l2_shared_bridge_abi_default,
 )
 from zksync2.module.request_types import *
 from zksync2.module.response_types import *
@@ -101,6 +101,10 @@ zks_get_l2_to_l1_log_proof_prc = RPCEndpoint("zks_getL2ToL1LogProof")
 zks_get_proof_rpc = RPCEndpoint("zks_getProof")
 zks_get_base_token_l1_address_rpc = RPCEndpoint("zks_getBaseTokenL1Address")
 zks_get_bridgehub_contract_rpc = RPCEndpoint("zks_getBridgehubContract")
+zks_get_protocol_version_rpc = RPCEndpoint("zks_getProtocolVersion")
+zks_get_confirmed_tokens_rpc = RPCEndpoint("zks_getConfirmedTokens")
+zks_send_raw_transaction_with_detailed_output_rpc = RPCEndpoint("zks_sendRawTransactionWithDetailedOutput")
+zks_get_fee_params_rpc = RPCEndpoint("zks_getFeeParams")
 eth_estimate_gas_rpc = RPCEndpoint("eth_estimateGas")
 eth_get_transaction_receipt_rpc = RPCEndpoint("eth_getTransactionReceipt")
 eth_get_transaction_by_hash_rpc = RPCEndpoint("eth_getTransactionByHash")
@@ -264,6 +268,7 @@ def to_l2_to_l1_logs(t: dict) -> L1ToL2Log:
         block_number=t["blockNumber"],
         l1_batch_number=t["l1BatchNumber"],
         transaction_index=t["transactionIndex"],
+        transaction_index_in_l1_batch=t["txIndexInL1Batch"] or None,
         transaction_hash=t["transactionHash"],
         transaction_log_index=t["transactionLogIndex"],
         shard_id=t["shardId"],
@@ -619,20 +624,22 @@ class ZkSync(Eth, ABC):
 
         return shared_bridge.functions.l1TokenAddress(token).call()
 
-    def l2_token_address(self, token: HexStr) -> HexStr:
+    def l2_token_address(self, token: HexStr, bridge_address: HexStr = None) -> HexStr:
         """
         Returns the L2 token address equivalent for a L1 token address as they are not equal.
         ETH address is set to zero address.
 
         :param token: The address of the token on L1.
+        :param bridge_address: The address of custom bridge, which will be used to get l2 token address.
         """
         if token == ADDRESS_DEFAULT:
             token = ETH_ADDRESS_IN_CONTRACTS
         base_token = self.zks_get_base_token_contract_address()
-        if token == base_token:
+        if token.lower() == base_token.lower():
             return L2_BASE_TOKEN_ADDRESS
 
-        bridge_address = self.zks_get_bridge_contracts()
+        if bridge_address is None:
+            bridge_address = self.zks_get_bridge_contracts()
         l2_shared_bridge = self.contract(
             Web3.to_checksum_address(bridge_address.shared_l2_default_bridge),
             abi=l2_bridge_abi_default(),
@@ -794,8 +801,10 @@ class ZkSync(Eth, ABC):
             )
         if tx.options.gas_price is None:
             tx.options.gas_price = self.gas_price
+        if tx.options.max_fee_per_gas is None:
+            tx.options.max_fee_per_gas = 0
         if tx.options.max_priority_fee_per_gas is None:
-            tx.options.max_priority_fee_per_gas = MAX_PRIORITY_FEE_PER_GAS
+            tx.options.max_priority_fee_per_gas = 0
         if tx.options.gas_limit is None:
             tx.options.gas_limit = 0
 
@@ -817,7 +826,7 @@ class ZkSync(Eth, ABC):
             data=call_data,
             value=tx.amount,
             gas_limit=tx.options.gas_limit,
-            gas_price=tx.options.gas_price,
+            max_fee_per_gas=tx.options.max_fee_per_gas,
             max_priority_fee_per_gas=tx.options.max_priority_fee_per_gas,
             gas_per_pub_data=tx.gas_per_pub_data,
             paymaster_params=tx.paymaster_params,
@@ -838,3 +847,21 @@ class ZkSync(Eth, ABC):
         return ContractAccountInfo(
             account_abstraction_version=data[0], account_nonce_ordering=data[1]
         )
+
+    def is_l2_bridge_legacy(self, address: HexStr) -> bool:
+        """
+        Returns true if the passed bridge address is legacy and false if it is a shared bridge.
+
+        :param address: The bridge address.
+        """
+        bridge = self.contract(
+            address=Web3.to_checksum_address(address),
+            abi=l2_shared_bridge_abi_default()
+        )
+        try:
+            bridge.functions.l1SharedBridge().call()
+            return False
+        except:
+            pass
+
+        return True
