@@ -597,6 +597,13 @@ class ZkSync(Eth, ABC):
         """
         return self._zks_send_raw_transaction_with_detailed_output(tx)
 
+    def zks_get_fee_params(self) -> FeeParams:
+        """
+        Returns the current fee parameters.
+        Calls the {@link https://docs.zksync.io/build/api.html#zks_getFeeParams zks_getFeeParams} JSON-RPC method.
+        """
+        return self._zks_get_fee_params()
+
     def zks_estimate_gas_transfer(
         self, transaction: Transaction, token_address: HexStr = ADDRESS_DEFAULT
     ) -> int:
