@@ -578,6 +578,25 @@ class ZkSync(Eth, ABC):
 
         return self._zks_get_confirmed_tokens(start, limit)
 
+    def zks_send_raw_transaction_with_detailed_output(self, tx: Union[HexStr, bytes]) -> ProtocolVersion:
+        """
+        Executes a transaction and returns its hash, storage logs, and events that would have been generated if the
+        transaction had already been included in the block. The API has a similar behaviour to `eth_sendRawTransaction`
+        but with some extra data returned from it.
+
+        With this API, consumer apps can apply "optimistic" events in their applications instantly without having to
+        wait for ZKsync block confirmation time.
+
+        It’s expected that the optimistic logs of two uncommitted transactions that modify the same state will not
+        have causal relationships between each other.
+
+        Calls the zks_sendRawTransactionWithDetailedOutput JSON-RPC method.
+        (Refer to: https://docs.zksync.io/build/api.html#zks_sendRawTransactionWithDetailedOutput)
+
+        :param tx: The signed transaction that needs to be broadcasted.
+        """
+        return self._zks_send_raw_transaction_with_detailed_output(tx)
+
     def zks_estimate_gas_transfer(
         self, transaction: Transaction, token_address: HexStr = ADDRESS_DEFAULT
     ) -> int:
