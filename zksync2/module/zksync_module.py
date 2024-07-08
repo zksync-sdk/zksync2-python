@@ -565,6 +565,19 @@ class ZkSync(Eth, ABC):
 
         return self._zks_get_protocol_version(id)
 
+    def zks_get_confirmed_tokens(self, start: int = 0, limit: int = 255) -> ProtocolVersion:
+        """
+        Returns confirmed tokens. A confirmed token is any token bridged to ZKsync Era via the official bridge.
+
+        Calls the zks_getConfirmedTokens JSON-RPC method.
+        (Refer to: https://docs.zksync.io/build/api.html#zks_getconfirmedtokens)
+
+        :param start: The token ID from which to start.
+        :param limit: The maximum number of tokens to list.
+        """
+
+        return self._zks_get_confirmed_tokens(start, limit)
+
     def zks_estimate_gas_transfer(
         self, transaction: Transaction, token_address: HexStr = ADDRESS_DEFAULT
     ) -> int:
