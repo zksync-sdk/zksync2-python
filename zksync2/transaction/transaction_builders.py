@@ -323,6 +323,8 @@ class TxWithdraw(TxBase, ABC):
             nonce = web3.get_transaction_count(from_)
         if chain_id is None:
             chain_id = web3.chain_id
+        if gas_limit is None:
+            gas_limit = 0
 
         eip712_meta = EIP712Meta(
             gas_per_pub_data=50000,
@@ -339,6 +341,7 @@ class TxWithdraw(TxBase, ABC):
             tx = contract.functions.withdraw(to).build_transaction(
                 {
                     "nonce": nonce,
+                    "gas": gas_limit,
                     "chainId": chain_id,
                     "maxFeePerGas": max_fee_per_gas,
                     "maxPriorityFeePerGas": max_priority_fee_per_gas,
@@ -360,12 +363,14 @@ class TxWithdraw(TxBase, ABC):
                 chain_id=chain_id,
                 max_fee_per_gas=max_fee_per_gas,
                 max_priority_fee_per_gas=max_priority_fee_per_gas,
+                gas_limit=gas_limit,
                 value=0,
             )
             tx = l2_bridge.functions.withdraw(to, token, amount).build_transaction(
                 prepare_transaction_options(from_=from_, options=options)
             )
         tx["eip712Meta"] = eip712_meta
+
         super(TxWithdraw, self).__init__(trans=tx)
 
     def tx712(self, estimated_gas: int = None) -> Transaction712:
@@ -403,8 +408,8 @@ class TxTransfer(TxBase, ABC):
         nonce: int = None,
         data: HexStr = HexStr("0x"),
         gas_limit: int = 0,
-        gas_price: int = 0,
-        max_priority_fee_per_gas: int = MAX_PRIORITY_FEE_PER_GAS,
+        max_fee_per_gas: int = 0,
+        max_priority_fee_per_gas: int = 0,
         paymaster_params=None,
         custom_signature=None,
         gas_per_pub_data: int = EIP712Meta.GAS_PER_PUB_DATA_DEFAULT,
@@ -423,7 +428,7 @@ class TxTransfer(TxBase, ABC):
                     "from": from_,
                     "to": to,
                     "gas": gas_limit,
-                    "gasPrice": gas_price,
+                    "maxFeePerGas": max_fee_per_gas,
                     "maxPriorityFeePerGas": max_priority_fee_per_gas,
                     "value": value,
                     "data": data,
@@ -441,7 +446,8 @@ class TxTransfer(TxBase, ABC):
                     "nonce": nonce,
                     "chainId": chain_id,
                     "gas": gas_limit,
-                    "gasPrice": gas_price,
+                    "maxFeePerGas": max_fee_per_gas,
+                    "maxPriorityFeePerGas": max_priority_fee_per_gas,
                     "from": from_,
                 }
             )
@@ -456,8 +462,8 @@ class TxTransfer(TxBase, ABC):
             to=self.tx["to"],
             value=self.tx["value"],
             data=self.tx["data"],
-            maxPriorityFeePerGas=0,
-            maxFeePerGas=self.tx["gasPrice"],
+            maxPriorityFeePerGas=self.tx["maxPriorityFeePerGas"],
+            maxFeePerGas=self.tx["maxFeePerGas"],
             from_=self.tx["from"],
             meta=self.tx["eip712Meta"],
         )

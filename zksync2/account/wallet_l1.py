@@ -6,11 +6,10 @@ from eth_typing import HexStr, Address
 from eth_utils import event_signature_to_log_topic, add_0x_prefix
 from web3 import Web3
 from web3.contract import Contract
-from web3.middleware import geth_poa_middleware
+from web3.middleware import ExtraDataToPOAMiddleware
 from web3.types import TxReceipt
 
 from zksync2.account.utils import (
-    deposit_to_request_execute,
     prepare_transaction_options,
 )
 from zksync2.core.types import (
@@ -38,6 +37,7 @@ from zksync2.core.utils import (
     LEGACY_ETH_ADDRESS,
     scale_gas_limit,
     is_address_eq,
+    L2_BASE_TOKEN_ADDRESS,
 )
 from zksync2.manage_contracts.deploy_addresses import ZkSyncAddresses
 from zksync2.manage_contracts.utils import (
@@ -49,6 +49,7 @@ from zksync2.manage_contracts.utils import (
     get_zksync_hyperchain,
     l2_shared_bridge_abi_default,
 )
+from zksync2.module.module_builder import ZkWeb3
 from zksync2.module.request_types import EIP712Meta
 from zksync2.transaction.transaction_builders import TxFunctionCall
 
@@ -68,9 +69,9 @@ class WalletL1:
     RECOMMENDED_DEPOSIT_L2_GAS_LIMIT = 10000000
     L1_MESSENGER_ADDRESS = "0x0000000000000000000000000000000000008008"
 
-    def __init__(self, zksync_web3: Web3, eth_web3: Web3, l1_account: BaseAccount):
+    def __init__(self, zksync_web3: ZkWeb3, eth_web3: Web3, l1_account: BaseAccount):
         self._eth_web3 = eth_web3
-        self._eth_web3.middleware_onion.inject(geth_poa_middleware, layer=0)
+        self._eth_web3.middleware_onion.inject(ExtraDataToPOAMiddleware, layer=0)
         self._zksync_web3 = zksync_web3
         self._main_contract_address = Web3.to_checksum_address(
             self._zksync_web3.zksync.zks_main_contract()
@@ -85,7 +86,7 @@ class WalletL1:
 
     @property
     def main_contract(self) -> Union[Type[Contract], Contract]:
-        """Returns Contract wrapper of the zkSync smart contract."""
+        """Returns Contract wrapper of the ZKsync smart contract."""
         return self.contract
 
     @property
@@ -202,7 +203,7 @@ class WalletL1:
 
         :param token: The address of the token on L1.
         :param bridge_address: The address of the bridge contract to be used.
-            Defaults to the default zkSync bridge (either L1EthBridge or L1Erc20Bridge).
+            Defaults to the default ZKsync bridge (either L1EthBridge or L1Erc20Bridge).
         """
         token_contract = self._eth_web3.eth.contract(
             address=Web3.to_checksum_address(token), abi=get_erc20_abi()
@@ -234,12 +235,12 @@ class WalletL1:
         gas_limit: int = None,
     ) -> TxReceipt:
         """
-        Bridging ERC20 tokens from Ethereum requires approving the tokens to the zkSync Ethereum smart contract.
+        Bridging ERC20 tokens from Ethereum requires approving the tokens to the ZKsync Ethereum smart contract.
 
         :param token: The Ethereum address of the token.
         :param amount: The amount of the token to be approved.
         :param bridge_address: The address of the bridge contract to be used.
-            Defaults to the default zkSync bridge (either L1EthBridge or L1Erc20Bridge).
+            Defaults to the default ZKsync bridge (either L1EthBridge or L1Erc20Bridge).
         :param gas_limit:
         """
         if is_eth(token):
@@ -531,7 +532,7 @@ class WalletL1:
 
             if allowance < transaction.amount:
                 approve_tx = self.approve_erc20(
-                    base_token_address,
+                    transaction.token,
                     transaction.amount,
                     bridge_address,
                     transaction.approve_options.gas_limit,
@@ -541,6 +542,12 @@ class WalletL1:
                         self.address
                     )
 
+        bridge_address = (
+            transaction.bridge_address
+            if transaction.bridge_address is not None
+            else bridge_contracts.shared.address
+        )
+
         transaction_data = {
             "chainId": chain_id,
             "mintValue": mint_value,
@@ -548,7 +555,7 @@ class WalletL1:
             "l2GasLimit": transaction.l2_gas_limit,
             "l2GasPerPubdataByteLimit": transaction.gas_per_pubdata_byte,
             "refundRecipient": transaction.refund_recipient or self.address,
-            "secondBridgeAddress": bridge_contracts.shared.address,
+            "secondBridgeAddress": bridge_address,
             "secondBridgeValue": 0,
             "secondBridgeCalldata": encode(
                 ["address", "uint256", "address"], [tx.token, tx.amount, tx.to]
@@ -593,6 +600,7 @@ class WalletL1:
                 l2_gas_limit=tx.l2_gas_limit,
                 gas_per_pubdata_byte=tx.gas_per_pubdata_byte,
                 options=tx.options,
+                refund_recipient=tx.refund_recipient,
             ),
             base_cost + tx.operator_tip + tx.amount,
         )
@@ -652,6 +660,12 @@ class WalletL1:
                         self.address
                     )
 
+        bridge_address = (
+            transaction.bridge_address
+            if transaction.bridge_address is not None
+            else shared_bridge.address
+        )
+
         transaction_data = {
             "chainId": chain_id,
             "mintValue": mint_value,
@@ -659,7 +673,7 @@ class WalletL1:
             "l2GasLimit": transaction.l2_gas_limit,
             "l2GasPerPubdataByteLimit": transaction.gas_per_pubdata_byte,
             "refundRecipient": transaction.refund_recipient,
-            "secondBridgeAddress": shared_bridge.address,
+            "secondBridgeAddress": bridge_address,
             "secondBridgeValue": transaction.amount,
             "secondBridgeCalldata": encode(
                 ["address", "uint256", "address"], [ETH_ADDRESS_IN_CONTRACTS, 0, tx.to]
@@ -727,23 +741,18 @@ class WalletL1:
         check_base_cost(base_cost, mint_value)
 
         second_bridge_address: str
-        second_bridge_calldata: bytes
+        second_bridge_calldata = encode(
+            ["address", "uint256", "address"], [tx.token, tx.amount, tx.to]
+        )
         if tx.bridge_address is not None:
             second_bridge_address = tx.bridge_address
-            token_contract = self._eth_web3.eth.contract(
-                address=Web3.to_checksum_address(tx.token), abi=get_erc20_abi()
-            )
-            second_bridge_calldata = get_custom_bridge_data(token_contract)
         else:
             second_bridge_address = self.get_l1_bridge_contracts().shared.address
-            second_bridge_calldata = encode(
-                ["address", "uint256", "address"], [tx.token, tx.amount, tx.to]
-            )
 
         transaction_data = {
             "chainId": chain_id,
             "mintValue": mint_value,
-            "l2Value": transaction.l2_value,
+            "l2Value": 0,
             "l2GasLimit": transaction.l2_gas_limit,
             "l2GasPerPubdataByteLimit": transaction.gas_per_pubdata_byte,
             "refundRecipient": transaction.refund_recipient,
@@ -823,12 +832,12 @@ class WalletL1:
     def _get_l2_gas_limit_from_custom_bridge(self, transaction: DepositTransaction):
         if transaction.custom_bridge_data is None:
             token_contract = self._zksync_web3.zksync.contract(
-                transaction.token, abi=get_erc20_abi()
+                address=Web3.to_checksum_address(transaction.token), abi=get_erc20_abi()
             )
             transaction.custom_bridge_data = get_custom_bridge_data(token_contract)
 
         bridge = self._zksync_web3.zksync.contract(
-            transaction.bridge_address, abi=l1_bridge_abi_default()
+            address=Web3.to_checksum_address(transaction.bridge_address), abi=l1_bridge_abi_default()
         )
 
         if transaction.options.chain_id is None:
@@ -1150,13 +1159,29 @@ class WalletL1:
             nonce=self._eth_web3.eth.get_transaction_count(self.address),
         )
 
-        shared_bridge_address = (
-            self._zksync_web3.zksync.zks_get_bridge_contracts().shared_l1_default_bridge
-        )
-        shared_bridge = self._eth_web3.eth.contract(
-            address=shared_bridge_address, abi=l1_shared_bridge_abi_default()
-        )
-        tx = shared_bridge.functions.finalizeWithdrawal(
+        l1_bridge: Contract
+        if params["sender"] == L2_BASE_TOKEN_ADDRESS:
+            l1_bridge = self.get_l1_bridge_contracts().shared
+        elif not self._zksync_web3.zksync.is_l2_bridge_legacy(params["sender"]):
+            l2_bridge = self._zksync_web3.eth.contract(
+                address=Web3.to_checksum_address(params["sender"]),
+                abi=l2_shared_bridge_abi_default(),
+            )
+            l1_bridge = self._eth_web3.eth.contract(
+                address=l2_bridge.functions.l1SharedBridge().call(),
+                abi=l1_shared_bridge_abi_default(),
+            )
+        else:
+            l2_bridge = self._zksync_web3.eth.contract(
+                address=Web3.to_checksum_address(params["sender"]),
+                abi=l2_bridge_abi_default(),
+            )
+            l1_bridge = self._eth_web3.eth.contract(
+                address=l2_bridge.functions.l1Bridge().call(),
+                abi=l1_bridge_abi_default(),
+            )
+
+        tx = l1_bridge.functions.finalizeWithdrawal(
             self._zksync_web3.eth.chain_id,
             params["l1_batch_number"],
             params["l2_message_index"],
@@ -1386,6 +1411,8 @@ class WalletL1:
     def insert_gas_price_in_transaction_options(
         self, options: TransactionOptions
     ) -> TransactionOptions:
+        if options is None:
+            options = TransactionOptions()
         if options.gas_price is None and options.max_fee_per_gas is None:
             is_ready, head = self.check_if_l1_chain_is_london_ready()
             if is_ready:

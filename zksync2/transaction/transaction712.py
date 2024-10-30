@@ -7,7 +7,7 @@ from eth_utils import remove_0x_prefix
 from rlp.sedes import big_endian_int, binary
 from rlp.sedes import List as rlpList
 from web3.types import Nonce
-from zksync2.module.request_types import EIP712Meta
+from zksync2.module.request_types import EIP712Meta, Transaction as ZkTx
 
 from zksync2.eip712 import EIP712Struct, Address, Uint, Bytes, Array
 from zksync2.core.utils import to_bytes, hash_byte_code, encode_address, int_to_bytes
@@ -160,3 +160,19 @@ class Transaction712:
             "paymasterInput": paymaster_input,
         }
         return Transaction(**kwargs)
+
+    def to_zk_transaction(self):
+        kwargs = {
+            "chain_id": self.chain_id,
+            "nonce": self.nonce,
+            "from": self.from_,
+            "to": self.to,
+            "gas": hex(self.gas_limit),
+            "maxFeePerGas": hex(self.maxFeePerGas),
+            "maxPriorityFeePerGas": hex(self.maxPriorityFeePerGas),
+            "value": self.value,
+            "data": self.data,
+            "type": hex(self.EIP_712_TX_TYPE),
+            "eip712Meta": self.meta,
+        }
+        return ZkTx(**kwargs)

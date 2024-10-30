@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 from enum import Enum, IntEnum
-from typing import Union, NewType, Dict, List, Any
+from typing import Union, NewType, Dict, List, Any, Optional
 
 from eth_typing import HexStr, Hash32
 from hexbytes import HexBytes
@@ -47,6 +47,7 @@ class EthBlockParams(Enum):
 class Token:
     l1_address: HexStr
     l2_address: HexStr
+    name: str
     symbol: str
     decimals: int
 
@@ -69,7 +70,7 @@ class Token:
 
     @classmethod
     def create_eth(cls) -> "Token":
-        return Token(ADDRESS_DEFAULT, L2_ETH_TOKEN_ADDRESS, "ETH", 18)
+        return Token(ADDRESS_DEFAULT, L2_ETH_TOKEN_ADDRESS, "Ether", "ETH", 18)
 
 
 @dataclass
@@ -287,6 +288,7 @@ class L1ToL2Log:
     key: HexStr
     value: HexStr
     log_index: HexStr
+    transaction_index_in_l1_batch: HexStr = None
 
 
 @dataclass
@@ -320,3 +322,93 @@ class StorageProofData:
 class StorageProof:
     address: HexStr
     storageProof: StorageProofData
+
+
+@dataclass
+class VerificationKeysHashesParams:
+    recursion_node_level_vk_hash: str
+    recursion_leaf_level_vk_hash: str
+    recursion_circuits_set_vks_hash: str
+
+
+@dataclass
+class VerificationKeysHashes:
+    params: VerificationKeysHashesParams
+    recursion_scheduler_level_vk_hash: str
+
+
+@dataclass
+class BaseSystemContracts:
+    bootloader: str
+    default_aa: str
+
+
+@dataclass
+class ProtocolVersion:
+    """Represents the protocol version."""
+
+    version_id: int  # Protocol version ID.
+    timestamp: int  # Unix timestamp of the version's activation.
+    verification_keys_hashes: VerificationKeysHashes  # Contains the hashes of various verification keys used in the protocol.
+    base_system_contracts: (
+        BaseSystemContracts  # Addresses of the base system contracts.
+    )
+    l2_system_upgrade_tx_hash: HexStr = (
+        None  # Hash of the transaction used for the system upgrade, if any.
+    )
+
+
+@dataclass
+class StorageLog:
+    address: str
+    key: str
+    writtenValue: str
+
+
+@dataclass
+class Event:
+    address: str
+    topics: List[str]
+    data: str
+    blockHash: Optional[str]
+    blockNumber: Optional[int]
+    l1BatchNumber: Optional[int]
+    transactionHash: str
+    transactionIndex: int
+    logIndex: Optional[int]
+    transactionLogIndex: Optional[int]
+    logType: Optional[str]
+    removed: bool
+
+
+@dataclass
+class TransactionWithDetailedOutput:
+    """Represents the transaction with detailed output."""
+
+    transactionHash: str  # Transaction hash.
+    storageLogs: List[StorageLog]  # Storage slots.
+    events: List[Event]  # Generated events.
+
+
+@dataclass
+class Config:
+    minimal_l2_gas_price: int  # Minimal gas price on L2.
+    compute_overhead_part: int  # Compute overhead part in fee calculation.
+    pubdata_overhead_part: int  # Public data overhead part in fee calculation.
+    batch_overhead_l1_gas: int  # Overhead in L1 gas for a batch of transactions.
+    max_gas_per_batch: int  # Maximum gas allowed per batch.
+    max_pubdata_per_batch: int  # Maximum amount of public data allowed per batch.
+
+
+@dataclass
+class V2:
+    config: Config  # Settings related to transaction fee computation.
+    l1_gas_price: int  # Current L1 gas price.
+    l1_pubdata_price: int  # Price of storing public data on L1.
+
+
+@dataclass
+class FeeParams:
+    """Represents the fee parameters configuration."""
+
+    V2: V2  # Fee parameter configuration for the current version of the ZKsync protocol.
