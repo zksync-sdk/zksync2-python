@@ -1,12 +1,16 @@
 from decimal import Decimal
 from pathlib import Path
-from unittest import TestCase, skip
+from unittest import TestCase
+
+from eth_account import Account
+from eth_account.signers.local import LocalAccount
 from eth_typing import HexStr
-from eth_utils import keccak, remove_0x_prefix
+from eth_utils import keccak
 from web3 import Web3
 
-from tests.integration.test_config import LOCAL_ENV
+from tests.integration.test_config import EnvURL, private_key_1
 from tests.integration.test_zksync_contract import generate_random_salt
+from zksync2.core.types import Token, EthBlockParams, PaymasterParams
 from zksync2.manage_contracts.contract_encoder_base import (
     ContractEncoder,
     JsonConfiguration,
@@ -18,20 +22,12 @@ from zksync2.manage_contracts.precompute_contract_deployer import (
 )
 from zksync2.manage_contracts.utils import nonce_holder_abi_default
 from zksync2.module.module_builder import ZkSyncBuilder
-from zksync2.core.types import Token, EthBlockParams, ZkBlockParams, PaymasterParams
-from eth_account import Account
-from eth_account.signers.local import LocalAccount
 from zksync2.signer.eth_signer import PrivateKeyEthSigner
-from tests.contracts.utils import contract_path
 from zksync2.transaction.transaction_builders import (
     TxFunctionCall,
     TxCreate2Contract,
     TxCreateAccount,
 )
-
-
-# mint tx hash of Test coins:
-# https://goerli.explorer.zksync.io/address/0xFC174650BDEbE4D94736442307D4D7fdBe799EeC#contract
 
 
 class PaymasterTests(TestCase):
@@ -43,20 +39,21 @@ class PaymasterTests(TestCase):
     ETH_TEST_NET_AMOUNT_BALANCE = Decimal(1)
 
     SERC20_TOKEN = Token(
-        Web3.to_checksum_address("0x" + "0" * 40),
-        Web3.to_checksum_address("0xFC174650BDEbE4D94736442307D4D7fdBe799EeC"),
-        "SERC20",
-        18,
+        l1_address=Web3.to_checksum_address("0x" + "0" * 40),
+        l2_address=Web3.to_checksum_address(
+            "0xFC174650BDEbE4D94736442307D4D7fdBe799EeC"
+        ),
+        name="SERC20",
+        symbol="SERC20",
+        decimals=18,
     )
 
     SALT = keccak(text="TestPaymaster")
 
     def setUp(self) -> None:
-        self.env = LOCAL_ENV
-        self.web3 = ZkSyncBuilder.build(self.env.zksync_server)
-        self.account: LocalAccount = Account.from_key(
-            "0x7726827caac94a7f9e1b160f7ea819f172f7b6f9d2a97f992c38edeab82d4110"
-        )
+        self.env = EnvURL()
+        self.web3 = ZkSyncBuilder.build(self.env.env.zksync_server)
+        self.account: LocalAccount = Account.from_key(private_key_1)
         self.chain_id = self.web3.zksync.chain_id
         self.signer = PrivateKeyEthSigner(self.account, self.chain_id)
         # self.custom_paymaster = ContractEncoder.from_json(self.web3, contract_path("CustomPaymaster.json"))
