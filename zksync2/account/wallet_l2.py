@@ -15,13 +15,14 @@ from zksync2.manage_contracts.utils import (
     l2_bridge_abi_default,
     l2_shared_bridge_abi_default,
 )
+from zksync2.module.module_builder import ZkWeb3
 from zksync2.module.response_types import ZksAccountBalances
 from zksync2.signer.eth_signer import PrivateKeyEthSigner
 from zksync2.transaction.transaction712 import Transaction712
 
 
 class WalletL2:
-    def __init__(self, zksync_web3: Web3, eth_web3: Web3, l1_account: BaseAccount):
+    def __init__(self, zksync_web3: ZkWeb3, eth_web3: Web3, l1_account: BaseAccount):
         self._eth_web3 = eth_web3
         self._zksync_web3 = zksync_web3
         self._main_contract_address = self._zksync_web3.zksync.zks_main_contract()
@@ -94,16 +95,18 @@ class WalletL2:
         Returns:
         - Transaction hash.
         """
-        tx_fun_call = self._zksync_web3.zksync.get_transfer_transaction(
+        transaction = self._zksync_web3.zksync.get_transfer_transaction(
             tx, self._l1_account.address
         )
 
-        if tx.options.gas_limit is None or tx.options.gas_limit == 0:
-            tx.options.gas_limit = self._zksync_web3.zksync.eth_estimate_gas(
-                tx_fun_call.tx
-            )
+        tx_712: Transaction712 = transaction.tx712(transaction.tx["gas"])
+        fee = self._zksync_web3.zksync.zks_estimate_fee(tx_712.to_zk_transaction())
+        tx_712.gas_limit = tx_712.gas_limit or fee.gas_limit
+        tx_712.maxFeePerGas = tx_712.maxFeePerGas or fee.max_fee_per_gas
+        tx_712.maxPriorityFeePerGas = (
+            tx_712.maxPriorityFeePerGas or fee.max_priority_fee_per_gas
+        )
 
-        tx_712 = tx_fun_call.tx712(tx.options.gas_limit)
         signer = PrivateKeyEthSigner(self._l1_account, tx.options.chain_id)
         signed_message = signer.sign_typed_data(tx_712.to_eip712_struct())
 
@@ -125,13 +128,15 @@ class WalletL2:
         transaction = self._zksync_web3.zksync.get_withdraw_transaction(
             tx, from_=self._l1_account.address
         )
-        if tx.options.gas_limit is None:
-            transaction.tx["gas"] = self._zksync_web3.zksync.eth_estimate_gas(
-                transaction.tx
-            )
-        else:
-            transaction.tx["gas"] = tx.options.gas_limit
+
         tx_712 = transaction.tx712()
+        fee = self._zksync_web3.zksync.zks_estimate_fee(tx_712.to_zk_transaction())
+        tx_712.gas_limit = tx_712.gas_limit or fee.gas_limit
+        tx_712.maxFeePerGas = tx_712.maxFeePerGas or fee.max_fee_per_gas
+        tx_712.maxPriorityFeePerGas = (
+            tx_712.maxPriorityFeePerGas or fee.max_priority_fee_per_gas
+        )
+
         signer = PrivateKeyEthSigner(self._l1_account, self._zksync_web3.eth.chain_id)
         signed_message = signer.sign_typed_data(tx_712.to_eip712_struct())
 
