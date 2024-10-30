@@ -43,7 +43,7 @@ from zksync2.transaction.transaction_builders import (
     TxCreateContract,
     TxCreate2Contract,
 )
-from .test_config import LOCAL_ENV, EnvType
+from .test_config import EnvURL, EnvType, address_1, private_key_1
 
 
 def generate_random_salt() -> bytes:
@@ -55,48 +55,14 @@ class ZkSyncWeb3Tests(TestCase):
     ETH_TEST_NET_AMOUNT_BALANCE = Decimal(1)
 
     def setUp(self) -> None:
-        self.env = LOCAL_ENV
-        self.web3 = ZkSyncBuilder.build(self.env.zksync_server)
-        self.account: LocalAccount = Account.from_key(
-            "7726827caac94a7f9e1b160f7ea819f172f7b6f9d2a97f992c38edeab82d4110"
-        )
+        self.env = EnvURL()
+        self.web3 = ZkSyncBuilder.build(self.env.env.zksync_server)
+        self.account: LocalAccount = Account.from_key(private_key_1)
         self.chain_id = self.web3.zksync.chain_id
         self.signer = PrivateKeyEthSigner(self.account, self.chain_id)
         self.counter_address = None
         self.test_tx_hash = None
-        # INFO: use deploy_erc20_token_builder to get new address
-        if self.env.type == EnvType.LOCAL_HOST:
-            self.some_erc20_address = Web3.to_checksum_address(
-                "0x37b96512962FC7773E06237116BE693Eb2b3cD51"
-            )
-        if self.env.type == EnvType.TESTNET:
-            # https://goerli.explorer.zksync.io/address/0xd782e03F4818A7eDb0bc5f70748F67B4e59CdB33#contract
-            self.some_erc20_address = Web3.to_checksum_address(
-                "0xd782e03F4818A7eDb0bc5f70748F67B4e59CdB33"
-            )
-        self.ERC20_Token = Token(
-            l1_address=ADDRESS_DEFAULT,
-            l2_address=self.some_erc20_address,
-            symbol="SERC20",
-            decimals=18,
-        )
-
-    @skip("Integration test, used for develop purposes only")
-    def test_send_money(self):
-        gas_limit = 21000
-        web3 = Web3(Web3.HTTPProvider(self.env.eth_server))
-        web3.middleware_onion.inject(geth_poa_middleware, layer=0)
-        account = web3.eth.accounts[0]
-        transaction: TxParams = {
-            "from": account,
-            "gasPrice": Web3.to_wei(1, "gwei"),
-            "gas": gas_limit,
-            "to": self.account.address,
-            "value": web3.to_wei(1000000, "ether"),
-        }
-        tx_hash = web3.eth.send_transaction(transaction)
-        txn_receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
-        self.assertEqual(txn_receipt["status"], 1)
+        self.some_erc20_address = None
 
     def test_zks_l1_batch_number(self):
         result = self.web3.zksync.zks_l1_batch_number()
@@ -107,7 +73,6 @@ class ZkSyncWeb3Tests(TestCase):
         result = self.web3.zksync.zks_get_l1_batch_block_range(l1_batch_number)
         self.assertIsNotNone(result)
 
-    @skip
     def test_zks_get_l1_batch_details(self):
         l1_batch_number = self.web3.zksync.zks_l1_batch_number()
         result = self.web3.zksync.zks_get_l1_batch_details(l1_batch_number)
@@ -145,7 +110,7 @@ class ZkSyncWeb3Tests(TestCase):
 
     # @skip("Integration test, used for develop purposes only")
     def test_get_l1_balance(self):
-        eth_web3 = Web3(Web3.HTTPProvider(self.env.eth_server))
+        eth_web3 = Web3(Web3.HTTPProvider(self.env.env.eth_server))
         eth_balance = eth_web3.eth.get_balance(self.account.address)
         self.assertNotEqual(eth_balance, 0)
 
@@ -793,7 +758,8 @@ class ZkSyncWeb3Tests(TestCase):
         self.assertEqual(result, ADDRESS_DEFAULT)
 
     def test_get_l2_token_address(self):
-        result = self.web3.zksync.l2_token_address(ADDRESS_DEFAULT)
+        base_token = self.web3.zksync.zks_get_base_token_contract_address()
+        result = self.web3.zksync.l2_token_address(base_token)
         self.assertEqual(result, L2_BASE_TOKEN_ADDRESS)
 
     def test_get_bridgehub_contract(self):
@@ -802,4 +768,16 @@ class ZkSyncWeb3Tests(TestCase):
 
     def test_zks_get_base_token_contract_address(self):
         result = self.web3.zksync.zks_get_base_token_contract_address()
+        self.assertIsNotNone(result)
+
+    def test_zks_get_protocol_version(self):
+        result = self.web3.zksync.zks_get_protocol_version()
+        self.assertIsNotNone(result)
+
+    def test_zks_get_confirmed_tokens(self):
+        result = self.web3.zksync.zks_get_confirmed_tokens()
+        self.assertEqual(len(result), 1)
+
+    def test_zks_get_fee_params(self):
+        result = self.web3.zksync.zks_get_fee_params()
         self.assertIsNotNone(result)

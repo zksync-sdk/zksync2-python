@@ -5,7 +5,8 @@ from eth_account import Account
 from eth_account.signers.local import LocalAccount
 from web3 import Web3
 
-from tests.unit.test_config import LOCAL_ENV, EnvPrivateKey
+from tests.integration.test_config import private_key_1
+from tests.integration.test_config import EnvURL
 from zksync2.core.utils import RecommendedGasLimit
 from zksync2.manage_contracts.utils import get_zksync_hyperchain
 from zksync2.module.module_builder import ZkSyncBuilder
@@ -18,11 +19,10 @@ def generate_random_salt() -> bytes:
 
 class ZkSyncWeb3Tests(TestCase):
     def setUp(self) -> None:
-        env = LOCAL_ENV
-        env_key = "0x7726827caac94a7f9e1b160f7ea819f172f7b6f9d2a97f992c38edeab82d4110"
-        self.zksync = ZkSyncBuilder.build(env.zksync_server)
-        self.eth_web3 = Web3(Web3.HTTPProvider(env.eth_server))
-        self.account: LocalAccount = Account.from_key(env_key)
+        env = EnvURL()
+        self.zksync = ZkSyncBuilder.build(env.env.zksync_server)
+        self.eth_web3 = Web3(Web3.HTTPProvider(env.env.eth_server))
+        self.account: LocalAccount = Account.from_key(private_key_1)
         self.chain_id = self.zksync.zksync.chain_id
         self.signer = PrivateKeyEthSigner(self.account, self.chain_id)
         self.zksync_contract = self.eth_web3.eth.contract(
