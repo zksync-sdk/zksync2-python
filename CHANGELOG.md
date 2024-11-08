@@ -1,3 +1,31 @@
+# [2.0.0](https://github.com/zksync-sdk/zksync2-python/compare/v1.2.0...v2.0.0) (2024-11-08)
+
+
+### Bug Fixes
+
+* `estimate_default_bridge_deposit_l2_gas` use correct token ([a173430](https://github.com/zksync-sdk/zksync2-python/commit/a173430e30f40e3cbc93cceca3581cec99b8e0c0))
+* **wallet:** fix custom bridge support ([a095d5a](https://github.com/zksync-sdk/zksync2-python/commit/a095d5a21e92baaa58adde5a5e4f7f90a8f0bcfc))
+* **wallet:** use `l2BridgeAddress` in `_get_l2_gas_limit_from_custom_bridge` ([b94636a](https://github.com/zksync-sdk/zksync2-python/commit/b94636a75ff3949256f8764bf658ba1f4cbfcbc8))
+
+
+### Features
+
+* `LegacyContractFactory` add `createAccount` and `create2Account` ([2daa365](https://github.com/zksync-sdk/zksync2-python/commit/2daa365ccc937721dcf647bd65afb28a307b4f8f))
+* add `SmartAccount` feature ([15eb303](https://github.com/zksync-sdk/zksync2-python/commit/15eb303d5959d97348b4a81a007071a9dbd0c215))
+* improve `provider` typing ([215168c](https://github.com/zksync-sdk/zksync2-python/commit/215168c4654a2f3f8ccea3952f3dbbd0808434c5))
+* **provider:** add `is_l2_bridge_legacy` ([5cb4eb8](https://github.com/zksync-sdk/zksync2-python/commit/5cb4eb8b8f312a2e19a61d994254abe5604360db))
+* **provider:** add `zks_get_confirmed_tokens` ([fc72cf9](https://github.com/zksync-sdk/zksync2-python/commit/fc72cf9ed637b0843e1f7bc784d94a7b31310cb6))
+* **provider:** add `zks_get_fee_params` ([82848dc](https://github.com/zksync-sdk/zksync2-python/commit/82848dccd1807e7dcff3f095dc711b77f4514b03))
+* **provider:** add `zks_get_protocol_version` ([5005ef1](https://github.com/zksync-sdk/zksync2-python/commit/5005ef13db214c909dccecc796477b0ccaaa76eb))
+* **provider:** add `zks_send_raw_transaction_with_detailed_output` ([b306242](https://github.com/zksync-sdk/zksync2-python/commit/b3062420992c80d5534a380981e1097be447961d))
+* update `web3` to the latest version ([cd0c34c](https://github.com/zksync-sdk/zksync2-python/commit/cd0c34cb3c3afd48a75bab692ad23dc8a3e52d1c))
+* **wallet:** add `l1_token_address` ([b6c49d3](https://github.com/zksync-sdk/zksync2-python/commit/b6c49d3d9acc0bb5dcb60ab9092278498dc6c699))
+
+
+### BREAKING CHANGES
+
+* update to `web3` `v7`
+
 # [1.2.0](https://github.com/zksync-sdk/zksync2-python/compare/v1.1.0...v1.2.0) (2024-06-07)
 
 
