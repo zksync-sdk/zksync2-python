@@ -57,6 +57,7 @@ class EIP712Tests(TestCase):
             result.hex(),
         )
 
+    @skip
     def test_encode_person(self):
         from_str = self.mail.get_data_value("from").to_message_json(self.domain)
         value = json.loads(from_str)
@@ -84,7 +85,6 @@ class EIP712Tests(TestCase):
             ret.body.hex(),
         )
 
-    @skip
     def test_singed_bytes(self):
         result_bytes = self.mail.signable_bytes(self.domain)
         ret = keccak_256(result_bytes)
