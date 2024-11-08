@@ -232,7 +232,7 @@ def deploy_paymaster(provider_l2: Web3, wallet, token_address, signer, salt):
         compiled_contract=path.resolve(),
         account=signer,
         signer=signer,
-        deployment_type=DeploymentType.CREATE2_ACCOUNT
+        deployment_type=DeploymentType.CREATE2_ACCOUNT,
     )
     contract = deployer.deploy(salt=to_bytes(salt), **constructor_arguments)
 
