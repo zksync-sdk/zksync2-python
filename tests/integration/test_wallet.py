@@ -46,7 +46,7 @@ from zksync2.module.module_builder import ZkSyncBuilder
 class TestWallet(TestCase):
     def setUp(self) -> None:
         self.env = EnvURL()
-        #self.w3 = Web3(Web3.HTTPProvider('YOUR_ZKSYNC_RPC_URL'))
+        # self.w3 = Web3(Web3.HTTPProvider('YOUR_ZKSYNC_RPC_URL'))
         self.zksync = ZkSyncBuilder.build(self.env.env.zksync_server)
         self.eth_web3 = Web3(Web3.HTTPProvider(self.env.env.eth_server))
         self.account: LocalAccount = Account.from_key(private_key_1)

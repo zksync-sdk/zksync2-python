@@ -8,7 +8,10 @@ from eth_typing import HexStr
 
 from tests.integration.test_config import EnvURL, private_key_1
 from zksync2.core.types import EthBlockParams
-from zksync2.manage_contracts.contract_factory import LegacyContractFactory, DeploymentType
+from zksync2.manage_contracts.contract_factory import (
+    LegacyContractFactory,
+    DeploymentType,
+)
 from zksync2.module.module_builder import ZkSyncBuilder
 from zksync2.signer.eth_signer import PrivateKeyEthSigner
 
@@ -50,7 +53,7 @@ class ContractFactoryTest(TestCase):
             compiled_contract=path.resolve(),
             account=self.account,
             signer=self.signer,
-            deployment_type=DeploymentType.CREATE2
+            deployment_type=DeploymentType.CREATE2,
         )
         contract = deployer.deploy(salt=salt)
         self.assertIsNotNone(self.provider.zksync.get_code(contract.address))
@@ -66,7 +69,7 @@ class ContractFactoryTest(TestCase):
             compiled_contract=path.resolve(),
             account=self.account,
             signer=self.signer,
-            deployment_type=DeploymentType.CREATE2
+            deployment_type=DeploymentType.CREATE2,
         )
         contract = deployer.deploy(salt=salt, **constructor_arguments)
         self.assertIsNotNone(self.provider.zksync.get_code(contract.address))
@@ -75,7 +78,9 @@ class ContractFactoryTest(TestCase):
         salt = generate_random_salt()
         directory = Path(__file__).parent
         path = directory / "../contracts/Paymaster.json"
-        token_address = self.provider.to_checksum_address('0x0183Fe07a98bc036d6eb23C3943d823bcD66a90F')
+        token_address = self.provider.to_checksum_address(
+            "0x0183Fe07a98bc036d6eb23C3943d823bcD66a90F"
+        )
         constructor_arguments = {"_erc20": token_address}
 
         deployer = LegacyContractFactory.from_json(
@@ -83,10 +88,7 @@ class ContractFactoryTest(TestCase):
             compiled_contract=path.resolve(),
             account=self.account,
             signer=self.signer,
-            deployment_type=DeploymentType.CREATE2_ACCOUNT
+            deployment_type=DeploymentType.CREATE2_ACCOUNT,
         )
         contract = deployer.deploy(salt=salt, **constructor_arguments)
         self.assertIsNotNone(self.provider.zksync.get_code(contract.address))
-
-
-

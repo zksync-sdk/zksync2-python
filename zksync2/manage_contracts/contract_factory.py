@@ -14,8 +14,12 @@ from zksync2.manage_contracts.precompute_contract_deployer import (
 )
 from zksync2.module.module_builder import ZkWeb3
 from zksync2.signer.eth_signer import EthSignerBase
-from zksync2.transaction.transaction_builders import TxCreateContract, TxCreate2Contract, TxCreateAccount, \
-    TxCreate2Account
+from zksync2.transaction.transaction_builders import (
+    TxCreateContract,
+    TxCreate2Contract,
+    TxCreateAccount,
+    TxCreate2Account,
+)
 
 
 class DeploymentType(Enum):
@@ -70,7 +74,9 @@ class LegacyContractFactory:
             self.account.address, EthBlockParams.PENDING.value
         )
         call_data = None
-        if (args is not None and kwargs is not None) and (len(args) > 0 or len(kwargs) > 0):
+        if (args is not None and kwargs is not None) and (
+            len(args) > 0 or len(kwargs) > 0
+        ):
             encoder = ContractEncoder(self.web3, abi=self.abi, bytecode=self.byte_code)
             call_data = encoder.encode_constructor(*args, **kwargs)
 
@@ -114,7 +120,9 @@ class LegacyContractFactory:
         )
         gas_price = self.web3.zksync.gas_price
         call_data = None
-        if (args is not None and kwargs is not None) and (len(args) > 0 or len(kwargs) > 0):
+        if (args is not None and kwargs is not None) and (
+            len(args) > 0 or len(kwargs) > 0
+        ):
             encoder = ContractEncoder(self.web3, abi=self.abi, bytecode=self.byte_code)
             call_data = encoder.encode_constructor(*args, **kwargs)
 
@@ -158,7 +166,9 @@ class LegacyContractFactory:
         )
         gas_price = self.web3.zksync.gas_price
         call_data = None
-        if (args is not None and kwargs is not None) and (len(args) > 0 or len(kwargs) > 0):
+        if (args is not None and kwargs is not None) and (
+            len(args) > 0 or len(kwargs) > 0
+        ):
             encoder = ContractEncoder(self.web3, abi=self.abi, bytecode=self.byte_code)
             call_data = encoder.encode_constructor(*args, **kwargs)
 
@@ -201,7 +211,9 @@ class LegacyContractFactory:
         )
         gas_price = self.web3.zksync.gas_price
         call_data = None
-        if (args is not None and kwargs is not None) and (len(args) > 0 or len(kwargs) > 0):
+        if (args is not None and kwargs is not None) and (
+            len(args) > 0 or len(kwargs) > 0
+        ):
             encoder = ContractEncoder(self.web3, abi=self.abi, bytecode=self.byte_code)
             call_data = encoder.encode_constructor(*args, **kwargs)
 

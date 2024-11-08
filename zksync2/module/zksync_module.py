@@ -50,7 +50,10 @@ from zksync2.core.types import (
     WithdrawTransaction,
     ContractAccountInfo,
     StorageProof,
-    ETH_ADDRESS_IN_CONTRACTS, ProtocolVersion, TransactionWithDetailedOutput, FeeParams,
+    ETH_ADDRESS_IN_CONTRACTS,
+    ProtocolVersion,
+    TransactionWithDetailedOutput,
+    FeeParams,
 )
 from zksync2.core.types import TransactionReceipt
 from zksync2.core.utils import (
@@ -64,7 +67,8 @@ from zksync2.manage_contracts.deploy_addresses import ZkSyncAddresses
 from zksync2.manage_contracts.utils import (
     get_erc20_abi,
     icontract_deployer_abi_default,
-    l2_bridge_abi_default, l2_shared_bridge_abi_default,
+    l2_bridge_abi_default,
+    l2_shared_bridge_abi_default,
 )
 from zksync2.module.request_types import *
 from zksync2.module.response_types import *
@@ -94,7 +98,9 @@ zks_get_base_token_l1_address_rpc = RPCEndpoint("zks_getBaseTokenL1Address")
 zks_get_bridgehub_contract_rpc = RPCEndpoint("zks_getBridgehubContract")
 zks_get_protocol_version_rpc = RPCEndpoint("zks_getProtocolVersion")
 zks_get_confirmed_tokens_rpc = RPCEndpoint("zks_getConfirmedTokens")
-zks_send_raw_transaction_with_detailed_output_rpc = RPCEndpoint("zks_sendRawTransactionWithDetailedOutput")
+zks_send_raw_transaction_with_detailed_output_rpc = RPCEndpoint(
+    "zks_sendRawTransactionWithDetailedOutput"
+)
 zks_get_fee_params_rpc = RPCEndpoint("zks_getFeeParams")
 eth_estimate_gas_rpc = RPCEndpoint("eth_estimateGas")
 eth_get_transaction_receipt_rpc = RPCEndpoint("eth_getTransactionReceipt")
@@ -455,16 +461,14 @@ class ZkSync(Eth, ABC):
         result_formatters=zksync_get_result_formatters,
     )
 
-    _zks_get_protocol_version: Method[
-        Callable[[Optional[int]], ProtocolVersion]
-    ] = Method(
-        zks_get_protocol_version_rpc,
-        mungers=[default_root_munger],
+    _zks_get_protocol_version: Method[Callable[[Optional[int]], ProtocolVersion]] = (
+        Method(
+            zks_get_protocol_version_rpc,
+            mungers=[default_root_munger],
+        )
     )
 
-    _zks_get_confirmed_tokens: Method[
-        Callable[[int, int], List[Token]]
-    ] = Method(
+    _zks_get_confirmed_tokens: Method[Callable[[int, int], List[Token]]] = Method(
         zks_get_confirmed_tokens_rpc,
         mungers=[default_root_munger],
     )
@@ -476,9 +480,7 @@ class ZkSync(Eth, ABC):
         mungers=[default_root_munger],
     )
 
-    _zks_get_fee_params: Method[
-        Callable[[], FeeParams]
-    ] = Method(
+    _zks_get_fee_params: Method[Callable[[], FeeParams]] = Method(
         zks_get_fee_params_rpc,
         mungers=[default_root_munger],
     )
@@ -556,7 +558,9 @@ class ZkSync(Eth, ABC):
 
         return self._zks_get_protocol_version(id)
 
-    def zks_get_confirmed_tokens(self, start: int = 0, limit: int = 255) -> ProtocolVersion:
+    def zks_get_confirmed_tokens(
+        self, start: int = 0, limit: int = 255
+    ) -> ProtocolVersion:
         """
         Returns confirmed tokens. A confirmed token is any token bridged to ZKsync Era via the official bridge.
 
@@ -569,7 +573,9 @@ class ZkSync(Eth, ABC):
 
         return self._zks_get_confirmed_tokens(start, limit)
 
-    def zks_send_raw_transaction_with_detailed_output(self, tx: Union[HexStr, bytes]) -> ProtocolVersion:
+    def zks_send_raw_transaction_with_detailed_output(
+        self, tx: Union[HexStr, bytes]
+    ) -> ProtocolVersion:
         """
         Executes a transaction and returns its hash, storage logs, and events that would have been generated if the
         transaction had already been included in the block. The API has a similar behaviour to `eth_sendRawTransaction`
@@ -926,7 +932,7 @@ class ZkSync(Eth, ABC):
         """
         bridge = self.contract(
             address=Web3.to_checksum_address(address),
-            abi=l2_shared_bridge_abi_default()
+            abi=l2_shared_bridge_abi_default(),
         )
         try:
             bridge.functions.l1SharedBridge().call()
