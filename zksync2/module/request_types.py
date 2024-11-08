@@ -1,9 +1,6 @@
 from enum import Enum
 from dataclasses import dataclass
-from typing import List, Optional
-from web3._utils.compat import (
-    TypedDict,
-)
+from typing import List, Optional, TypedDict
 
 from eth_typing import HexStr
 from web3.types import AccessList
@@ -30,11 +27,11 @@ Transaction = TypedDict(
         "from": HexStr,
         "to": HexStr,
         "gas": int,
-        "gasPrice": int,
+        "maxFeePerGas": int,
         "maxPriorityFeePerGas": int,
         "value": int,
         "data": HexStr,
-        "transactionType": int,
+        "type": int,
         "accessList": Optional[AccessList],
         "eip712Meta": EIP712Meta,
     },

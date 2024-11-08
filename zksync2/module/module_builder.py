@@ -1,12 +1,11 @@
-from web3._utils.module import attach_modules
-
-from zksync2.module.middleware import ZkSyncMiddlewareBuilder
-from zksync2.module.zksync_module import ZkSync
-from zksync2.module.zksync_provider import ZkSyncProvider
-
 from typing import Union
+
 from eth_typing import URI
 from web3 import Web3
+from web3._utils.module import attach_modules
+
+from zksync2.module.zksync_module import ZkSync
+from zksync2.module.zksync_provider import ZkSyncProvider
 
 
 class ZkWeb3(Web3):

@@ -49,7 +49,7 @@ We follow basic coding style guidelines. Before committing, ensure your code is 
 
 ## Need Assistance?
 
-If you're unsure about something or have questions, don't hesitate to open an issue or initiate a discussion in our [zkSync Community Hub](https://github.com/zkSync-Community-Hub/zkSync-developers/discussions). We're here to assist!
+If you're unsure about something or have questions, don't hesitate to open an issue or initiate a discussion in our [ZKsync Community Hub](https://github.com/zkSync-Community-Hub/zkSync-developers/discussions). We're here to assist!
 
 ## What's Next?
 

@@ -8,7 +8,6 @@ from eth_account.signers.local import LocalAccount
 from eth_typing import HexStr
 from eth_utils import keccak
 from web3 import Web3
-from web3.middleware import geth_poa_middleware
 from web3.types import TxParams
 
 from tests.contracts.utils import contract_path
@@ -116,9 +115,10 @@ class ZkSyncWeb3Tests(TestCase):
 
     # @skip("Integration test, used for develop purposes only")
     def test_get_l2_balance(self):
-        zk_balance = self.web3.zksync.get_balance(
+        result = self.web3.zksync.get_balance(
             self.account.address, EthBlockParams.LATEST.value
         )
+        self.assertIsNotNone(result)
 
     # @skip("Integration test, used for develop purposes only")
     def test_get_nonce(self):
@@ -312,7 +312,7 @@ class ZkSyncWeb3Tests(TestCase):
         )
         self.assertEqual(1, tx_receipt["status"])
 
-    # @skip("Integration test, used for develop purposes only")
+    @skip("Integration test, used for develop purposes only")
     def test_estimate_gas_deploy_contract(self):
         directory = Path(__file__).parent
         path = directory / Path("../contracts/Counter.json")
@@ -339,7 +339,7 @@ class ZkSyncWeb3Tests(TestCase):
             "test_estimate_gas_deploy_contract, estimate_gas must be greater 0",
         )
 
-    # @skip("Integration test, used for develop purposes only")
+    @skip("Integration test, used for develop purposes only")
     def test_deploy_contract_create(self):
         random_salt = generate_random_salt()
         nonce = self.web3.zksync.get_transaction_count(
@@ -396,7 +396,7 @@ class ZkSyncWeb3Tests(TestCase):
         version = self.web3.zksync.protocol_version
         self.assertEqual(version, "zks/1")
 
-    # @skip("Integration test, used for develop purposes only")
+    @skip("Integration test, used for develop purposes only")
     def test_deploy_contract_with_constructor_create(self):
         random_salt = generate_random_salt()
         nonce = self.web3.zksync.get_transaction_count(
@@ -463,7 +463,7 @@ class ZkSyncWeb3Tests(TestCase):
         )
         self.assertEqual(a * b, value)
 
-    # @skip("Integration test, used for develop purposes only")
+    @skip("Integration test, used for develop purposes only")
     def test_deploy_contract_create2(self):
         random_salt = generate_random_salt()
         nonce = self.web3.zksync.get_transaction_count(
@@ -515,7 +515,7 @@ class ZkSyncWeb3Tests(TestCase):
         )
         self.assertEqual(0, value)
 
-    # @skip("Integration test, used for develop purposes only")
+    @skip("Integration test, used for develop purposes only")
     def test_deploy_contract_with_deps_create(self):
         random_salt = generate_random_salt()
         directory = Path(__file__).parent
@@ -570,7 +570,7 @@ class ZkSyncWeb3Tests(TestCase):
         contract_address = contract_deployer.extract_contract_address(tx_receipt)
         self.assertEqual(precomputed_address.lower(), contract_address.lower())
 
-    # @skip("Integration test, used for develop purposes only")
+    @skip("Integration test, used for develop purposes only")
     def test_deploy_contract_with_deps_create2(self):
         random_salt = generate_random_salt()
         directory = Path(__file__).parent
@@ -620,7 +620,7 @@ class ZkSyncWeb3Tests(TestCase):
         contract_address = contract_deployer.extract_contract_address(tx_receipt)
         self.assertEqual(precomputed_address.lower(), contract_address.lower())
 
-    # @skip("Integration test, used for develop purposes only")
+    @skip("Integration test, used for develop purposes only")
     def test_execute_contract(self):
         directory = Path(__file__).parent
         path = directory / Path("../contracts/Counter.json")
@@ -693,7 +693,7 @@ class ZkSyncWeb3Tests(TestCase):
         updated_result = int.from_bytes(eth_ret2, "big", signed=True)
         self.assertEqual(result + 1, updated_result)
 
-    # @skip
+    @skip
     def test_contract_factory(self):
         increment_value = 10
         salt = generate_random_salt()
@@ -723,7 +723,7 @@ class ZkSyncWeb3Tests(TestCase):
             }
         )
         signed = self.account.sign_transaction(tx)
-        tx_hash = self.web3.zksync.send_raw_transaction(signed.rawTransaction)
+        tx_hash = self.web3.zksync.send_raw_transaction(signed.raw_transaction)
         tx_receipt = self.web3.zksync.wait_for_transaction_receipt(tx_hash)
         self.assertEqual(1, tx_receipt["status"])
 

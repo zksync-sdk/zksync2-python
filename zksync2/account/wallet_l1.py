@@ -275,7 +275,7 @@ class WalletL1:
             prepare_transaction_options(options, self.address)
         )
         signed_tx = self._l1_account.sign_transaction(tx)
-        tx_hash = self._eth_web3.eth.send_raw_transaction(signed_tx.rawTransaction)
+        tx_hash = self._eth_web3.eth.send_raw_transaction(signed_tx.raw_transaction)
         tx_receipt = self._eth_web3.eth.wait_for_transaction_receipt(tx_hash)
 
         return tx_receipt
@@ -350,7 +350,7 @@ class WalletL1:
             tx["gas"] = scale_gas_limit(tx["gas"])
 
         signed_tx = self._l1_account.sign_transaction(tx)
-        txn_hash = self._eth_web3.eth.send_raw_transaction(signed_tx.rawTransaction)
+        txn_hash = self._eth_web3.eth.send_raw_transaction(signed_tx.raw_transaction)
 
         return txn_hash
 
@@ -405,7 +405,7 @@ class WalletL1:
             tx["gas"] = scale_gas_limit(tx["gas"])
 
         signed_tx = self._l1_account.sign_transaction(tx)
-        txn_hash = self._eth_web3.eth.send_raw_transaction(signed_tx.rawTransaction)
+        txn_hash = self._eth_web3.eth.send_raw_transaction(signed_tx.raw_transaction)
 
         return txn_hash
 
@@ -417,7 +417,7 @@ class WalletL1:
             tx["gas"] = scale_gas_limit(base_gas_limit)
 
         signed_tx = self._l1_account.sign_transaction(tx)
-        txn_hash = self._eth_web3.eth.send_raw_transaction(signed_tx.rawTransaction)
+        txn_hash = self._eth_web3.eth.send_raw_transaction(signed_tx.raw_transaction)
 
         return txn_hash
 
@@ -1137,7 +1137,7 @@ class WalletL1:
         bridge_data: bytes,
     ) -> HexStr:
         l2_bridge = self._eth_web3.eth.contract(abi=l2_bridge_abi_default())
-        return l2_bridge.encodeABI(
+        return l2_bridge.encode_abi(
             "finalizeDeposit",
             (l1_sender, l2_receiver, l1_token_address, amount, bridge_data),
         )
@@ -1191,7 +1191,7 @@ class WalletL1:
         ).build_transaction(prepare_transaction_options(options, self.address))
 
         signed = self._l1_account.sign_transaction(tx)
-        tx_hash = self._eth_web3.eth.send_raw_transaction(signed.rawTransaction)
+        tx_hash = self._eth_web3.eth.send_raw_transaction(signed.raw_transaction)
         return tx_hash
 
     def is_withdrawal_finalized(self, withdraw_hash, index: int = 0):
@@ -1243,7 +1243,7 @@ class WalletL1:
         """
         transaction = self.get_request_execute_transaction(transaction)
         signed_tx = self._l1_account.sign_transaction(transaction)
-        tx_hash = self._eth_web3.eth.send_raw_transaction(signed_tx.rawTransaction)
+        tx_hash = self._eth_web3.eth.send_raw_transaction(signed_tx.raw_transaction)
 
         return tx_hash
 
