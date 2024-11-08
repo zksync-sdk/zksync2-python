@@ -192,9 +192,7 @@ class PaymasterTests(TestCase):
             tx_hash, timeout=240, poll_latency=0.5
         )
 
-        calladata = token_contract.encode_abi(
-            "mint", args=[self.account.address, 7]
-        )
+        calladata = token_contract.encode_abi("mint", args=[self.account.address, 7])
 
         paymaster_params = PaymasterParams(
             **{

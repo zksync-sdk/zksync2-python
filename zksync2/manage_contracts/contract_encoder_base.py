@@ -68,7 +68,7 @@ class ContractEncoder(BaseContractEncoder):
                 args = tuple()
             if not kwargs:
                 kwargs = {}
-            arguments = merge_args_and_kwargs(constructor_abi['inputs'], args, kwargs)
+            arguments = merge_args_and_kwargs(constructor_abi["inputs"], args, kwargs)
             # INFO: it takes affect on the eth_estimate_gas,
             #       it does not need the bytecode in the front of encoded arguments, see implementation of encode_abi
             #  uncomment if it's fixed on ZkSync side
@@ -136,8 +136,9 @@ def merge_args_and_kwargs(abi_inputs, args, kwargs):
     else:
         return tuple()
 
+
 def get_constructor_abi(contract_abi):
     for item in contract_abi:
-        if item.get('type') == 'constructor':
+        if item.get("type") == "constructor":
             return item
     return None

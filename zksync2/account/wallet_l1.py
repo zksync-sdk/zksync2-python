@@ -846,7 +846,8 @@ class WalletL1:
             transaction.custom_bridge_data = get_custom_bridge_data(token_contract)
 
         bridge = self._zksync_web3.zksync.contract(
-            address=Web3.to_checksum_address(transaction.bridge_address), abi=l1_bridge_abi_default()
+            address=Web3.to_checksum_address(transaction.bridge_address),
+            abi=l1_bridge_abi_default(),
         )
 
         if transaction.options.chain_id is None:
