@@ -1079,6 +1079,8 @@ class WalletL1:
         gas_per_pubdata_byte: int = None,
         from_: HexStr = None,
     ) -> int:
+        if is_address_eq(token, LEGACY_ETH_ADDRESS):
+            token = ETH_ADDRESS_IN_CONTRACTS
         if from_ is None:
             from_ = self._l1_account.address
         if gas_per_pubdata_byte is None:
