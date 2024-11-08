@@ -18,7 +18,7 @@ Before initiating the release process, ensure the following prerequisites are me
     - Merge the approved Pull Request into the `main`. Currently, 
    only the `main` branch is allowed for releasing.
 
-2. **Manual execution of [Release](workflows/release.yml) Action:**
+2. **Manual execution of [Release](workflows/release.yaml) Action:**
     - The `Release` GitHub Action automates versioning based on conventional commit messages. Pipeline creates tag, release, 
    and pushes new commit in which updates `CHANGELOG.md` and version in `pyproject.toml`.
     - Click on the `Run workflow` button and select the desired branch or run the following command: 
