@@ -163,7 +163,7 @@ class PaymasterTests(TestCase):
         )
 
         signed = self.account.sign_transaction(mint_tx)
-        tx_hash = self.web3.zksync.send_raw_transaction(signed.rawTransaction)
+        tx_hash = self.web3.zksync.send_raw_transaction(signed.raw_transaction)
         self.web3.zksync.wait_for_transaction_receipt(
             tx_hash, timeout=240, poll_latency=0.5
         )
@@ -192,8 +192,8 @@ class PaymasterTests(TestCase):
             tx_hash, timeout=240, poll_latency=0.5
         )
 
-        calladata = token_contract.encodeABI(
-            fn_name="mint", args=[self.account.address, 7]
+        calladata = token_contract.encode_abi(
+            "mint", args=[self.account.address, 7]
         )
 
         paymaster_params = PaymasterParams(

@@ -1,5 +1,7 @@
 from unittest import TestCase
 from eth_typing import HexStr
+from eth_utils import add_0x_prefix
+
 from zksync2.signer.eth_signer import PrivateKeyEthSigner
 from eth_account.signers.local import LocalAccount
 from eth_account import Account
@@ -54,7 +56,7 @@ class EthSignerTests(TestCase):
 
     def test_sign_typed_data(self):
         sm = self.signer.sign_typed_data(self.mail, self.domain)
-        self.assertEqual(self._TEST_TYPED_EXPECTED_SIGNATURE, sm.signature.hex())
+        self.assertEqual(self._TEST_TYPED_EXPECTED_SIGNATURE, add_0x_prefix(sm.signature.hex()))
 
     def test_verify_signed_typed_data(self):
         ret = self.signer.verify_typed_data(

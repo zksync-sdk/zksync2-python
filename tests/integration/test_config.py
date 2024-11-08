@@ -35,7 +35,7 @@ class EnvPrivateKey:
 
 class EnvURL:
     def __init__(self):
-        env: bool = os.getenv("IS_ETH_CHAIN", True)
+        env: bool = os.getenv("IS_ETH_CHAIN", False)
         if env:
             self._env = LOCAL_ETH_ENV
         else:

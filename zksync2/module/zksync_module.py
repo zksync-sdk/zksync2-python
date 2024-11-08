@@ -1,16 +1,14 @@
 from abc import ABC
+from typing import Any, Callable, List, Union
 
-import web3
+from eth_typing import Address
+from eth_utils import remove_0x_prefix
 from eth_utils import to_checksum_address, is_address
-from eth_utils.curried import apply_formatter_to_array
-
 from eth_utils.curried import apply_formatter_at_index
+from eth_utils.curried import apply_formatter_to_array
+from eth_utils.toolz import compose
 from hexbytes import HexBytes
 from web3 import Web3
-from web3._utils.threads import Timeout
-from web3.contract import Contract
-from web3.exceptions import TransactionNotFound, TimeExhausted
-from web3.module import Module
 from web3._utils.formatters import integer_to_hex
 from web3._utils.method_formatters import (
     ABI_REQUEST_FORMATTERS,
@@ -19,7 +17,6 @@ from web3._utils.method_formatters import (
     combine_formatters,
     apply_formatter_if,
     apply_formatters_to_dict,
-    apply_list_to_array_formatter,
     to_hex_if_integer,
     PYTHONIC_RESULT_FORMATTERS,
     FILTER_RESULT_FORMATTERS,
@@ -27,12 +24,15 @@ from web3._utils.method_formatters import (
     is_not_null,
     to_ascii_if_bytes,
 )
-
+from web3._utils.threads import Timeout
+from web3.contract import Contract
 from web3.eth import Eth
-from web3.types import RPCEndpoint, _Hash32, TxReceipt, BlockIdentifier
+from web3.exceptions import TransactionNotFound, TimeExhausted
+from web3.method import Method, default_root_munger
+from web3.module import Module
+from web3.types import RPCEndpoint, _Hash32, TxReceipt
+
 from zksync2.core.types import (
-    Limit,
-    From,
     ContractSourceDebugInfo,
     BridgeAddresses,
     TokenAddress,
@@ -52,9 +52,9 @@ from zksync2.core.types import (
     StorageProof,
     ETH_ADDRESS_IN_CONTRACTS, ProtocolVersion, TransactionWithDetailedOutput, FeeParams,
 )
+from zksync2.core.types import TransactionReceipt
 from zksync2.core.utils import (
     is_eth,
-    MAX_PRIORITY_FEE_PER_GAS,
     LEGACY_ETH_ADDRESS,
     L2_BASE_TOKEN_ADDRESS,
     is_address_eq,
@@ -62,24 +62,15 @@ from zksync2.core.utils import (
 )
 from zksync2.manage_contracts.deploy_addresses import ZkSyncAddresses
 from zksync2.manage_contracts.utils import (
-    ERC20Encoder,
     get_erc20_abi,
     icontract_deployer_abi_default,
     l2_bridge_abi_default, l2_shared_bridge_abi_default,
 )
 from zksync2.module.request_types import *
 from zksync2.module.response_types import *
-from zksync2.core.types import TransactionReceipt
-from eth_typing import Address
-from eth_utils import remove_0x_prefix
-from eth_utils.toolz import compose
-from web3.method import Method, default_root_munger
-from typing import Any, Callable, List, Union
-
 from zksync2.transaction.transaction712 import Transaction712
 from zksync2.transaction.transaction_builders import (
     TxWithdraw,
-    TxFunctionCall,
     TxTransfer,
 )
 
@@ -613,7 +604,7 @@ class ZkSync(Eth, ABC):
             contract = self.contract(
                 Web3.to_checksum_address(token_address), abi=get_erc20_abi()
             )
-            transaction["data"] = contract.encodeABI("transfer", args=transfer_params)
+            transaction["data"] = contract.encode_abi("transfer", args=transfer_params)
             transaction["nonce"] = self.get_transaction_count(
                 transaction["from_"], ZkBlockParams.COMMITTED.value
             )
@@ -893,7 +884,7 @@ class ZkSync(Eth, ABC):
             contract = self.contract(
                 Web3.to_checksum_address(tx.token_address), abi=get_erc20_abi()
             )
-            call_data = contract.encodeABI("transfer", transfer_params)
+            call_data = contract.encode_abi("transfer", transfer_params)
 
         transaction = TxTransfer(
             web3=self,

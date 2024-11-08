@@ -40,24 +40,19 @@ from zksync2.manage_contracts.paymaster_utils import PaymasterFlowEncoder
 from zksync2.manage_contracts.utils import (
     get_zksync_hyperchain,
 )
-from zksync2.module.provider import Provider
 from zksync2.module.module_builder import ZkSyncBuilder
 
 
 class TestWallet(TestCase):
     def setUp(self) -> None:
         self.env = EnvURL()
-        self.custom = Provider(Web3.HTTPProvider(self.env.env.zksync_server))
-        self.a = ZkSyncBuilder.build(self.env.env.zksync_server)
-        print(self.a.eth.get_balance(address_1))
-        print(self.a.zksync.zks_main_contract())
         #self.w3 = Web3(Web3.HTTPProvider('YOUR_ZKSYNC_RPC_URL'))
-        self.zksync: Provider = Provider(Web3.HTTPProvider(self.env.env.zksync_server))
+        self.zksync = ZkSyncBuilder.build(self.env.env.zksync_server)
         self.eth_web3 = Web3(Web3.HTTPProvider(self.env.env.eth_server))
         self.account: LocalAccount = Account.from_key(private_key_1)
-        self.wallet = Wallet(self.a, self.eth_web3, self.account)
+        self.wallet = Wallet(self.zksync, self.eth_web3, self.account)
         self.zksync_contract = self.eth_web3.eth.contract(
-            Web3.to_checksum_address(self.zksync.get_main_contract()),
+            Web3.to_checksum_address(self.zksync.zksync.zks_main_contract()),
             abi=get_zksync_hyperchain(),
         )
         self.is_eth_based_chain = self.wallet.is_eth_based_chain()
@@ -578,7 +573,7 @@ class TestWallet(TestCase):
 
     def test_transfer_eth(self):
         amount = 7_000_000_000
-        balance_before_transfer = self.zksync.get_balance(
+        balance_before_transfer = self.zksync.zksync.zks_get_balance(
             Web3.to_checksum_address(address_2), token_address=LEGACY_ETH_ADDRESS
         )
         tx_hash = self.wallet.transfer(
@@ -589,7 +584,7 @@ class TestWallet(TestCase):
             )
         )
 
-        a = self.zksync.wait_for_transaction_receipt(
+        a = self.zksync.zksync.wait_for_transaction_receipt(
             tx_hash, timeout=240, poll_latency=0.5
         )
         print(a)
@@ -664,10 +659,10 @@ class TestWallet(TestCase):
         path = directory / Path("../contracts/Token.json")
 
         token_contract = ContractEncoder.from_json(
-            self.custom, path.resolve(), JsonConfiguration.STANDARD
+            self.zksync, path.resolve(), JsonConfiguration.STANDARD
         )
         abi = token_contract.abi
-        token_contract = self.custom.eth.contract(
+        token_contract = self.zksync.eth.contract(
             Web3.to_checksum_address(approval_token), abi=abi
         )
 
@@ -688,7 +683,7 @@ class TestWallet(TestCase):
         )
 
         signed = self.wallet.sign_transaction(mint_tx)
-        tx_hash = self.zksync.eth.send_raw_transaction(signed.rawTransaction)
+        tx_hash = self.zksync.eth.send_raw_transaction(signed.raw_transaction)
         self.zksync.zksync.wait_for_transaction_receipt(
             tx_hash, timeout=240, poll_latency=0.5
         )

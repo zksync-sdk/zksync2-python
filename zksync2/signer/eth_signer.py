@@ -1,11 +1,13 @@
-import web3
 from abc import abstractmethod, ABC
-from zksync2.eip712 import make_domain, EIP712Struct
+
+import web3
 from eth_account.datastructures import SignedMessage
+from eth_account.messages import encode_defunct, SignableMessage
 from eth_account.signers.base import BaseAccount
 from eth_typing import ChecksumAddress, HexStr
 from eth_utils import keccak
-from eth_account.messages import encode_defunct, SignableMessage
+
+from zksync2.eip712 import make_domain, EIP712Struct
 
 
 class EthSignerBase:
@@ -29,6 +31,14 @@ class PrivateKeyEthSigner(EthSignerBase, ABC):
             name=self._NAME, version=self._VERSION, chainId=self.chain_id
         )
 
+    @staticmethod
+    def get_default_domain(chain_id: int):
+        return make_domain(
+            name=PrivateKeyEthSigner._NAME,
+            version=PrivateKeyEthSigner._VERSION,
+            chainId=chain_id,
+        )
+
     @property
     def address(self) -> ChecksumAddress:
         return self.credentials.address
@@ -49,7 +59,7 @@ class PrivateKeyEthSigner(EthSignerBase, ABC):
     def sign_typed_data(self, typed_data: EIP712Struct, domain=None) -> SignedMessage:
         singable_message = self.typed_data_to_signed_bytes(typed_data, domain)
         msg_hash = keccak(singable_message.body)
-        return self.credentials.signHash(msg_hash)
+        return self.credentials.unsafe_sign_hash(msg_hash)
 
     def verify_typed_data(
         self, sig: HexStr, typed_data: EIP712Struct, domain=None
@@ -58,3 +68,7 @@ class PrivateKeyEthSigner(EthSignerBase, ABC):
         msg_hash = keccak(singable_message.body)
         address = web3.Account._recover_hash(message_hash=msg_hash, signature=sig)
         return address.lower() == self.address.lower()
+
+    def sign_message(self, message: bytes) -> SignedMessage:
+        msg_hash = keccak(message)
+        return self.credentials.unsafe_sign_hash(msg_hash)

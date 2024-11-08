@@ -174,5 +174,5 @@ class ZkSyncWeb3Tests(TestCase):
             }
         )
         signed_tx = self.account.sign_transaction(tx)
-        tx_hash = self.eth_web3.eth.send_raw_transaction(signed_tx.rawTransaction)
+        tx_hash = self.eth_web3.eth.send_raw_transaction(signed_tx.raw_transaction)
         tx_receipt = self.eth_web3.eth.wait_for_transaction_receipt(tx_hash)
