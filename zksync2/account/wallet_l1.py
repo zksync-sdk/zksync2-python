@@ -227,6 +227,15 @@ class WalletL1:
         """
         return self._zksync_web3.zksync.l2_token_address(address)
 
+    def l1_token_address(self, address: HexStr) -> HexStr:
+        """
+        Returns the L1 token address equivalent for a L2 token address as they are not necessarily equal.
+        The ETH address is set to the zero address.
+
+        :param address: The address of the token on L2.
+        """
+        return self._zksync_web3.zksync.l1_token_address(address)
+
     def approve_erc20(
         self,
         token: HexStr,
