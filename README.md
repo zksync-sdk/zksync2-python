@@ -1,3 +1,9 @@
+> [!WARNING]  
+> This project is no longer maintained, the usage of a general-purpose web3 SDK is recommended instead.
+
+---
+---
+
 # 🚀 zksync2 Python SDK 🚀
 
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE-MIT)
